@@ -60,7 +60,7 @@ function Shell({ children }: Props) {
 
   return (
     <div className="app-shell">
-      <div ref={bar} className="app-shell__bar">
+      <div ref={bar} className="app-shell__bar" data-scrolled={scrolled}>
         <div className="app-shell__bar-row">
           <nav className="app-shell__tabs" aria-label="Main">
             <ul className="app-shell__tab-list">
@@ -93,7 +93,7 @@ function Shell({ children }: Props) {
             </div>
           </header>
         </div>
-        {/* From 640px: a sibling of the row, so the two glass surfaces are built alike. */}
+        {/* From 640px: a strip under the row; the bar's one glass layer grows to cover it. */}
         <p className="app-shell__title-row" aria-hidden="true" data-scrolled={scrolled}>
           {pageTitle?.text}
         </p>

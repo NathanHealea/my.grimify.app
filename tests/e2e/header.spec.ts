@@ -86,6 +86,33 @@ async function backdropFilter(target: Locator, pseudo?: string): Promise<string>
   }, pseudo ?? null);
 }
 
+// --color-glass is a color-mix(), so resolve it through a real element before reading it.
+async function resolvedGlass(page: Page): Promise<Rgba> {
+  const probe = page.locator("[data-test-glass-probe]");
+  await bar(page).evaluate((el) => {
+    const span = document.createElement("span");
+    span.dataset.testGlassProbe = "";
+    span.style.backgroundColor = "var(--color-glass)";
+    el.append(span);
+  });
+  const glass = await computedColor(probe, "background-color");
+  await probe.evaluate((el) => el.remove());
+  return glass;
+}
+
+// Pseudo-elements have no getBoundingClientRect, so the layer's bottom comes from its used top and height.
+async function layerBottom(page: Page): Promise<number> {
+  return bar(page).evaluate((el) => {
+    const layer = getComputedStyle(el, "::before");
+    return (
+      el.getBoundingClientRect().top +
+      parseFloat(getComputedStyle(el).borderTopWidth) +
+      parseFloat(layer.top) +
+      parseFloat(layer.height)
+    );
+  });
+}
+
 async function expectAligned(page: Page, width: number) {
   const column = await contentBox(page.locator("main"));
   const start = await rect(header(page).locator(".app-shell__header-start"));
@@ -346,7 +373,7 @@ test("merges the header and nav into one bar on desktop", async ({
       .soft(spans.right, `bar ends at the window edge at ${width}px`)
       .toBeCloseTo(viewportWidth, 0);
     if (browserName === "chromium") {
-      const filter = await backdropFilter(barRow(page));
+      const filter = await backdropFilter(bar(page), "::before");
       expect.soft(filter, `bar blur at ${width}px`).toContain("blur(16px)");
       // Chromium serialises saturate(180%) as saturate(1.8).
       expect.soft(filter, `bar saturation at ${width}px`).toContain("saturate(1.8)");
@@ -599,31 +626,27 @@ test("makes the title row a sibling of the nav row", async ({ page }) => {
   expect.soft(tree.bannerHoldsTitle, "banner doesn't contain the title row").toBe(false);
 });
 
-test("puts the title row on the bar's glass", async ({ page }) => {
+test("puts both rows on one glass layer", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/paints");
   await expect(page.getByRole("main").getByRole("status")).toHaveText("2,837 paints");
-  await page.evaluate(() => window.scrollTo(0, 300));
-  await expect(titleRow(page)).toBeVisible();
+  await expect(bar(page)).toHaveCount(1);
 
   expect
-    .soft(await computedColor(titleRow(page), "background-color"), "same glass colour")
-    .toEqual(await computedColor(barRow(page), "background-color"));
-  const navRowFilter = await backdropFilter(barRow(page));
-  expect.soft(navRowFilter, "nav row blur").toContain("blur(16px)");
-  expect.soft(await backdropFilter(titleRow(page)), "same backdrop filter").toBe(navRowFilter);
-  expect
     .soft(
-      await barRow(page).evaluate((el) => getComputedStyle(el, "::before").content),
-      "no glass layer behind the nav row",
+      await computedColor(bar(page), "background-color", "::before"),
+      "layer has the glass colour",
     )
-    .toBe("none");
-  // A backdrop-filter above either row would be its backdrop root, so the row would blur only
-  // that ancestor and the list would show through it sharp.
+    .toEqual(await resolvedGlass(page));
+  expect.soft(await backdropFilter(bar(page), "::before"), "layer blur").toContain("blur(16px)");
   for (const [name, target] of [
     ["nav row", barRow(page)],
     ["title row", titleRow(page)],
   ] as const) {
+    expect.soft((await computedColor(target, "background-color")).a, `${name} background`).toBe(0);
+    expect.soft(await backdropFilter(target), `${name} blur`).toBe("none");
+    // A backdrop-filter above either row would be its backdrop root, so the layer would blur only
+    // that ancestor and the list would show through it sharp.
     const rooted = await target.evaluate((row) => {
       const roots: string[] = [];
       for (let el = row.parentElement; el; el = el.parentElement) {
@@ -635,27 +658,28 @@ test("puts the title row on the bar's glass", async ({ page }) => {
     });
     expect.soft(rooted, `no backdrop filter above the ${name}`).toEqual([]);
   }
-});
 
-test("makes the title row solid with reduced transparency", async ({ page, browserName }) => {
-  test.skip(browserName !== "chromium", "reduced transparency is emulated through Chromium's CDP");
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/paints");
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("2,837 paints");
+  const navRowBottom = await barRow(page).evaluate((el) => el.getBoundingClientRect().bottom);
+  await expect
+    .poll(async () => Math.abs((await layerBottom(page)) - navRowBottom), {
+      message: "layer ends at the nav row's bottom at the top",
+    })
+    .toBeLessThanOrEqual(1);
+
   await page.evaluate(() => window.scrollTo(0, 300));
   await expect(titleRow(page)).toBeVisible();
-
-  // Playwright 1.63's emulateMedia has no reducedTransparency option, so set the media feature directly.
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send("Emulation.setEmulatedMedia", {
-    features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
-  });
-  expect(
-    await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches),
-  ).toBe(true);
-
-  expect(await backdropFilter(titleRow(page))).toBe("none");
-  expect((await computedColor(titleRow(page), "background-color")).a).toBe(1);
+  // The layer slides down over --duration-title, so wait for it to settle.
+  await expect
+    .poll(
+      async () => {
+        const titleRowBottom = await titleRow(page).evaluate(
+          (el) => el.getBoundingClientRect().bottom,
+        );
+        return Math.abs((await layerBottom(page)) - titleRowBottom);
+      },
+      { message: "layer ends at the title row's bottom after scrolling" },
+    )
+    .toBeLessThanOrEqual(1);
 });
 
 test("keeps the desktop title readable", async ({ page }) => {
@@ -669,7 +693,7 @@ test("keeps the desktop title readable", async ({ page }) => {
 
     // A blur over one solid colour is that colour, so blending the glass over black and white
     // gives the same backdrop as a solid swatch scrolled under the title row.
-    const glass = await computedColor(titleRow(page), "background-color");
+    const glass = await computedColor(bar(page), "background-color", "::before");
     const text = await computedColor(titleRow(page), "color");
     for (const backdrop of [
       over(glass, { r: 0, g: 0, b: 0, a: 1 }),
@@ -692,7 +716,7 @@ test("keeps the desktop bar readable", async ({ page }) => {
 
     // A blur over one solid colour is that colour, so blending the glass over black and white
     // gives the same backdrop as a solid swatch scrolled under the bar.
-    const glass = await computedColor(barRow(page), "background-color");
+    const glass = await computedColor(bar(page), "background-color", "::before");
     const backdrops = [
       over(glass, { r: 0, g: 0, b: 0, a: 1 }),
       over(glass, { r: 255, g: 255, b: 255, a: 1 }),
@@ -775,10 +799,13 @@ test("fits the desktop bar at 640px", async ({ page, context }) => {
   await context.setOffline(false);
 });
 
-test("makes the desktop bar solid with reduced transparency", async ({ page, browserName }) => {
+test("makes the one glass layer solid with reduced transparency", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "reduced transparency is emulated through Chromium's CDP");
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/paints");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("2,837 paints");
+  await page.evaluate(() => window.scrollTo(0, 300));
+  await expect(titleRow(page)).toBeVisible();
 
   // Playwright 1.63's emulateMedia has no reducedTransparency option, so set the media feature directly.
   const cdp = await page.context().newCDPSession(page);
@@ -789,7 +816,7 @@ test("makes the desktop bar solid with reduced transparency", async ({ page, bro
     await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches),
   ).toBe(true);
 
-  await expect(barRow(page)).toHaveCount(1);
-  expect(await backdropFilter(barRow(page))).toBe("none");
-  expect((await computedColor(barRow(page), "background-color")).a).toBe(1);
+  await expect(bar(page)).toHaveCount(1);
+  expect(await backdropFilter(bar(page), "::before")).toBe("none");
+  expect((await computedColor(bar(page), "background-color", "::before")).a).toBe(1);
 });

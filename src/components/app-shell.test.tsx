@@ -149,15 +149,19 @@ describe("AppShell", () => {
     });
     const header = screen.getByRole("banner");
     const titleRow = document.querySelector(".app-shell__title-row");
+    const bar = document.querySelector(".app-shell__bar");
     expect(header).toHaveAttribute("data-scrolled", "false");
     expect(titleRow).toHaveAttribute("data-scrolled", "false");
+    expect(bar).toHaveAttribute("data-scrolled", "false");
 
     act(() => triggerIntersection(false));
     expect(header).toHaveAttribute("data-scrolled", "true");
     expect(titleRow).toHaveAttribute("data-scrolled", "true");
+    expect(bar).toHaveAttribute("data-scrolled", "true");
 
     act(() => triggerIntersection(true));
     expect(header).toHaveAttribute("data-scrolled", "false");
     expect(titleRow).toHaveAttribute("data-scrolled", "false");
+    expect(bar).toHaveAttribute("data-scrolled", "false");
   });
 });
