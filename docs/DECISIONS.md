@@ -977,7 +977,7 @@ On dev.grimify.app the owner saw swatch colour glow through the desktop bar but 
 Decision:
 - The phone nav has no outline and no shadow: plain glass like the desktop bar. The active item stays a solid Primary pill, since its label must stay 4.5:1 over any swatch.
 - From 640px the bar has `--space-3` above and below its row.
-- From 640px the small title is a full-width glass strip along the bar's bottom edge, centred, fading in once the large title has scrolled under the bar. It's a sibling of the bar's navigation row inside the sticky bar, each row carrying the glass on itself (a `backdrop-filter` on an ancestor would make it the strip's backdrop root), and absolutely positioned so it overlays the content and the list doesn't move when it appears. It carries the bar's bottom line; the bar itself has none on desktop. It stays `aria-hidden` and ignores taps.
+- From 640px the small title is a full-width glass strip along the bar's bottom edge, centred, fading in once the large title has scrolled under the bar. It's a sibling of the bar's navigation row inside the sticky bar, and one glass layer (the bar's `::before`, not the bar itself, since a `backdrop-filter` on an ancestor would make it the strip's backdrop root) sits behind both rows, sliding down over the strip as it fades in. The strip is absolutely positioned so it overlays the content and the list doesn't move when it appears. It carries the bar's bottom line; the bar itself has none on desktop. It stays `aria-hidden` and ignores taps.
 
 Alternatives:
 - Keep the phone outline and lighten the shadow: clearer bar edge on a plain screen, but it still reads as a card, not glass
@@ -987,4 +987,4 @@ Alternatives:
 
 Consequences:
 Positive: the phone and desktop bars look like the same glass; desktop keeps the page name in view while scrolling.
-Trade-off: the phone bar's edge on a plain screen is only the tint change, and with reduced transparency in light mode (solid Surface on a Surface-coloured page) it shows no edge at all, only its items. The title strip covers about 40px of the list while it shows. The bar and the strip are two glass layers that meet at an edge; the strip first sat inside the bar with the bar's glass on a `::before` layer, and the two read as different glass, so they were made siblings (bug-title-row-glass).
+Trade-off: the phone bar's edge on a plain screen is only the tint change, and with reduced transparency in light mode (solid Surface on a Surface-coloured page) it shows no edge at all, only its items. The title strip covers about 40px of the list while it shows. The strip's glass slides in rather than fading with its text. Two glass layers (first the strip inside the bar, then the strip and the row as siblings) each blurred separately and showed a faint line where they met, hence the one shared layer (bug-title-row-glass).
