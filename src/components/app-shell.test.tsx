@@ -116,7 +116,7 @@ describe("AppShell", () => {
     expect(await statusTexts()).toEqual(["", "3 changes waiting to sync"]);
   });
 
-  it("renders one large title and a hidden copy in the header", async () => {
+  it("renders one large title and hidden copies for the header and the title row", async () => {
     renderRoute("/settings");
 
     const main = await screen.findByRole("main");
@@ -129,6 +129,15 @@ describe("AppShell", () => {
     const smallTitle = header.querySelector(".app-shell__title");
     expect(smallTitle).toHaveTextContent("Settings");
     expect(smallTitle).toHaveAttribute("aria-hidden", "true");
+
+    const titleRow = document.querySelector(".app-shell__title-row");
+    expect(titleRow).toHaveTextContent("Settings");
+    expect(titleRow).toHaveAttribute("aria-hidden", "true");
+    expect(header.contains(titleRow)).toBe(false);
+    const navRow = document.querySelector(".app-shell__bar-row");
+    expect(navRow).not.toBeNull();
+    expect(titleRow?.parentElement).toBe(navRow?.parentElement);
+    expect(navRow?.contains(titleRow)).toBe(false);
   });
 
   it("shows the small title once the large one scrolls away", async () => {
@@ -139,12 +148,16 @@ describe("AppShell", () => {
       name: "Settings",
     });
     const header = screen.getByRole("banner");
+    const titleRow = document.querySelector(".app-shell__title-row");
     expect(header).toHaveAttribute("data-scrolled", "false");
+    expect(titleRow).toHaveAttribute("data-scrolled", "false");
 
     act(() => triggerIntersection(false));
     expect(header).toHaveAttribute("data-scrolled", "true");
+    expect(titleRow).toHaveAttribute("data-scrolled", "true");
 
     act(() => triggerIntersection(true));
     expect(header).toHaveAttribute("data-scrolled", "false");
+    expect(titleRow).toHaveAttribute("data-scrolled", "false");
   });
 });
