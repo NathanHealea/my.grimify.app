@@ -5,21 +5,30 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   },
-  "routes": [{ "pattern": "grimify.app", "custom_domain": true }],
+  "routes": [
+    { "pattern": "grimify.app", "custom_domain": true },
+    { "pattern": "www.grimify.app", "custom_domain": true }
+  ],
   "env": {
     "dev": {
       "assets": {
         "directory": "./dist",
         "not_found_handling": "single-page-application"
       },
-      "routes": [{ "pattern": "dev.grimify.app", "custom_domain": true }]
+      "routes": [
+        { "pattern": "dev.grimify.app", "custom_domain": true },
+        { "pattern": "www.dev.grimify.app", "custom_domain": true }
+      ]
     },
     "stage": {
       "assets": {
         "directory": "./dist",
         "not_found_handling": "single-page-application"
       },
-      "routes": [{ "pattern": "stage.grimify.app", "custom_domain": true }]
+      "routes": [
+        { "pattern": "stage.grimify.app", "custom_domain": true },
+        { "pattern": "www.stage.grimify.app", "custom_domain": true }
+      ]
     }
   }
 }

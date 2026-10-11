@@ -53,6 +53,8 @@ CLERK_SECRET_KEY=             # sk_test_… from the Clerk dev instance; Playwri
 | Stage | `stage` | `https://stage.grimify.app` | `v2-grimify-app-stage` | `stage` (name recorded in `scripts/deploy.ts`) | production instance |
 | Production | `main` | `https://grimify.app` | `v2-grimify-app` | `nautical-toucan-398` | production instance |
 
+Each site also answers on its `www.` name (`www.grimify.app`, `www.dev.grimify.app`, `www.stage.grimify.app`). Declare every domain in `wrangler.json`'s `routes`: the first scripted production deploy dropped `www.grimify.app`, which had been attached only in the Cloudflare dashboard. Each custom domain gets its own certificate, so the two-level `www.` names are covered.
+
 Dev and stage sign in with real production accounts (Clerk allows this on subdomains of the production domain), but keep their own collections: nothing they write reaches production data. Every environment shows the live catalog, because the catalog is built into the app. Signing in on one `*.grimify.app` site signs you in on all of them. **Delete account on dev or stage deletes the real account.**
 
 ---
