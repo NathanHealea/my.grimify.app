@@ -3,9 +3,14 @@
 }
 
 /* No box on phones, where the nav floats at the bottom and the header sticks on its own. From
-   640px it's the one glass bar holding both (DECISIONS 045). */
-.app-shell__bar {
+   640px they're one glass bar (DECISIONS 045). */
+.app-shell__bar,
+.app-shell__bar-row {
   display: contents;
+}
+
+.app-shell__title-row {
+  display: none;
 }
 
 /* Back link | small title | status pills. The title is the first to give way (it truncates); the
@@ -67,7 +72,8 @@
   min-width: 0;
 }
 
-.app-shell__title {
+.app-shell__title,
+.app-shell__title-row {
   overflow: hidden;
   font-size: var(--text-body);
   font-weight: var(--weight-semibold);
@@ -78,6 +84,7 @@
   opacity: 0;
   transition: opacity var(--duration-title) var(--easing-standard);
 
+  &[data-scrolled="true"],
   [data-scrolled="true"] > & {
     opacity: 1;
   }
@@ -217,17 +224,42 @@
 }
 
 @media (width >= 640px) {
-  /* Back link | tabs | status pills. Equal outer columns keep the tabs centred in the window; the
-     padding lines the outer columns up with the content column while the glass spans the window. */
   .app-shell__bar {
+    --title-row-height: calc(var(--leading-body) + 2 * var(--space-2) + var(--border-width));
+
     position: sticky;
     top: 0;
     z-index: var(--z-header);
+    display: block;
+  }
+
+  /* One glass layer behind both rows: two layers blur separately and show a line where they meet.
+     It's a layer, not the bar's own background, because an element with a backdrop-filter is the
+     backdrop root for everything inside it (Filter Effects 2), so the title row would blur only
+     the bar. It slides down over the title row as the title fades in. */
+  .app-shell__bar::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background: var(--color-background);
+    transition: bottom var(--duration-title) var(--easing-standard);
+  }
+
+  .app-shell__bar[data-scrolled="true"]::before {
+    bottom: calc(var(--title-row-height) * -1);
+  }
+
+  /* Back link | tabs | status pills. Equal outer columns keep the tabs centred in the window; the
+     padding lines the outer columns up with the content column while the glass spans the window. */
+  .app-shell__bar-row {
     display: grid;
     grid-template-columns: minmax(max-content, 1fr) max-content minmax(min-content, 1fr);
     gap: var(--space-2);
     align-items: center;
     padding-block: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-3);
+    padding: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-3);
     padding-right: max(
       calc(var(--space-4) + env(safe-area-inset-right)),
       calc((100% - var(--content-max-width)) / 2 + var(--space-4))
@@ -238,35 +270,28 @@
     );
   }
 
-  /* The glass sits on a layer behind the bar's items, not on the bar: an element with a
-     backdrop-filter is the backdrop root for everything inside it (Filter Effects 2), so the title
-     strip would only blur the bar, not the page under it. */
-  .app-shell__bar::before {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    content: "";
-    background: var(--color-background);
+  .app-shell__title {
+    display: none;
   }
 
-  /* The tabs fill the middle of the bar, so the small title gets its own glass strip under it. It
+  /* The tabs fill the middle of the bar, so the small title gets its own strip under it. It
      overlays the content rather than growing the bar, so the list doesn't jump when it appears. */
-  .app-shell__title {
+  .app-shell__title-row {
     position: absolute;
     top: 100%;
+    display: block;
     right: 0;
     left: 0;
+    height: var(--title-row-height);
     padding: var(--space-2) calc(var(--space-4) + env(safe-area-inset-right)) var(--space-2)
       calc(var(--space-4) + env(safe-area-inset-left));
     text-align: center;
-    background: var(--color-background);
     border-bottom: var(--border-width) solid var(--color-border);
   }
 
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and
     (color: color-mix(in srgb, currentcolor 50%, transparent)) {
-    .app-shell__bar::before,
-    .app-shell__title {
+    .app-shell__bar::before {
       background: var(--color-glass);
       /* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 only knows the prefixed name */
       -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
@@ -275,8 +300,7 @@
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    .app-shell__bar::before,
-    .app-shell__title {
+    .app-shell__bar::before {
       background: var(--color-background);
       /* stylelint-disable-next-line property-no-vendor-prefix -- matches the rule above */
       -webkit-backdrop-filter: none;

@@ -60,36 +60,43 @@ function Shell({ children }: Props) {
 
   return (
     <div className="app-shell">
-      <div ref={bar} className="app-shell__bar">
-        <nav className="app-shell__tabs" aria-label="Main">
-          <ul className="app-shell__tab-list">
-            {TABS.map(({ to, label, Icon }) => (
-              <li key={to} className="app-shell__tab-item">
-                <Link to={to} className="app-shell__tab">
-                  <Icon className="app-shell__tab-icon" aria-hidden="true" />
-                  <span>{label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <header ref={header} className="app-shell__header" data-scrolled={scrolled}>
-          <div className="app-shell__header-start">
-            {back && <BackButton to={back.to} label={back.label} />}
-          </div>
-          {/* Visual only: screen readers get the page's h1 (PageTitle). */}
-          <p className="app-shell__title" aria-hidden="true">
-            {pageTitle?.text}
-          </p>
-          <div className="app-shell__header-end">
-            <p className="app-shell__offline" role="status">
-              {!online && "Offline"}
+      <div ref={bar} className="app-shell__bar" data-scrolled={scrolled}>
+        <div className="app-shell__bar-row">
+          <nav className="app-shell__tabs" aria-label="Main">
+            <ul className="app-shell__tab-list">
+              {TABS.map(({ to, label, Icon }) => (
+                <li key={to} className="app-shell__tab-item">
+                  <Link to={to} className="app-shell__tab">
+                    <Icon className="app-shell__tab-icon" aria-hidden="true" />
+                    <span>{label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <header ref={header} className="app-shell__header" data-scrolled={scrolled}>
+            <div className="app-shell__header-start">
+              {back && <BackButton to={back.to} label={back.label} />}
+            </div>
+            {/* Visual only: screen readers get the page's h1 (PageTitle). */}
+            <p className="app-shell__title" aria-hidden="true">
+              {pageTitle?.text}
             </p>
-            <p className="app-shell__pending" role="status">
-              {pending > 0 && `${pending} ${pending === 1 ? "change" : "changes"} waiting to sync`}
-            </p>
-          </div>
-        </header>
+            <div className="app-shell__header-end">
+              <p className="app-shell__offline" role="status">
+                {!online && "Offline"}
+              </p>
+              <p className="app-shell__pending" role="status">
+                {pending > 0 &&
+                  `${pending} ${pending === 1 ? "change" : "changes"} waiting to sync`}
+              </p>
+            </div>
+          </header>
+        </div>
+        {/* From 640px: a strip under the row; the bar's one glass layer grows to cover it. */}
+        <p className="app-shell__title-row" aria-hidden="true" data-scrolled={scrolled}>
+          {pageTitle?.text}
+        </p>
       </div>
       <main className="app-shell__main">
         {title && <PageTitle>{title}</PageTitle>}
