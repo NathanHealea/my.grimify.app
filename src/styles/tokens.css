@@ -18,8 +18,9 @@
   --color-swatch-edge: rgb(0 0 0 / 10%);
   --color-overlay: rgb(0 0 0 / 50%);
 
-  /* Frosted bars (DECISIONS 039): 70% Surface keeps text ≥ 4.5:1 over black or white behind it. */
-  --color-glass: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  /* Frosted bars (DECISIONS 045): the thinnest Surface that keeps text ≥ 4.5:1 over black or white
+     behind it. White text needs more cover than black, so dark mode overrides it. */
+  --color-glass: color-mix(in srgb, var(--color-surface) 50%, transparent);
 
   /* Ink drawn on top of a swatch follows the paint, not the theme, so these have no dark override. */
   --color-swatch-ink-dark: #0a0a0a;
@@ -81,6 +82,7 @@
   --touch-target: 44px;
   --touch-target-sm: 36px;
   --glass-blur: 16px;
+  --glass-saturate: 180%;
   --icon-size: 20px;
   --icon-size-tab: 24px;
   --icon-size-sm: 14px;
@@ -115,6 +117,7 @@
     --color-secondary: #262626;
     --color-background: #0a0a0a;
     --color-surface: #171717;
+    --color-glass: color-mix(in srgb, var(--color-surface) 62%, transparent);
     --color-text: #fafafa;
     --color-muted-text: #a3a3a3;
     --color-border: #262626;

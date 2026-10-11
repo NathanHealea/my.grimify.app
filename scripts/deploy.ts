@@ -20,14 +20,14 @@ export const ENVIRONMENTS: Record<EnvName, Environment> = {
     worker: "v2-grimify-app-dev",
     domain: "dev.grimify.app",
     wranglerEnv: "dev",
-    convexDeployment: null,
+    convexDeployment: "sensible-buffalo-782",
   },
   stage: {
     branch: "stage",
     worker: "v2-grimify-app-stage",
     domain: "stage.grimify.app",
     wranglerEnv: "stage",
-    convexDeployment: null,
+    convexDeployment: "notable-ferret-719",
   },
   prod: {
     branch: "main",

@@ -96,7 +96,13 @@ describe("deploy environments", () => {
 
   it("refuses an environment whose Convex deployment isn't set up yet", () => {
     const attempt = () =>
-      planDeploy("dev", cleanGit("dev"), settings(DEV_DEPLOY_KEY), { PATH: "/bin" });
+      planDeploy(
+        "dev",
+        cleanGit("dev"),
+        settings(DEV_DEPLOY_KEY),
+        { PATH: "/bin" },
+        { ...testEnvironments, dev: { ...ENVIRONMENTS.dev, convexDeployment: null } },
+      );
 
     expect(attempt).toThrow(/dev isn't set up yet/);
     expect(attempt).toThrow(/ENVIRONMENTS/);

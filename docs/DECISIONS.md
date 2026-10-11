@@ -286,7 +286,7 @@ The PWA manifest, icons and any Cloudflare Pages project use Grimify when those 
 ## Decision 014 — Floating nav bar: bottom on mobile, top on tablet and desktop
 
 Date: 2026-10-06
-Status: Accepted
+Status: Accepted; amended by 045 (from 640px the nav is part of one full-width sticky glass bar, not a floating pill)
 
 Context:
 The app is mobile-first, but it also has to work on a desktop. DESIGN_SYSTEM §11 left desktop navigation TBD, with a left rail as the working idea.
@@ -808,7 +808,7 @@ Trade-off: while sign-out is pending, a change made on another tab or a server u
 ## Decision 039 — Frosted glass nav bar with one-line items
 
 Date: 2026-10-08
-Status: Accepted
+Status: Accepted; amended by 045 (glass is 50% Surface in light, 62% in dark, with a saturation boost; from 640px the nav is part of one glass bar)
 
 Context:
 Before the first deploy the owner asked for a glass look on the nav bar and for labels that don't stack. On phones each item put its icon above its label, and on desktop "My Paints" wrapped onto two lines because the content-sized bar squeezed equal-share items. Placement stays as DECISIONS 014 set it.
@@ -829,7 +829,7 @@ Trade-off: inactive and active items differ by the filled pill alone, no longer 
 ## Decision 040 — Large page titles with a collapsing glass header
 
 Date: 2026-10-08
-Status: Accepted
+Status: Accepted; amended by 045 (from 640px the header joins the nav in one glass bar and the small title is dropped)
 
 Context:
 The owner asked for more modern page titles and for the desktop title not to sit at the far left of the window. A preview of iOS-style large titles was approved for every screen size.
@@ -937,3 +937,54 @@ Alternatives:
 Consequences:
 Positive: three environments with real sign-in, isolated data and one command each; a deploy can't run from unpushed code or with the wrong keys; Wrangler no longer floats.
 Trade-off: deploys need the owner's machine, with `wrangler login` and three local settings files; nothing deploys on push. Dev and stage share production accounts, so a sign-in on one `*.grimify.app` site signs in on all, and any production user who opens a dev or stage link is signed in there. Delete account clears only the deployment it runs on: deleting on grimify.app leaves dev and stage rows, and deleting on dev or stage deletes the real Clerk account and orphans the production rows. Tracked as issue #20; until it's fixed, SECURITY.md's deletion promise has that gap. Dev and stage data holds production account IDs. Two more Convex deployments count against the free plan.
+
+---
+
+## Decision 045 — Thinner glass, and one glass bar on desktop
+
+Date: 2026-10-09
+Status: Accepted; amended by 046 (the bar has `--space-3` above and below its row, the small title returns on desktop as a strip under the bar, and the phone nav loses its outline and shadow)
+
+Context:
+On a phone the owner found the nav bar "looks solid when colors are under the bar": the 16px blur mixes small swatches with the gaps between them, and 70% Surface on top (039) left almost nothing showing. On desktop the nav (placed at the top by 014) floated in a strip the sticky glass header reserved, so content never passed behind the nav and the screen showed two stacked glass layers. The owner asked for "one cohesive glass effect navbar" on desktop and chose a full-width bar with the back link, tabs and status pills in one row.
+
+Decision:
+- `--color-glass` is the thinnest Surface that keeps text at 4.5:1 over black or white behind it: 50% in light mode, 62% in dark (white text needs more cover). Every glass surface adds `saturate(var(--glass-saturate))`, 180%, behind the blur so colour shows through.
+- From 640px the nav and header sit in one sticky full-width glass bar (`.app-shell__bar`): back link left and status pills right, both lined up with the content column, tabs centred. The nav and header have no surface of their own there, and nothing is reserved above the bar, so content scrolls under it. The bar's bottom border shows once the large title has scrolled under it.
+- The small header title isn't shown from 640px; the large title stays the page's `h1`. Phones keep the bottom nav and the sticky header with the small title.
+- The DOM order (nav "Main", then the header, then `main`) is unchanged; the bar wrapper is `display: contents` on phones.
+
+Alternatives:
+- Lower the glass further (about 40%): more see-through, but text drops under 4.5:1 over white in dark mode and over black in light
+- Solid desktop header with the floating nav kept: the owner's first ask, but the nav only ever sits over the header, so its glass would never show
+- One floating pill holding the back link, tabs and pills: keeps the floating look, but crowds at 640px and still needs content under it
+- Keep the small title on desktop: the middle of the bar belongs to the tabs, and the large title already names the page
+
+Consequences:
+Positive: colour shows through the glass on phones; desktop has one glass surface with content passing under it.
+Trade-off: dark mode can only get a little thinner, so the saturation boost does most of the visible work. Tab reaches the tabs before the back link that sits to their left on desktop (unchanged from 039's layout). With both status pills at 640–800px they stack in their column and the bar grows taller. `subgrid` needs Safari 16, Chrome 117 or Firefox 71.
+
+---
+
+## Decision 046 — A roomier desktop bar with a title strip, and a plain glass phone nav
+
+Date: 2026-10-09
+Status: Accepted
+
+Context:
+On dev.grimify.app the owner saw swatch colour glow through the desktop bar but not the phone's bottom bar, and asked for the phone bars to match it. The glass values were already identical; the bottom bar differed by its outline and shadow (and its solid active pill sits over the swatch column). On desktop the owner asked for more room in the bar and for the page title to show at the bottom of the bar once the large title has scrolled under it, which 045 had dropped.
+
+Decision:
+- The phone nav has no outline and no shadow: plain glass like the desktop bar. The active item stays a solid Primary pill, since its label must stay 4.5:1 over any swatch.
+- From 640px the bar has `--space-3` above and below its row.
+- From 640px the small title is a full-width glass strip along the bar's bottom edge, centred, fading in once the large title has scrolled under the bar. It's a sibling of the bar's navigation row inside the sticky bar, and one glass layer (the bar's `::before`, not the bar itself, since a `backdrop-filter` on an ancestor would make it the strip's backdrop root) sits behind both rows, sliding down over the strip as it fades in. The strip is absolutely positioned so it overlays the content and the list doesn't move when it appears. It carries the bar's bottom line; the bar itself has none on desktop. It stays `aria-hidden` and ignores taps.
+
+Alternatives:
+- Keep the phone outline and lighten the shadow: clearer bar edge on a plain screen, but it still reads as a card, not glass
+- A see-through active pill: more colour through the bar, but its label can't be shown to stay readable over mid-tone swatches
+- Grow the bar by a title row when the title appears: one glass element, but the list jumps by the row's height at the switch point
+- Reserve the title row's space all the time: no jump, but an empty band at the top of every page
+
+Consequences:
+Positive: the phone and desktop bars look like the same glass; desktop keeps the page name in view while scrolling.
+Trade-off: the phone bar's edge on a plain screen is only the tint change, and with reduced transparency in light mode (solid Surface on a Surface-coloured page) it shows no edge at all, only its items. The title strip covers about 40px of the list while it shows. The strip's glass slides in rather than fading with its text. Two glass layers (first the strip inside the bar, then the strip and the row as siblings) each blurred separately and showed a faint line where they met, hence the one shared layer (bug-title-row-glass).
