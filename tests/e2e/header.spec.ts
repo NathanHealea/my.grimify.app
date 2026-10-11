@@ -639,6 +639,21 @@ test("puts both rows on one glass layer", async ({ page }) => {
     )
     .toEqual(await resolvedGlass(page));
   expect.soft(await backdropFilter(bar(page), "::before"), "layer blur").toContain("blur(16px)");
+  const layer = await bar(page).evaluate((el) => {
+    const style = getComputedStyle(el, "::before");
+    const token = getComputedStyle(document.documentElement).getPropertyValue("--duration-title");
+    const ms = (time: string) => parseFloat(time) * (time.trim().endsWith("ms") ? 1 : 1000);
+    return {
+      zIndex: style.zIndex,
+      property: style.transitionProperty,
+      durationMs: ms(style.transitionDuration),
+      tokenMs: ms(token),
+    };
+  });
+  // Above the rows, the blur and tint would cover the back link and status pills.
+  expect.soft(layer.zIndex, "layer sits behind the rows").toBe("-1");
+  expect.soft(layer.property, "layer slides").toContain("bottom");
+  expect.soft(layer.durationMs, "layer slides over --duration-title").toBe(layer.tokenMs);
   for (const [name, target] of [
     ["nav row", barRow(page)],
     ["title row", titleRow(page)],
