@@ -1,10 +1,16 @@
 .app-shell {
-  /* Strip the top nav bar floats in on tablet and desktop; the header reserves it. */
-  --app-shell-nav-reserve: calc(
-    env(safe-area-inset-top) + var(--space-3) + var(--tab-bar-height) + var(--space-3)
-  );
-
   min-height: 100dvh;
+}
+
+/* No box on phones, where the nav floats at the bottom and the header sticks on its own. From
+   640px they're one glass bar (DECISIONS 045). */
+.app-shell__bar,
+.app-shell__bar-row {
+  display: contents;
+}
+
+.app-shell__title-row {
+  display: none;
 }
 
 /* Back link | small title | status pills. The title is the first to give way (it truncates); the
@@ -37,8 +43,8 @@
   .app-shell__header {
     background: var(--color-glass);
     /* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 only knows the prefixed name */
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   }
 }
 
@@ -66,7 +72,8 @@
   min-width: 0;
 }
 
-.app-shell__title {
+.app-shell__title,
+.app-shell__title-row {
   overflow: hidden;
   font-size: var(--text-body);
   font-weight: var(--weight-semibold);
@@ -77,6 +84,7 @@
   opacity: 0;
   transition: opacity var(--duration-title) var(--easing-standard);
 
+  &[data-scrolled="true"],
   [data-scrolled="true"] > & {
     opacity: 1;
   }
@@ -139,9 +147,7 @@
   z-index: var(--z-tab-bar);
   padding: var(--space-1);
   background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-md);
 }
 
 /* Glass only where the blur and the colour mix both work; without either the bar would be hard to read. */
@@ -150,8 +156,8 @@
   .app-shell__tabs {
     background: var(--color-glass);
     /* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 only knows the prefixed name */
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   }
 }
 
@@ -168,7 +174,7 @@
 .app-shell__tab-list {
   display: flex;
   gap: var(--space-1);
-  min-height: calc(var(--tab-bar-height) - 2 * var(--space-1) - 2 * var(--border-width));
+  min-height: calc(var(--tab-bar-height) - 2 * var(--space-1));
   padding: 0;
   list-style: none;
 }
@@ -217,17 +223,43 @@
   height: var(--icon-size-tab);
 }
 
-@media (prefers-color-scheme: dark) {
-  .app-shell__tabs {
-    box-shadow: none;
-  }
-}
-
 @media (width >= 640px) {
-  /* Contents line up with the centred content column; the background still spans the window. */
-  .app-shell__header {
-    min-height: calc(var(--header-height) + var(--app-shell-nav-reserve));
-    padding-top: var(--app-shell-nav-reserve);
+  .app-shell__bar {
+    --title-row-height: calc(var(--leading-body) + 2 * var(--space-2) + var(--border-width));
+
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    display: block;
+  }
+
+  /* One glass layer behind both rows: two layers blur separately and show a line where they meet.
+     It's a layer, not the bar's own background, because an element with a backdrop-filter is the
+     backdrop root for everything inside it (Filter Effects 2), so the title row would blur only
+     the bar. It slides down over the title row as the title fades in. */
+  .app-shell__bar::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background: var(--color-background);
+    transition: bottom var(--duration-title) var(--easing-standard);
+  }
+
+  .app-shell__bar[data-scrolled="true"]::before {
+    bottom: calc(var(--title-row-height) * -1);
+  }
+
+  /* Back link | tabs | status pills. Equal outer columns keep the tabs centred in the window; the
+     padding lines the outer columns up with the content column while the glass spans the window. */
+  .app-shell__bar-row {
+    display: grid;
+    grid-template-columns: minmax(max-content, 1fr) max-content minmax(min-content, 1fr);
+    gap: var(--space-2);
+    align-items: center;
+    padding-block: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-3);
+    padding: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-3);
     padding-right: max(
       calc(var(--space-4) + env(safe-area-inset-right)),
       calc((100% - var(--content-max-width)) / 2 + var(--space-4))
@@ -238,15 +270,81 @@
     );
   }
 
-  .app-shell__main {
-    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  .app-shell__title {
+    display: none;
+  }
+
+  /* The tabs fill the middle of the bar, so the small title gets its own strip under it. It
+     overlays the content rather than growing the bar, so the list doesn't jump when it appears. */
+  .app-shell__title-row {
+    position: absolute;
+    top: 100%;
+    display: block;
+    right: 0;
+    left: 0;
+    height: var(--title-row-height);
+    padding: var(--space-2) calc(var(--space-4) + env(safe-area-inset-right)) var(--space-2)
+      calc(var(--space-4) + env(safe-area-inset-left));
+    text-align: center;
+    border-bottom: var(--border-width) solid var(--color-border);
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and
+    (color: color-mix(in srgb, currentcolor 50%, transparent)) {
+    .app-shell__bar::before {
+      background: var(--color-glass);
+      /* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 only knows the prefixed name */
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .app-shell__bar::before {
+      background: var(--color-background);
+      /* stylelint-disable-next-line property-no-vendor-prefix -- matches the rule above */
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* The header and nav are parts of the bar here, with no surface of their own. The header spans
+     the row through subgrid; the nav sits above it in the middle column so it gets the taps. */
+  .app-shell__header {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    grid-template-columns: subgrid;
+    min-height: var(--header-height);
+    padding: 0;
+    background: transparent;
+    border-bottom: 0;
+    /* stylelint-disable-next-line property-no-vendor-prefix -- matches the glass rule */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell__header-start {
+    grid-column: 1;
+  }
+
+  .app-shell__header-end {
+    grid-column: 3;
   }
 
   .app-shell__tabs {
-    inset: calc(var(--space-3) + env(safe-area-inset-top)) 0 auto;
-    width: fit-content;
-    max-width: min(var(--content-max-width), 100% - 2 * var(--space-3));
-    margin-inline: auto;
+    position: relative;
+    inset: auto;
+    grid-column: 2;
+    grid-row: 1;
+    background: transparent;
+    /* stylelint-disable-next-line property-no-vendor-prefix -- matches the glass rule */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell__main {
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
   }
 
   .app-shell__tab {

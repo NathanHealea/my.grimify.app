@@ -248,7 +248,7 @@ Business:
 - Built mostly by AI coding agents under Nathan's direction
 
 Design:
-- Mobile-first; one-handed use with a floating nav bar at the bottom on phones (top on tablet and desktop)
+- Mobile-first; one-handed use with a floating nav bar at the bottom on phones (in the top glass bar on tablet and desktop)
 - Paint swatches are the visual focus; the UI chrome stays neutral
 
 Timeline:

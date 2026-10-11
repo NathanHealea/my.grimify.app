@@ -24,7 +24,7 @@ Routes (TanStack Router):
 - `/settings`
 - `/sign-in`
 
-Page titles (DECISIONS 040): every screen opens with its name as a large title at the top of the content (Paints, My Paints, Settings; a paint's page uses the paint's name). As it scrolls under the header, a small copy fades into the header. The browser tab and app switcher read "<title> · Grimify" ("Paint not found · Grimify" for an unknown paint ID).
+Page titles (DECISIONS 040): every screen opens with its name as a large title at the top of the content (Paints, My Paints, Settings; a paint's page uses the paint's name). On phones, as it scrolls under the header, a small copy fades into the header. From 640px the header and nav are one bar, and the small copy fades in as a strip along the bar's bottom edge (DECISIONS 045, 046). The browser tab and app switcher read "<title> · Grimify" ("Paint not found · Grimify" for an unknown paint ID).
 
 ---
 

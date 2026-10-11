@@ -38,12 +38,23 @@ function contrast(a: Rgba, b: Rgba): number {
 
 test("frosts the bar where it can", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "reduced transparency is emulated through Chromium's CDP");
-  await page.goto("/paints");
   const bar = nav(page);
-  await expect(bar).toBeVisible();
+  for (const [colorScheme, alpha] of [
+    ["light", 0.5],
+    ["dark", 0.62],
+  ] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto("/paints");
+    await expect(bar).toBeVisible();
 
-  expect(await bar.evaluate((el) => getComputedStyle(el).backdropFilter)).toContain("blur(16px)");
-  expect((await computedColor(bar, "background-color")).a).toBeCloseTo(0.7, 2);
+    // Chromium serialises saturate(180%) as saturate(1.8).
+    const filter = await bar.evaluate((el) => getComputedStyle(el).backdropFilter);
+    expect.soft(filter, `${colorScheme} blur`).toContain("blur(16px)");
+    expect.soft(filter, `${colorScheme} saturation`).toContain("saturate(1.8)");
+    expect
+      .soft((await computedColor(bar, "background-color")).a, `${colorScheme} glass alpha`)
+      .toBeCloseTo(alpha, 2);
+  }
 
   // Playwright 1.63's emulateMedia has no reducedTransparency option, so set the media feature directly.
   const cdp = await page.context().newCDPSession(page);
@@ -56,6 +67,42 @@ test("frosts the bar where it can", async ({ page, browserName }) => {
 
   expect(await bar.evaluate((el) => getComputedStyle(el).backdropFilter)).toBe("none");
   expect((await computedColor(bar, "background-color")).a).toBe(1);
+});
+
+test("keeps the phone bar plain glass", async ({ page }) => {
+  const bar = nav(page);
+  for (const [colorScheme, alpha] of [
+    ["light", 0.5],
+    ["dark", 0.62],
+  ] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto("/paints");
+    await expect(bar).toBeVisible();
+
+    const look = await bar.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return {
+        borders: [
+          style.borderTopWidth,
+          style.borderRightWidth,
+          style.borderBottomWidth,
+          style.borderLeftWidth,
+        ],
+        shadow: style.boxShadow,
+      };
+    });
+    expect.soft(look.borders, `${colorScheme} border widths`).toEqual(["0px", "0px", "0px", "0px"]);
+    expect.soft(look.shadow, `${colorScheme} shadow`).toBe("none");
+    expect
+      .soft((await computedColor(bar, "background-color")).a, `${colorScheme} glass alpha`)
+      .toBeCloseTo(alpha, 2);
+
+    const active = bar.locator('.app-shell__tab[aria-current="page"]');
+    await expect(active).toHaveCount(1);
+    expect
+      .soft((await computedColor(active, "background-color")).a, `${colorScheme} active pill alpha`)
+      .toBe(1);
+  }
 });
 
 test("keeps nav text readable over any swatch", async ({ page }) => {
@@ -173,29 +220,7 @@ test("lays the nav out per screen size", async ({ page }) => {
   await expectOneLineItems(page, 320);
   await expectBottomBar(page, 320);
 
+  // The desktop layout is the shared bar, checked in header.spec.ts.
   await page.setViewportSize({ width: 1280, height: 800 });
   await expectOneLineItems(page, 1280);
-  const bar = await box(nav(page));
-  expect.soft(bar.y, "top inset").toBeCloseTo(SPACE_3, 0);
-  expect.soft(Math.abs(bar.x - (1280 - (bar.x + bar.width))), "bar centred").toBeLessThanOrEqual(1);
-  expect.soft(bar.width, "bar narrower than viewport").toBeLessThan(1280);
-  // Sized to its items: no item is stretched beyond its icon, label and padding.
-  const spare = await nav(page)
-    .locator(".app-shell__tab")
-    .evaluateAll((tabs) =>
-      tabs.map((tab) => {
-        const style = getComputedStyle(tab);
-        const icon = tab.querySelector("svg")?.getBoundingClientRect();
-        const label = tab.querySelector("span")?.getBoundingClientRect();
-        if (!icon || !label) throw new Error("tab without icon or label");
-        const content = label.right - icon.left;
-        return (
-          tab.getBoundingClientRect().width -
-          content -
-          parseFloat(style.paddingLeft) -
-          parseFloat(style.paddingRight)
-        );
-      }),
-    );
-  for (const extra of spare) expect.soft(extra, "bar sized to its items").toBeLessThanOrEqual(1);
 });
