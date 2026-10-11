@@ -8,7 +8,7 @@ created: 2026-10-10
 approved: 2026-10-10
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.14.1
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-11
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -118,3 +118,4 @@ Playwright (iPhone 15 WebKit, Pixel 7 Chromium; desktop cases set the viewport) 
 - 2026-10-10 — Review: security and a11y/privacy clean; code review 3 LOW (redundant padding-block in owner's edit, redundant data-scrolled on title row, stale doc lines). Fixed the stale doc lines.
 - 2026-10-11 — Test audit: 7/7 mutations caught; two survivors (layer z-index, slide transition) closed with new T8 asserts. Left: no-blur fallback untested (manual), T9 Chromium only.
 - 2026-10-11 — Staged: verification passed; version 0.14.0 → 0.14.1; no changelog file.
+- 2026-10-11 — Review approved.
