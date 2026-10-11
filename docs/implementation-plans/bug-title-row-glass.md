@@ -1,13 +1,13 @@
 ---
 type: bug
 slug: title-row-glass
-status: in-progress
+status: staged
 branch: bug/title-row-glass
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/bug-title-row-glass
 created: 2026-10-10
 approved: 2026-10-10
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.14.1
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -42,7 +42,7 @@ Phones are not affected: there the small title is the middle column of the stick
 
 **In scope**
 
-- From 640px: a sticky wrapper (`.app-shell__bar`, no surface) holding two sibling rows: the navigation row (nav + header, carrying the glass directly, no `::before`) and the title row
+- From 640px: a sticky wrapper (`.app-shell__bar`) holding two sibling rows, the navigation row (nav + header) and the title row, with one glass layer (the wrapper's `::before`) behind both (R6; the first version gave each row its own glass)
 - The desktop title row becomes its own element outside the header; the phone keeps its small title in the header
 - Updating the desktop e2e tests and the `AppShell` unit test to the new structure
 - DECISIONS 046 consequence line and DESIGN_SYSTEM §11 desktop line updated to describe the sibling rows
@@ -64,7 +64,7 @@ Phones are not affected: there the small title is the middle column of the stick
 
 ## Acceptance criteria
 
-- **AC1** (R1, R2) — Given a 1280px window on /paints scrolled so the title row shows over the swatches, when I look where the two rows meet, then the swatch colour diffuses the same way through both.
+- **AC1** (R1, R6) — Given a 1280px window on /paints scrolled so the title row shows over the swatches, when I look where the two rows meet, then the swatch colour diffuses the same way through both.
 - **AC2** (R3) — Given a desktop window, when I scroll past the large title and back, then the title row fades in and out under the bar as before, and the list doesn't jump.
 - **AC3** (R4) — Given a phone, when I scroll past the large title, then the small title fades into the header as before.
 - **AC4** (R5) — Given a screen reader, when I list landmarks and headings, then I get banner, navigation and main in that order and one `h1`.
@@ -76,8 +76,8 @@ Playwright (iPhone 15 WebKit, Pixel 7 Chromium; desktop cases set the viewport) 
 | ID | Covers | Test | File | Asserts |
 |----|--------|------|------|---------|
 | T1 | R1 | `makes the title row a sibling of the nav row` (regression, fails today) | `tests/e2e/header.spec.ts` | Both engines, 1280px: `.app-shell__title-row.parentElement === .app-shell__bar-row.parentElement`; neither `contains()` the other; the banner doesn't contain the title row |
-| T2 | R2 | `puts the title row on the bar's glass` (updated) | `tests/e2e/header.spec.ts` | Both engines, 1280px after scrolling: nav row and title row `background-color` equal, `backdrop-filter` equal and containing `blur(16px)`; nav row `::before` has `content: none`; no ancestor of either row has a backdrop filter |
-| T3 | R2, R3 | `makes the title row solid with reduced transparency`, `makes the desktop bar solid with reduced transparency` (updated) | `tests/e2e/header.spec.ts` | Chromium CDP reduced transparency: both rows alpha 1, `backdrop-filter` none |
+| ~~T2~~ (replaced by T8) | R2 | `puts the title row on the bar's glass` (updated) | `tests/e2e/header.spec.ts` | Both engines, 1280px after scrolling: nav row and title row `background-color` equal, `backdrop-filter` equal and containing `blur(16px)`; nav row `::before` has `content: none`; no ancestor of either row has a backdrop filter |
+| ~~T3~~ (replaced by T9) | R2, R3 | `makes the title row solid with reduced transparency`, `makes the desktop bar solid with reduced transparency` (updated) | `tests/e2e/header.spec.ts` | Chromium CDP reduced transparency: both rows alpha 1, `backdrop-filter` none |
 | T8 | R6 | `puts both rows on one glass layer` (replaces T2) | `tests/e2e/header.spec.ts` | Both engines, 1280px: the bar's `::before` has the glass alpha and `blur(16px)`; nav row and title row backgrounds transparent and `backdrop-filter` none; no ancestor of either row has a backdrop filter; at the top the layer's bottom is within 1px of the nav row's bottom; after scrolling, within 1px of the title row's bottom |
 | T9 | R6 | `makes the one glass layer solid with reduced transparency` (replaces T3) | `tests/e2e/header.spec.ts` | Chromium CDP reduced transparency: the bar's `::before` alpha 1, `backdrop-filter` none |
 | T4 | R3 | existing `spaces the desktop bar`, `shows the title along the bottom of the desktop bar`, `doesn't move content when the title row appears`, `draws the bar's line under the title row`, `lets taps through the title row`, `keeps the desktop title readable`, `keeps the desktop bar readable`, `merges the header and nav into one bar on desktop`, `scrolls content under the desktop bar`, `fits the desktop bar at 640px` | `tests/e2e/header.spec.ts` | Still pass with the new locators; padding assertions read the navigation row |
@@ -85,7 +85,7 @@ Playwright (iPhone 15 WebKit, Pixel 7 Chromium; desktop cases set the viewport) 
 | T6 | R1, R4, R5 | `renders one large title and hidden copies for the header and the title row` (updated), `shows the small title once the large one scrolls away` (updated) | `src/components/app-shell.test.tsx` | One `h1`, in `main`; header's `.app-shell__title` and `.app-shell__title-row` both have the title text and `aria-hidden="true"`; the title row is outside the banner and a sibling of `.app-shell__bar-row`; `data-scrolled` toggles on both the header and the title row with the observer |
 | T7 | R5 | existing landmark-order tests | `tests/e2e/nav.spec.ts`, `src/components/app-shell.test.tsx` | Banner and navigation precede main |
 
-**Not unit testable:** AC1's "diffuses the same way" is a visual check by the owner at 1280px on dev.grimify.app over the swatch column, in WebKit (Safari) and Chromium, light and dark. T1–T3 prove the structure and values are identical, not the rendered pixels.
+**Not unit testable:** AC1's "diffuses the same way" is a visual check by the owner at 1280px on dev.grimify.app over the swatch column, in WebKit (Safari) and Chromium, light and dark. T1, T8 and T9 prove the structure and the single layer, not the rendered pixels.
 
 ## Implementation plan
 
@@ -115,3 +115,6 @@ Playwright (iPhone 15 WebKit, Pixel 7 Chromium; desktop cases set the viewport) 
 - 2026-10-10 — Built: title row is a sibling of the nav row; user's navbar padding edit committed first (b38e4f8); full e2e suite green.
 - 2026-10-10 — Revised: owner's screenshot shows a faint line between the two glass rows; R2 replaced by R6 (one glass layer on the bar's ::before, sliding down over the title row); added steps 3-4 and tests T8-T9. Owner approved the slide-down reveal.
 - 2026-10-10 — Built steps 3-4: one glass layer on the bar's ::before behind both rows; full e2e suite green (56 passed, 4 skipped).
+- 2026-10-10 — Review: security and a11y/privacy clean; code review 3 LOW (redundant padding-block in owner's edit, redundant data-scrolled on title row, stale doc lines). Fixed the stale doc lines.
+- 2026-10-11 — Test audit: 7/7 mutations caught; two survivors (layer z-index, slide transition) closed with new T8 asserts. Left: no-blur fallback untested (manual), T9 Chromium only.
+- 2026-10-11 — Staged: verification passed; version 0.14.0 → 0.14.1; no changelog file.
