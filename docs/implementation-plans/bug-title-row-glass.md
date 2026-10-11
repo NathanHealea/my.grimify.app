@@ -1,7 +1,7 @@
 ---
 type: bug
 slug: title-row-glass
-status: staged
+status: released
 branch: bug/title-row-glass
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/bug-title-row-glass
 created: 2026-10-10
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.14.1
 review_approved: 2026-10-11
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.14.1
 ---
 
 # Desktop title row glass differs from the bar's
@@ -119,3 +119,4 @@ Playwright (iPhone 15 WebKit, Pixel 7 Chromium; desktop cases set the viewport) 
 - 2026-10-11 — Test audit: 7/7 mutations caught; two survivors (layer z-index, slide transition) closed with new T8 asserts. Left: no-blur fallback untested (manual), T9 Chromium only.
 - 2026-10-11 — Staged: verification passed; version 0.14.0 → 0.14.1; no changelog file.
 - 2026-10-11 — Review approved.
+- 2026-10-11 — Released 0.14.1 as v0.14.1.
