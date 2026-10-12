@@ -159,13 +159,14 @@ Functions should:
 ## 7. Error Handling
 
 Use:
-- `ConvexError({ code, message })` in Convex functions (see API.md §3)
-- A shared `toUserMessage(error)` helper on the client that maps error codes to friendly text
-- Toasts (Sonner) for failed mutations; inline errors for failed queries
-- React error boundary at the route level (TanStack Router `errorComponent`)
+- `ConvexError("<CODE>")` in Convex functions, with the code as a plain string (see API.md §3)
+- On the client, handle each failure where it happens: `console.error` the cause, then show fixed, plain text written for that action (e.g., "Couldn't sign out. Check your connection.")
+- `useToast()` (the in-app toast, DECISIONS 029) for a failed action that has no screen of its own: sign-out, a dropped outbox change
+- Inline text in a `role="alert"` or `role="status"` element when the failure belongs to a screen or sheet: the catalog gate's offline message, the delete-account sheet
+- Check `error.data` against known codes only where the code changes what happens (the outbox drops validation errors, `src/features/collection/outbox.ts`)
 
 Do not:
-- Swallow errors silently (`catch {}`)
+- Swallow errors silently. A `catch {}` needs a comment saying why the failure is safe to ignore (e.g., optional storage in `src/features/pwa/install-hint.ts`)
 - Show raw error messages or stack traces to users
 - Use `alert()`
 

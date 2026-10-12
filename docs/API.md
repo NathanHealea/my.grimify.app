@@ -11,7 +11,7 @@ Authentication:
 None (public)
 
 Caching:
-Service worker: stale-while-revalidate. CDN: long cache with a content-hash query string (`/catalog.json?v=<hash>`).
+Fetched once per session as `catalog.json` (`src/features/catalog/load-catalog.ts`); a failed fetch is retried on the next call. The service worker precaches it with the app shell (`workbox.globPatterns` in `vite.config.ts` includes `json`), so a new catalog reaches users with the next app update. `version` changes whenever the content does.
 
 Response:
 ```json
@@ -117,20 +117,20 @@ Every Own/Want/Favorite change goes through the outbox, online or not (DECISIONS
 
 ## 3. Error Format
 
-Convex functions throw `ConvexError` with a structured payload:
+Convex functions throw `ConvexError` with the error code as a plain string payload:
 ```ts
-throw new ConvexError({ code: "UNAUTHENTICATED", message: "Sign in to save paints" });
+throw new ConvexError("UNAUTHENTICATED");
 ```
+The client reads the code from `error.data` (`src/features/collection/outbox.ts`).
 
-| code | Meaning |
-|---|---|
-| `UNAUTHENTICATED` | No signed-in user |
-| `INVALID_ARGUMENT` | Argument failed validation |
-| `NOT_FOUND` | Referenced record doesn't exist |
-| `RATE_LIMITED` | Too many requests (if rate limiting is added) |
-| `INTERNAL` | Unexpected error (details are never exposed) |
+| code | Thrown by | Meaning |
+|---|---|---|
+| `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`) | No signed-in user, or no `users` row yet |
+| `INVALID_PAINT_ID` | `userPaints.set` | `paintId` doesn't match `^[a-z0-9-]{3,100}$` |
+| `NO_FLAGS` | `userPaints.set` | None of `owned` / `wishlisted` / `favorite` given |
+| `CLOCK_IN_FUTURE` | `userPaints.set` | `clientUpdatedAt` more than 5 minutes ahead |
 
-The client maps `code` to a user-facing message (see ERROR_HANDLING.md when it's written).
+The outbox drops an entry on `INVALID_PAINT_ID`, `NO_FLAGS` or `CLOCK_IN_FUTURE` and toasts "Couldn't save that change." Any other error keeps the entry (§2b).
 
 ---
 
