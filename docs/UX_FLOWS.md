@@ -190,7 +190,7 @@ Sign out:
 - Afterwards focus is on the Account heading.
 
 Delete account:
-1. Tap Delete account → sheet "Delete your account?": "This permanently deletes your Grimify account and your saved paints. It can't be undone." plus, with pending changes, "n changes that haven't synced will be lost too."
+1. Tap Delete account → sheet "Delete your account?": "This permanently deletes your Grimify account, your saved paints and your palettes. It can't be undone." plus, with pending changes, "n changes that haven't synced will be lost too."
 2. Type DELETE in "Type DELETE to confirm"; the sheet's Delete account button enables
 3. `users.deleteAccount` runs, the phone's copy is cleared, then the Clerk account is deleted
 4. User lands on the Paints tab, signed out, with the toast "Account deleted"

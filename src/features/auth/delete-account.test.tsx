@@ -111,7 +111,7 @@ describe("DeleteAccount", () => {
 
     let dialog = openSheet();
     expect(dialog).toHaveTextContent(
-      "This permanently deletes your Grimify account and your saved paints. It can't be undone.",
+      "This permanently deletes your Grimify account, your saved paints and your palettes. It can't be undone.",
     );
     expect(dialog).toHaveTextContent("3 changes that haven't synced will be lost too.");
     const confirm = () => within(dialog).getByRole("button", { name: "Delete account" });

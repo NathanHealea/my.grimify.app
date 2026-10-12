@@ -129,8 +129,8 @@ export function DeleteAccount() {
           </SheetHeader>
           <SheetBody className="delete-account__body">
             <SheetDescription>
-              This permanently deletes your Grimify account and your saved paints. It can't be
-              undone.
+              This permanently deletes your Grimify account, your saved paints and your palettes. It
+              can't be undone.
               {pending > 0 &&
                 ` ${pending} ${pending === 1 ? "change that hasn't" : "changes that haven't"} synced will be lost too.`}
             </SheetDescription>
