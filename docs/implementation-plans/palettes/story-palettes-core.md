@@ -9,7 +9,7 @@ created: 2026-10-11
 approved: 2026-10-12
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
 version: 0.15.0
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-12
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
 ---
@@ -145,3 +145,4 @@ Already in place:
 - 2026-10-12 — Steps 1-7 done. Extra: delete-account sheet copy now names palettes. Open: four tabs overflow the nav at 320px (nav.spec fails); palettes E2E needs functions pushed to the dev deployment.
 - 2026-10-12 — Nav fit resolved with user: icons hide under 360px, tab padding tightens 640-767px (DECISIONS 050). nav and header E2E pass.
 - 2026-10-12 — Staged: verification passed; version 0.14.1 → 0.15.0; no changelog file.
+- 2026-10-12 — Review approved.
