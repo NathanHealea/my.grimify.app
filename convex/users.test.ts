@@ -58,8 +58,16 @@ describe("users", () => {
     await asA.mutation(api.users.store, {});
     const b = await asB.mutation(api.users.store, {});
     await asA.mutation(api.userPaints.set, { paintId: "p-red", owned: true, clientUpdatedAt: 1 });
-    await asA.mutation(api.userPaints.set, { paintId: "p-blue", wishlisted: true, clientUpdatedAt: 2 });
-    await asA.mutation(api.userPaints.set, { paintId: "p-green", favorite: true, clientUpdatedAt: 3 });
+    await asA.mutation(api.userPaints.set, {
+      paintId: "p-blue",
+      wishlisted: true,
+      clientUpdatedAt: 2,
+    });
+    await asA.mutation(api.userPaints.set, {
+      paintId: "p-green",
+      favorite: true,
+      clientUpdatedAt: 3,
+    });
     await asA.mutation(api.userPaints.set, { paintId: "p-grey", owned: true, clientUpdatedAt: 4 });
     await asA.mutation(api.userPaints.set, { paintId: "p-grey", owned: false, clientUpdatedAt: 5 });
     await asB.mutation(api.userPaints.set, { paintId: "p-red", owned: true, clientUpdatedAt: 6 });
@@ -76,6 +84,25 @@ describe("users", () => {
     ]);
     expect(await asA.query(api.users.me, {})).toBeNull();
     expect(await asB.query(api.users.me, {})).toEqual({ _id: b });
+  });
+
+  it("deletes the caller's palettes with the account and nobody else's", async () => {
+    const t = convexTest(schema, modules);
+    const asA = t.withIdentity({ subject: "a", issuer: ISSUER });
+    const asB = t.withIdentity({ subject: "b", issuer: ISSUER });
+    await asA.mutation(api.users.store, {});
+    const b = await asB.mutation(api.users.store, {});
+    await asA.mutation(api.palettes.create, { name: "Ultramarines" });
+    await asA.mutation(api.palettes.create, { name: "Necrons" });
+    await asB.mutation(api.palettes.create, { name: "Orks" });
+    const before = await t.run((ctx) => ctx.db.query("palettes").collect());
+    const bPalettes = before.filter((p) => p.userId === b);
+
+    await asA.mutation(api.users.deleteAccount, {});
+
+    const after = await t.run((ctx) => ctx.db.query("palettes").collect());
+    expect(after).toEqual(bPalettes);
+    expect(after.map((p) => p.name)).toEqual(["Orks"]);
   });
 
   it("deletes large collections in batches", async () => {
