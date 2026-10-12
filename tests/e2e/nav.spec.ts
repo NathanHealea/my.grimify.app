@@ -120,7 +120,7 @@ test("keeps nav text readable over any swatch", async ({ page }) => {
       over(glass, { r: 255, g: 255, b: 255, a: 1 }),
     ];
     const inactive = bar.locator('.app-shell__tab:not([aria-current="page"]) span');
-    await expect(inactive).toHaveCount(2);
+    await expect(inactive).toHaveCount(3);
     const active = bar.locator('.app-shell__tab[aria-current="page"]');
     await expect(active).toHaveCount(1);
 
@@ -165,7 +165,7 @@ async function box(target: Locator) {
 
 async function expectOneLineItems(page: Page, width: number) {
   const tabs = nav(page).locator(".app-shell__tab");
-  await expect(tabs).toHaveCount(3);
+  await expect(tabs).toHaveCount(4);
   const overflow = await nav(page)
     .locator(".app-shell__tab-list")
     .evaluate((list) => list.scrollWidth - list.clientWidth);
