@@ -988,3 +988,72 @@ Alternatives:
 Consequences:
 Positive: the phone and desktop bars look like the same glass; desktop keeps the page name in view while scrolling.
 Trade-off: the phone bar's edge on a plain screen is only the tint change, and with reduced transparency in light mode (solid Surface on a Surface-coloured page) it shows no edge at all, only its items. The title strip covers about 40px of the list while it shows. The strip's glass slides in rather than fading with its text. Two glass layers (first the strip inside the bar, then the strip and the row as siblings) each blurred separately and showed a faint line where they met, hence the one shared layer (bug-title-row-glass).
+
+---
+
+## Decision 047 — Palettes pulled forward as an online-only first version
+
+Date: 2026-10-12
+Status: Accepted
+
+Context:
+"Painting recipes and schemes" sat under PRD §8 Future and ROADMAP LATER. The owner wants painters to collect the paints for a scheme ("Ultramarines", "Nurgle Rot") now, sorted into named groups, before recipes with steps exist. The epic is `docs/implementation-plans/palettes/epic-palettes.md`.
+
+Decision:
+- Signed-in users get named color palettes made of catalog paints, in a fourth tab, Palettes (`SwatchBook` icon), between My Paints and Settings. Routes `/palettes` and `/palettes/$paletteId`.
+- Online only for this version. Palette screens read straight from Convex queries; nothing is stored on the device and there's no outbox. Offline, an already-loaded list or palette stays visible, editing is disabled, and the screen says "Connect to the internet to edit palettes." With nothing loaded it says "Palettes need an internet connection."
+- A palette stores paint IDs only, never copied names or hex. Names and swatches come from the catalog on the device.
+- Recipe steps, sharing, export, arbitrary hex colors and signed-out palettes stay out of scope.
+
+Alternatives:
+- Wait for full recipes (steps, order, notes): more useful per palette, but a much larger first release
+- Offline editing through an outbox like the collection's (DECISIONS 036): matches My Paints, but reorders and moves merge badly by entry, and it doubles the work of the first version
+
+Consequences:
+Positive: a first version ships in four small stories; paint IDs keep palettes valid across catalog renames.
+Trade-off: palettes behave differently from My Paints offline. After a reload offline, a palette that was open shows "Palettes need an internet connection" because Convex keeps query results only in memory. The nav has four tabs, which is tight at 320px (DECISIONS 039).
+
+---
+
+## Decision 048 — One document per palette, with caps
+
+Date: 2026-10-12
+Status: Accepted
+
+Context:
+Palettes need a main list in a user-chosen order and named groups that reference paints from it (a paint at most once per list, in any number of groups). Later stories add drag and drop, where one drag can reorder a list or move a paint between groups. The stored shape is a one-way door once users have data.
+
+Decision:
+- One `palettes` document per palette: `userId`, `name`, `paintIds` (main list, in order), `groups` (`{ id, name, paintIds }[]`, in order) and `updatedAt` (server time). Index `by_userId`.
+- Groups are in the stored shape from the first story, empty until the groups story, so no migration is needed later.
+- Caps, enforced server-side: 50 palettes per user and names of 1–60 characters after trimming, both enforced now (`PALETTE_LIMIT`, `PALETTE_NAME_INVALID`). 200 paints per palette and 30 groups per palette land with the stories that add paints and groups.
+- Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, and `rename` and `remove` throw `NOT_FOUND`. `palettes.get` takes a plain string and returns `null` for anything that isn't a palette ID, so a mangled URL shows "Palette not found" instead of failing argument validation.
+- `users.deleteAccount` deletes the caller's palettes in the same transaction as the `users` row. The 50-palette cap keeps that inside one transaction.
+
+Alternatives:
+- Separate `paletteEntries` and `paletteGroups` tables with order keys: scales to very large palettes, but a move touches several rows and the membership rules have to hold across them
+
+Consequences:
+Positive: every reorder or move is one atomic write, and the membership rules live in one place. With the caps a palette stays far under Convex's 1 MiB document limit.
+Trade-off: per-entry data (for example a note per paint) would need a migration. A palette's whole document is rewritten on every change.
+
+---
+
+## Decision 049 — Last write wins for concurrent palette edits
+
+Date: 2026-10-12
+Status: Accepted
+
+Context:
+A user can edit the same palette on two devices. With one document per palette (DECISIONS 048), each mutation rewrites the fields it changes.
+
+Decision:
+Concurrent edits are last write wins on the document. There's no merge and no conflict warning in this version.
+
+Alternatives:
+- Version numbers with a conflict prompt: no silent loss, but extra UI for a rare case
+- Per-entry merge: needs per-entry storage, which DECISIONS 048 rejects
+
+Consequences:
+Positive: simple, and Convex's reactive queries show the other device's change right away.
+Trade-off: if two devices change the same list at nearly the same moment, the earlier change is lost.

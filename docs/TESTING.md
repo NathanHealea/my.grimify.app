@@ -33,7 +33,8 @@ Test (with `convex-test`):
 - `userPaints.set` ignores an older `clientUpdatedAt` (last-write-wins); replaying is idempotent
 - Unauthenticated calls throw `UNAUTHENTICATED`
 - User A cannot read or modify user B's data
-- `users.deleteAccount` removes all of the user's data (tombstones included) and nobody else's, in scheduled batches past 500 rows; signed out → `UNAUTHENTICATED`, nothing left → `null`
+- `users.deleteAccount` removes all of the user's data (tombstones and palettes included) and nobody else's, in scheduled batches past 500 rows; signed out → `UNAUTHENTICATED`, nothing left → `null`
+- `palettes.*`: trimmed names, `PALETTE_NAME_INVALID` and `PALETTE_LIMIT` (51st palette), rename and remove, list order and preview, another user's ID behaves like a missing one, a malformed ID → `null`, every function `UNAUTHENTICATED` signed out (`convex/palettes.test.ts`)
 
 Deleting an account isn't covered by E2E: it would delete the shared test user (DECISIONS 032) during parallel runs. Check it by hand on the dev instance with a throwaway email.
 
@@ -46,6 +47,7 @@ Test critical user journeys (Playwright with mobile device emulation: iPhone 15 
 - Filter by brand/type → URL updates → reload keeps filters
 - Sign in (test-mode auth) → mark owned → appears in My Paints: `tests/e2e/collection.spec.ts`, with `@clerk/testing`. Global setup creates `grimify-e2e+clerk_test@example.com` in the Clerk development instance if missing (DECISIONS 032); each device profile uses a different paint and un-owns it at the end
 - Offline: load app, go offline (`context.setOffline(true)`), search still works
+- Palettes: sign in → create a palette → rename it → back to the list ("0 paints") → delete it → gone after reload: `tests/e2e/palettes.spec.ts`. Each device profile names its own palette (`E2E <profile> <timestamp>`). Needs the `palettes` functions on the dev deployment (`npx convex dev`); without them the app shows its error screen
 - Offline toggle: go offline, reload, mark a paint owned, see "1 change waiting to sync", go online → change synced (visible in a fresh context): `tests/e2e/collection.spec.ts`, Chromium only like `offline.spec.ts`
 
 ### Manual Testing (real devices, before each release)
@@ -90,8 +92,9 @@ tests/
     ├── catalog.spec.ts
     ├── collection.spec.ts
     ├── header.spec.ts  # large title collapse, header alignment with the content column, title contrast
-    ├── nav.spec.ts     # nav layout per width, glass and fallback, contrast over black/white
-    └── offline.spec.ts
+    ├── nav.spec.ts     # nav layout per width (four tabs), glass and fallback, contrast over black/white
+    ├── offline.spec.ts
+    └── palettes.spec.ts
 ```
 
 ---

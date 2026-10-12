@@ -185,6 +185,26 @@ Acceptance Criteria:
 - Browsing the catalog does **not** require an account
 - Email code only for MVP; OAuth revisited after the beta (DECISIONS 027)
 
+### Feature 6 — Color Palettes
+
+Purpose:
+Let painters collect the paints for a scheme ("Ultramarines", "Nurgle Rot") in one named place. Pulled forward from Future as an online-only first version (DECISIONS 047).
+
+User Flow:
+Palettes tab → New palette → name it → the palette opens. Rename or delete it from its actions button. Adding paints, groups and drag and drop follow in later stories of the palettes epic.
+
+Acceptance Criteria:
+- Requires sign-in; signed-out users see "Sign in to keep color palettes on any device." and a Sign in button
+- Up to 50 palettes per user; names of 1–60 characters
+- A palette shows its paints in the user's order, each with swatch, name and brand
+- Online only: offline, loaded palettes stay visible but can't be edited
+- Deleting the account deletes all palettes
+
+Edge Cases:
+- A paint ID the catalog no longer has → shown as "Unknown paint"
+- Another user's palette ID or a mangled URL → "Palette not found"
+- Two devices editing one palette → the last write wins (DECISIONS 049)
+
 ---
 
 ## 7. Non-Goals
@@ -218,7 +238,7 @@ Nice to Have:
 Future:
 - Barcode scanning to add paints
 - Pick a color from a photo
-- Painting recipes and schemes
+- Painting recipes and schemes (palettes, a first step, are Feature 6; recipe steps stay Future)
 - Sharing a collection or wishlist via link
 - Additional brands beyond launch (e.g., Two Thin Coats, Kimera, Reaper)
 

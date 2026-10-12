@@ -166,6 +166,21 @@ Fields:
 No quantity, notes or "running low" fields in MVP. When all three flags become false the row stays as a tombstone with its `updatedAt`, so an older queued change can't bring it back (DECISIONS 035). `listMine` leaves tombstones out. At most one row per user and paint, so at most 2,837 per user.
 - `_creationTime`
 
+### palettes
+Purpose:
+A user's named color palette: a main list of catalog paints plus named groups that reference them (DECISIONS 047, 048).
+
+Fields:
+- `_id`
+- `userId: Id<"users">`
+- `name: string` — 1–60 characters after trimming; duplicates allowed
+- `paintIds: string[]` — the main list, in the user's order; catalog paint IDs only, never copied names or hex
+- `groups: { id: string; name: string; paintIds: string[] }[]` — named sections, in order, referencing paints from the main list. Always `[]` until the groups story
+- `updatedAt: number` — **server** time of the last change (orders the Palettes list)
+- `_creationTime`
+
+Limits: 50 palettes per user and names of 1–60 characters, enforced in the mutations. 200 paints per palette and 30 groups per palette are planned with the stories that add them (DECISIONS 048).
+
 ### Convex schema (reference)
 ```ts
 // convex/schema.ts
@@ -186,6 +201,14 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_userId_and_paintId", ["userId", "paintId"]),
+
+  palettes: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    paintIds: v.array(v.string()),
+    groups: v.array(v.object({ id: v.string(), name: v.string(), paintIds: v.array(v.string()) })),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });
 ```
 
@@ -194,6 +217,8 @@ export default defineSchema({
 ## 5. Relationships
 
 - users → userPaints: one user has many userPaints
+- users → palettes: one user has up to 50 palettes
+- palettes → catalog paint: `paintIds` and each group's `paintIds` hold catalog paint IDs (soft reference). An ID the catalog doesn't have shows as "Unknown paint"
 - userPaints → catalog paint: many-to-one via `paintId` (soft reference; not enforced by the database)
 - brand → productLine → paint (inside the catalog)
 
@@ -204,6 +229,7 @@ export default defineSchema({
 Required:
 - Catalog: `id`, `brandId`, `lineId`, `name`, `hex`, `type`
 - userPaints: `userId`, `paintId`, `owned`, `wishlisted`, `updatedAt`
+- palettes: `userId`, `name`, `paintIds`, `groups`, `updatedAt`
 
 Unique:
 - Catalog `id` (enforced by the build script)
@@ -212,6 +238,7 @@ Unique:
 
 Foreign Keys:
 - `userPaints.userId` → `users._id`
+- `palettes.userId` → `users._id`
 - `userPaints.paintId` → catalog paint `id` (validated in the mutation against an allow-list or format regex)
 
 ---
@@ -221,6 +248,7 @@ Foreign Keys:
 | Index | Reason |
 |---|---|
 | `users.by_tokenIdentifier` | Resolve the current user from the auth identity (index names list every field, per the Convex guidelines) |
+| `palettes.by_userId` | List the caller's palettes and count them against the 50 cap. Reads are bounded at 50; the list is sorted by `updatedAt` in code |
 | `userPaints.by_userId_and_paintId` | Upsert/toggle a single paint, and load the whole collection by its `userId` prefix (no separate `by_userId` index needed). Lists are bounded at 5,000 rows, above the catalog's 2,837 paints |
 
 ---
@@ -228,7 +256,7 @@ Foreign Keys:
 ## 8. Data Validation
 
 - Catalog: Zod schema; `hex` matches `^#[0-9A-F]{6}$`; `brandId`/`lineId` must exist; IDs are unique; `hueOverride` must be a valid HueFamily
-- Convex: argument validators on every function; `paintId` matches `^[a-z0-9-]{3,100}$`
+- Convex: argument validators on every function; `paintId` matches `^[a-z0-9-]{3,100}$`; palette names are trimmed and must be 1–60 characters
 - Strings are trimmed; `notes` (if added) is capped at 500 characters
 
 ---
@@ -236,7 +264,7 @@ Foreign Keys:
 ## 9. Soft Delete
 
 Catalog: yes, via `discontinued: true` (never delete).
-Convex: removing a paint from a collection keeps its `userPaints` row with every flag `false` (a tombstone, DECISIONS 035). Deleting the account removes all rows.
+Convex: removing a paint from a collection keeps its `userPaints` row with every flag `false` (a tombstone, DECISIONS 035). Deleting the account removes all rows. Palettes have no soft delete: `palettes.remove` deletes the document.
 
 ---
 

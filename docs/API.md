@@ -59,10 +59,10 @@ Returns:
 ### users.deleteAccount — mutation
 Authentication: Required (`UNAUTHENTICATED` when signed out)
 Args: none
-Purpose: Delete all of the caller's `userPaints` (tombstones included) and their `users` row. The Clerk account is deleted afterwards by the client with `user.delete()` (DECISIONS 037).
+Purpose: Delete all of the caller's `userPaints` (tombstones included), their `palettes` and their `users` row. The Clerk account is deleted afterwards by the client with `user.delete()` (DECISIONS 037).
 Behavior:
 - No `users` row for the caller → returns `null` without changes, so a retry after a failed Clerk step is safe
-- Deletes up to `DELETE_BATCH` (500) `userPaints` rows, then the `users` row. If a full batch was deleted, the internal mutation `users.deletePaints({ userId })` continues in scheduled batches until none are left
+- Deletes up to `DELETE_BATCH` (500) `userPaints` rows, then every `palettes` document of the caller (at most 50, so no batching; DECISIONS 048), then the `users` row, all in one transaction. If a full batch was deleted, the internal mutation `users.deletePaints({ userId })` continues in scheduled batches until none are left
 Returns: `null`
 
 ### userPaints.listMine — query
@@ -100,6 +100,49 @@ Validation:
 - At least one of `owned` / `wishlisted` / `favorite` is provided
 - `clientUpdatedAt` is not more than 5 minutes in the future (clock-skew guard)
 Returns: `null`
+
+### palettes.listMine — query
+Authentication: Required (`UNAUTHENTICATED` when signed out; the client skips the query until Convex is authenticated)
+Args: none
+Bounded: at most 50 rows (the per-user cap).
+Returns the caller's palettes, most recently updated first:
+```ts
+Array<{
+  _id: Id<"palettes">;
+  name: string;
+  paintCount: number;          // length of the main list
+  previewPaintIds: string[];   // first 5 paint IDs of the main list
+  updatedAt: number;
+}>
+```
+
+### palettes.get — query
+Authentication: Required (`UNAUTHENTICATED` when signed out)
+Args: `{ paletteId: string }` — a plain string, not `v.id`, because it comes from the URL
+Returns: the palette document (`_id`, `_creationTime`, `userId`, `name`, `paintIds`, `groups`, `updatedAt`), or `null` when the string isn't a palette ID, the palette doesn't exist, or it belongs to someone else. The three cases look the same, so a guessed ID reveals nothing (DECISIONS 048).
+
+### palettes.create — mutation
+Authentication: Required
+Args: `{ name: string }`
+Behavior:
+- Trims the name; empty or over 60 characters → `PALETTE_NAME_INVALID`
+- The caller already has 50 palettes → `PALETTE_LIMIT`
+- Inserts `{ userId, name, paintIds: [], groups: [], updatedAt: now }`
+Returns: `Id<"palettes">`
+
+### palettes.rename — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes">, name: string }`
+Behavior: trims and checks the name like `create` (`PALETTE_NAME_INVALID`); a missing palette or someone else's → `NOT_FOUND`; otherwise sets `name` and `updatedAt = now`
+Returns: `null`
+
+### palettes.remove — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes"> }`
+Behavior: a missing palette or someone else's → `NOT_FOUND`; otherwise deletes the document
+Returns: `null`
+
+Palette errors are thrown as `ConvexError` with the code string as data: `UNAUTHENTICATED`, `PALETTE_NAME_INVALID`, `PALETTE_LIMIT`, `NOT_FOUND`. The name sheet shows "Give the palette a name" for `PALETTE_NAME_INVALID`, "You can have up to 50 palettes" for `PALETTE_LIMIT`, and "Couldn't save the palette. Check your connection and try again." for anything else.
 
 ---
 

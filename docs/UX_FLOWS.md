@@ -13,6 +13,8 @@ Paints tab (catalog) ──► Paint detail ──► Equivalents ──► anot
    ↓
 My Paints tab (Owned | Wishlist | Favorites)
    ↓
+Palettes tab ──► Palette (main list) ──► Rename / Delete
+   ↓
 Settings (account, install help, about)
 ```
 
@@ -21,10 +23,12 @@ Routes (TanStack Router):
 - `/paints?q=&brand=&line=&type=&hue=&show=` — catalog list (also handles hex color search via `q`); `show=owned|wishlist|favorites` is the signed-in Show only filter (DECISIONS 031)
 - `/paints/$paintId` — paint detail
 - `/my-paints?tab=owned|wishlist|favorites&q=&brand=&line=&type=&hue=` — the collection, searched like the catalog; a missing or unknown `tab` means Owned
+- `/palettes` — the signed-in user's palettes
+- `/palettes/$paletteId` — one palette; any unknown, mangled or someone else's ID shows "Palette not found"
 - `/settings`
 - `/sign-in`
 
-Page titles (DECISIONS 040): every screen opens with its name as a large title at the top of the content (Paints, My Paints, Settings; a paint's page uses the paint's name). On phones, as it scrolls under the header, a small copy fades into the header. From 640px the header and nav are one bar, and the small copy fades in as a strip along the bar's bottom edge (DECISIONS 045, 046). The browser tab and app switcher read "<title> · Grimify" ("Paint not found · Grimify" for an unknown paint ID).
+Page titles (DECISIONS 040): every screen opens with its name as a large title at the top of the content (Paints, My Paints, Palettes, Settings; a paint's or palette's page uses its name). On phones, as it scrolls under the header, a small copy fades into the header. From 640px the header and nav are one bar, and the small copy fades in as a strip along the bar's bottom edge (DECISIONS 045, 046). The browser tab and app switcher read "<title> · Grimify" ("Paint not found · Grimify" for an unknown paint ID).
 
 ---
 
@@ -196,3 +200,41 @@ Errors (shown in the sheet, which stays open):
 - Clerk step failed: "Couldn't finish deleting your account. Try again."
 
 Disabled: offline → "Deleting your account needs an internet connection."; self-deletion off in Clerk → "Account deletion isn't available right now."
+
+---
+
+## Flow 10 — Palettes
+
+The fourth tab, Palettes (`SwatchBook` icon), sits between My Paints and Settings. Palettes are online only (DECISIONS 047).
+
+List (`/palettes`):
+1. User opens the Palettes tab
+2. A **New palette** button, then the palettes, most recently changed first. Each row links to the palette and shows its name, "n paints" ("1 paint") and up to five overlapping swatches from the start of its main list
+3. Tap a row → the palette
+
+Create:
+1. Tap New palette → sheet "New palette" with a "Palette name" field, Cancel and Create
+2. Create → the palette opens. Focus returns to New palette if the sheet is closed instead
+3. Errors show under the field and the sheet stays open: blank → "Give the palette a name"; over 60 characters → "Use 60 characters or fewer"; the 51st palette → "You can have up to 50 palettes"; anything else → "Couldn't save the palette. Check your connection and try again."
+
+Palette (`/palettes/$paletteId`):
+1. The palette's name is the page title; the header has a back link to Palettes
+2. The main list in the user's order: swatch, paint name and brand; each known paint links to its page. A paint ID the catalog doesn't have shows a neutral dashed swatch and "Unknown paint"
+3. Empty: "No paints in this palette yet" (adding paints is the next story)
+4. Unknown, mangled or someone else's ID: title "Palette not found" and an "All palettes" link
+
+Rename and delete:
+1. Tap the **Palette actions** button (next to the title) → a sheet with Rename and Delete palette
+2. Rename → sheet "Rename palette", field filled with the current name, Cancel and Save; same errors as Create
+3. Delete palette → sheet `Delete "<name>"?`: "This deletes the palette. Your paints and collection aren't affected." with Cancel and Delete
+4. Delete → back on Palettes with the toast "Palette deleted". If it fails: "Couldn't delete the palette. Check your connection and try again." in the sheet
+
+Signed Out:
+"Sign in to keep color palettes on any device." plus a Sign in button. Offline and signed out: "Signing in needs an internet connection."
+
+Loading State:
+"Loading your palettes…" (list) or "Loading palette…" (a palette) as a status message.
+
+Offline:
+- Loaded list or palette stays visible; New palette and Palette actions are disabled, and a status line says "Connect to the internet to edit palettes."; back online re-enables them
+- Nothing loaded yet (for example after a reload offline): "Palettes need an internet connection."

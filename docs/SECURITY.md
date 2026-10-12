@@ -31,6 +31,7 @@ Permissions:
 ### User
 - Read the public catalog
 - Read, create, update and delete **their own** `userPaints`
+- Read, create, rename and delete **their own** `palettes`. Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, mutations throw `NOT_FOUND` (DECISIONS 048)
 - Read and delete **their own** `users` row
 
 ### Anonymous
@@ -104,7 +105,7 @@ Crawlers: `public/robots.txt` disallows everything during the private beta. It i
 
 Sensitive data:
 - Email address, display name (held only by the auth provider; never copied to Convex, DECISIONS 028)
-- A user's collection (low sensitivity, but private by default)
+- A user's collection and palettes (low sensitivity, but private by default)
 
 Encryption:
 In transit via HTTPS (Cloudflare and Convex); at rest by the providers.
@@ -113,7 +114,7 @@ Retention:
 Kept until the user deletes their account. Dev and stage (dev.grimify.app, stage.grimify.app) sign in with the same production accounts but keep their own Convex data, so one person can have rows in up to three deployments.
 
 Deletion:
-"Delete account" in Settings (type DELETE to confirm) → `users.deleteAccount` removes all Convex data → the device record is cleared → Clerk's `user.delete()` removes the auth account (DECISIONS 037). Collections over 500 rows finish deleting in scheduled batches seconds later. If the Clerk step fails, the account exists with no data and the user is told to retry; a retry completes it. Needs "Allow users to delete their accounts" on in the Clerk instance (ENVIRONMENT.md). **Gap:** deletion clears only the Convex deployment of the site it runs on. Deleting on grimify.app leaves any dev or stage rows; deleting on dev or stage deletes the production Clerk account and leaves the production rows with no way to sign in and clear them (DECISIONS 044; issue #20).
+"Delete account" in Settings (type DELETE to confirm) → `users.deleteAccount` removes all Convex data (collection, palettes, `users` row) → the device record is cleared → Clerk's `user.delete()` removes the auth account (DECISIONS 037). Collections over 500 rows finish deleting in scheduled batches seconds later. If the Clerk step fails, the account exists with no data and the user is told to retry; a retry completes it. Needs "Allow users to delete their accounts" on in the Clerk instance (ENVIRONMENT.md). **Gap:** deletion clears only the Convex deployment of the site it runs on. Deleting on grimify.app leaves any dev or stage rows; deleting on dev or stage deletes the production Clerk account and leaves the production rows with no way to sign in and clear them (DECISIONS 044; issue #20).
 
 Signing out clears the device record only after Clerk's sign-out succeeds; while it runs, nothing is saved to the device or sent (DECISIONS 038).
 

@@ -20,6 +20,7 @@
 - Deploy to Cloudflare (Worker static assets) + Convex production at grimify.app (DECISIONS 041, 043); dev and stage environments (DECISIONS 044)
 - Ask PaintPad for permission to use the derived hex data (DECISIONS 015); before anything public
 - Private beta with friends
+- Color palettes, online only (pulled forward from LATER, DECISIONS 047): palettes tab and CRUD, then adding paints, groups, and drag and drop (`docs/implementation-plans/palettes/`)
 
 ## NEXT
 - Visual color picker for color search
@@ -32,7 +33,7 @@
 ## LATER
 - Barcode scanning to add paints (camera)
 - Pick a color from a photo (client-side only)
-- Painting recipes and schemes (lists of paints for a model or army)
+- Painting recipes (ordered steps with instructions). Palettes, the paint lists themselves, moved to NOW (DECISIONS 047)
 - Share a collection or wishlist via a read-only link
 - Export collection (CSV)
 
