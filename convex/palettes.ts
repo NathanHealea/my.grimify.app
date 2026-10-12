@@ -73,13 +73,16 @@ export const listMine = query({
   },
 });
 
-/** One of the caller's palettes; null when missing or owned by someone else. */
+/** One of the caller's palettes; null when missing, owned by someone else, or not a palette ID. */
 export const get = query({
-  args: { paletteId: v.id("palettes") },
+  // A string, not v.id: the ID comes from the URL, and a mangled one should read as not found.
+  args: { paletteId: v.string() },
   returns: v.union(paletteValidator, v.null()),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    const palette = await ctx.db.get("palettes", args.paletteId);
+    const paletteId = ctx.db.normalizeId("palettes", args.paletteId);
+    if (!paletteId) return null;
+    const palette = await ctx.db.get("palettes", paletteId);
     if (!palette || palette.userId !== user._id) return null;
     return palette;
   },

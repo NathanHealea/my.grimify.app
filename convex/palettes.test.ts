@@ -113,6 +113,12 @@ describe("palettes", () => {
     expect((await asB.query(api.palettes.listMine, {})).map((p) => p._id)).toEqual([bId]);
   });
 
+  it("get returns null for a malformed ID", async () => {
+    const { as } = await signedIn("a");
+
+    expect(await as.query(api.palettes.get, { paletteId: "not-an-id" })).toBeNull();
+  });
+
   it("rejects unauthenticated calls", async () => {
     const { t, as } = await signedIn("a");
     const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
