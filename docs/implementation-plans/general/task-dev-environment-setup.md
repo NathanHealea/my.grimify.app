@@ -53,7 +53,7 @@ Outside the repository and not part of this diff: the cloud project `grimify` (d
 
 ## Acceptance criteria
 
-- **AC1** (R1) — `docs/implementation-plans/task-project-scaffold.md` exists and `CLAUDE.md` has a `## Work Item Workflow` section with `work_items_root: docs/implementation-plans`.
+- **AC1** (R1) — `docs/implementation-plans/general/task-project-scaffold.md` exists and `CLAUDE.md` has a `## Work Item Workflow` section with `work_items_root: docs/implementation-plans`.
 - **AC2** (R2) — `package.json` lists `"convex": "1.46.0"`, and `npx convex dev` reports `Convex functions ready!` against `proper-bloodhound-699`.
 - **AC3** (R3) — `git check-ignore .convex` matches.
 - **AC4** (R4, R6) — On a clean install, `npm run check`, `npm run build` and `npx prettier --check .` exit 0.
