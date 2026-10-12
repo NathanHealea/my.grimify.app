@@ -116,13 +116,13 @@ Already in place:
 
 ## Implementation plan
 
-1. [ ] Add the `palettes` table and `palettes.ts` functions (`listMine`, `get`, `create`, `rename`, `remove`) with validators, caps and owner checks — touches `convex/schema.ts`, `convex/palettes.ts`, `convex/palettes.test.ts` — tests T1, T2, T3, T4, T5, T6, T7
-2. [ ] Delete palettes in `users.deleteAccount` — touches `convex/users.ts`, `convex/users.test.ts` — tests T8
-3. [ ] Add the Palettes tab and routes, and widen `staticData.back` to allow `/palettes` — touches `src/components/app-shell.tsx`, `src/components/app-shell.test.tsx`, `src/router.ts`, `src/routes/palettes/index.tsx`, `src/routes/palettes/$paletteId.tsx` — tests T14
-4. [ ] Build the Palettes list screen and the shared name sheet (create) — touches `src/features/palettes/palettes-screen.tsx/.css/.test.tsx`, `src/features/palettes/palette-name-sheet.tsx/.css/.test.tsx` — tests T9, T10, T13
-5. [ ] Build the palette detail screen with main list, rename, delete-with-confirm and offline states — touches `src/features/palettes/palette-detail.tsx/.css/.test.tsx` — tests T11, T12, T13
-6. [ ] Add the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T15
-7. [ ] Update docs — touches `docs/DATABASE.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/UX_FLOWS.md`, `docs/PRD.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/TESTING.md` — tests none (docs only)
+1. [x] Add the `palettes` table and `palettes.ts` functions (`listMine`, `get`, `create`, `rename`, `remove`) with validators, caps and owner checks — touches `convex/schema.ts`, `convex/palettes.ts`, `convex/palettes.test.ts` — tests T1, T2, T3, T4, T5, T6, T7
+2. [x] Delete palettes in `users.deleteAccount` — touches `convex/users.ts`, `convex/users.test.ts` — tests T8
+3. [x] Add the Palettes tab and routes, and widen `staticData.back` to allow `/palettes` — touches `src/components/app-shell.tsx`, `src/components/app-shell.test.tsx`, `src/router.ts`, `src/routes/palettes/index.tsx`, `src/routes/palettes/$paletteId.tsx` — tests T14
+4. [x] Build the Palettes list screen and the shared name sheet (create) — touches `src/features/palettes/palettes-screen.tsx/.css/.test.tsx`, `src/features/palettes/palette-name-sheet.tsx/.css/.test.tsx` — tests T9, T10, T13
+5. [x] Build the palette detail screen with main list, rename, delete-with-confirm and offline states — touches `src/features/palettes/palette-detail.tsx/.css/.test.tsx` — tests T11, T12, T13
+6. [x] Add the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T15
+7. [x] Update docs — touches `docs/DATABASE.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/UX_FLOWS.md`, `docs/PRD.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/TESTING.md` — tests none (docs only)
 
 **Must not change:** the `users` and `userPaints` tables and the signatures of `userPaints.*` and `users.*`. `deleteAccount` keeps returning `null` and stays safe to retry. Paint IDs and the catalog.
 
@@ -141,3 +141,6 @@ Already in place:
 - 2026-10-11 — Planned.
 - 2026-10-12 — Plan approved.
 - 2026-10-12 — Started on branch story/palettes-core from origin/dev.
+- 2026-10-12 — Steps 1-5 built. Plan correction: palettes.get takes v.string() and normalizes the ID so a mangled URL shows Palette not found; rename validates names like create.
+- 2026-10-12 — Steps 1-7 done. Extra: delete-account sheet copy now names palettes. Open: four tabs overflow the nav at 320px (nav.spec fails); palettes E2E needs functions pushed to the dev deployment.
+- 2026-10-12 — Nav fit resolved with user: icons hide under 360px, tab padding tightens 640-767px (DECISIONS 050). nav and header E2E pass.
