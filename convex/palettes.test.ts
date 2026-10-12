@@ -90,6 +90,27 @@ describe("palettes", () => {
     expect(await as.query(api.palettes.get, { paletteId: id })).toBeNull();
   });
 
+  it("rejects blank and over-long names on rename", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+
+    vi.setSystemTime(2_000);
+    for (const name of ["", "   ", "x".repeat(61)]) {
+      await expect(as.mutation(api.palettes.rename, { paletteId: id, name })).rejects.toThrow(
+        "PALETTE_NAME_INVALID",
+      );
+    }
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      name: "Ultramarines",
+      updatedAt: 1_000,
+    });
+
+    await as.mutation(api.palettes.rename, { paletteId: id, name: "x".repeat(60) });
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({ name: "x".repeat(60) });
+  });
+
   it("keeps users' palettes apart", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);

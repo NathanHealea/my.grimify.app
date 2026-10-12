@@ -157,4 +157,233 @@ describe("PaletteDetail", () => {
     expect(within(main).getByRole("button", { name: "Palette actions" })).toBeEnabled();
     expect(notice).toBeEmptyDOMElement();
   });
+
+  it("disables Delete in the confirmation once offline", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([red.id]));
+    const { remove } = mockMutations();
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete palette" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete "Ultramarines"?' });
+    expect(within(confirm).getByRole("button", { name: "Delete" })).toBeEnabled();
+
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    const deleteButton = within(confirm).getByRole("button", { name: "Delete" });
+    expect(deleteButton).toBeDisabled();
+    expect(within(confirm).getByRole("status")).toHaveTextContent(
+      "Connect to the internet to edit palettes.",
+    );
+    fireEvent.click(deleteButton);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("names the page Palette while signed out", async () => {
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Palette" })).toBeVisible();
+    expect(screen.getByText("Sign in to keep color palettes on any device.")).toBeInTheDocument();
+  });
+
+  it("names the page Palette while loading", async () => {
+    signedInWith(undefined);
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Palette" })).toBeVisible();
+    expect(screen.getByText("Loading palette…")).toBeInTheDocument();
+  });
+
+  it("goes back to Palettes after a delete without showing Palette not found", async () => {
+    let stored: ReturnType<typeof palette> | null = palette([red.id]);
+    signedInWith(stored);
+    vi.mocked(useQuery).mockImplementation(((query: unknown) => {
+      const name = nameOf(query);
+      if (name === nameOf(api.palettes.get)) return stored;
+      if (name === nameOf(api.palettes.listMine)) return NO_ROWS;
+      if (name === nameOf(api.userPaints.listMine)) return NO_ROWS;
+      return ME;
+    }) as typeof useQuery);
+    // Convex updates the subscribed query to null before the mutation's promise resolves.
+    const remove = vi.fn(() => {
+      stored = null;
+      return Promise.resolve(null);
+    });
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const fn =
+        nameOf(ref) === nameOf(api.palettes.remove) ? remove : vi.fn(() => Promise.resolve(null));
+      return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    }) as unknown as typeof useMutation);
+    const router = renderRoute(`/palettes/${PALETTE_ID}`);
+    let sawNotFound = false;
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent?.includes("Palette not found")) sawNotFound = true;
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete palette" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete "Ultramarines"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/palettes"));
+    observer.disconnect();
+    expect(remove).toHaveBeenCalledOnce();
+    expect(sawNotFound).toBe(false);
+  });
+
+  it("moves focus to the name field when Rename is chosen", async () => {
+    signedInWith(palette([red.id]));
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Rename" }));
+    const rename = await screen.findByRole("dialog", { name: "Rename palette" });
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Ultramarines" })).not.toBeInTheDocument(),
+    );
+
+    expect(within(rename).getByLabelText("Palette name")).toHaveFocus();
+  });
+
+  it("renames the palette with the typed name", async () => {
+    signedInWith(palette([red.id]));
+    const rename = vi.fn<(args: { paletteId: string; name: string }) => Promise<null>>(() =>
+      Promise.resolve(null),
+    );
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const fn =
+        nameOf(ref) === nameOf(api.palettes.rename) ? rename : vi.fn(() => Promise.resolve(null));
+      return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    }) as unknown as typeof useMutation);
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Rename" }));
+    const sheet = await screen.findByRole("dialog", { name: "Rename palette" });
+    const field = within(sheet).getByLabelText("Palette name");
+    expect(field).toHaveValue("Ultramarines");
+    fireEvent.change(field, { target: { value: "  Ultramarines 2nd Co.  " } });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(rename).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      name: "Ultramarines 2nd Co.",
+    });
+  });
+
+  it("stays on the palette and says so when the delete fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    signedInWith(palette([red.id]));
+    const { remove } = mockMutations();
+    remove.mockImplementation(() => Promise.reject(new Error("network down")));
+    const router = renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete palette" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete "Ultramarines"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(within(confirm).getByRole("alert")).toHaveTextContent(
+        "Couldn't delete the palette. Check your connection and try again.",
+      ),
+    );
+    expect(remove).toHaveBeenCalledOnce();
+    expect(router.state.location.pathname).toBe(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("heading", { level: 1, name: "Ultramarines" })).toBeVisible();
+  });
+
+  it("lets a pending delete be cancelled once the device goes offline", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([red.id]));
+    const { remove } = mockMutations();
+    remove.mockImplementation(() => new Promise<never>(() => {}));
+    const router = renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete palette" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete "Ultramarines"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+    expect(remove).toHaveBeenCalledOnce();
+    expect(within(confirm).getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    const cancel = within(confirm).getByRole("button", { name: "Cancel" });
+    expect(cancel).toBeEnabled();
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(router.state.location.pathname).toBe(`/palettes/${PALETTE_ID}`);
+  });
+
+  it("keeps the confirmation open on Escape while a delete is pending online", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([red.id]));
+    const { remove } = mockMutations();
+    remove.mockImplementation(() => new Promise<never>(() => {}));
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete palette" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete "Ultramarines"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+    fireEvent.keyDown(confirm, { key: "Escape" });
+
+    expect(screen.getByRole("dialog", { name: 'Delete "Ultramarines"?' })).toBeInTheDocument();
+  });
+
+  it("shows Palette not found if the palette disappears after a failed delete", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    let stored: ReturnType<typeof palette> | null = palette([red.id]);
+    signedInWith(stored);
+    vi.mocked(useQuery).mockImplementation(((query: unknown) => {
+      const name = nameOf(query);
+      if (name === nameOf(api.palettes.get)) return stored;
+      if (name === nameOf(api.palettes.listMine)) return NO_ROWS;
+      if (name === nameOf(api.userPaints.listMine)) return NO_ROWS;
+      return ME;
+    }) as typeof useQuery);
+    const { remove } = mockMutations();
+    remove.mockImplementation(() => Promise.reject(new Error("network down")));
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Palette actions" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete palette" }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete "Ultramarines"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(within(confirm).getByRole("alert")).toHaveTextContent("Couldn't delete the palette."),
+    );
+
+    // Deleted on another device; the connection dropping and returning re-renders the screen.
+    stored = null;
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Palette not found" }),
+    ).toBeVisible();
+  });
 });
