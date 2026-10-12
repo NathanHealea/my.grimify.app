@@ -18,4 +18,14 @@ export default defineSchema({
     // The client's clock when the change was made; drives last-write-wins (DECISIONS 010).
     updatedAt: v.number(),
   }).index("by_userId_and_paintId", ["userId", "paintId"]),
+
+  // One document per palette so a reorder or move is a single atomic write; groups reference
+  // paints in the main list.
+  palettes: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    paintIds: v.array(v.string()),
+    groups: v.array(v.object({ id: v.string(), name: v.string(), paintIds: v.array(v.string()) })),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });
