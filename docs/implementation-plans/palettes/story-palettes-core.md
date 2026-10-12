@@ -2,7 +2,7 @@
 type: story
 epic: palettes
 slug: palettes-core
-status: staged
+status: released
 branch: story/palettes-core
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/story-palettes-core
 created: 2026-10-11
@@ -11,7 +11,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.15.0
 review_approved: 2026-10-12
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.15.0
 ---
 
 # Palettes tab, storage and palette CRUD
@@ -146,3 +146,4 @@ Already in place:
 - 2026-10-12 — Nav fit resolved with user: icons hide under 360px, tab padding tightens 640-767px (DECISIONS 050). nav and header E2E pass.
 - 2026-10-12 — Staged: verification passed; version 0.14.1 → 0.15.0; no changelog file.
 - 2026-10-12 — Review approved.
+- 2026-10-12 — Released 0.15.0 as v0.15.0.
