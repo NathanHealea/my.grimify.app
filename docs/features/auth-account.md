@@ -56,7 +56,7 @@ The **Delete account** button is disabled, with a note, when the user is **offli
 
 1. The user types **`DELETE`** to enable confirm. The sheet warns when unsynced changes will be lost.
 2. Inside `useEndSession`:
-   1. `users.deleteAccount({})` runs.
+   1. `users.deleteAccount({})` runs. It deletes the collection, the user's palettes and the `users` row.
    2. `clearDevice()` runs. The server copy is gone, so the **device copy goes too**.
    3. `user.delete()` deletes the Clerk account.
    4. `signOut()` runs; a failure here is only logged.

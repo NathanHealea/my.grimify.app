@@ -8,7 +8,7 @@
 - Grimify is a **static React SPA/PWA** on **Cloudflare Workers**, with **Convex** as the backend and **Clerk** for sign-in. There's **no custom server**.
 - There are **two data stores**:
   - **Paint catalog**: JSON in Git, built to `catalog.json`. Public and read-only.
-  - **User data**: Convex tables `users` and `userPaints`. Private, per user.
+  - **User data**: Convex tables `users`, `userPaints` and `palettes`. Private, per user.
 - The **paint ID** is the **only link** between the two stores.
 - **Search and color matching run in the browser.** Convex never sees the catalog.
 - **Every collection write goes through the outbox** (IndexedDB), online or offline.
@@ -26,6 +26,7 @@
 | Collection: toggles and My Paints | [collection/toggles-and-my-paints.md](collection/toggles-and-my-paints.md) | `src/features/collection/`, `src/routes/my-paints.tsx` |
 | Auth and account | [auth-account.md](auth-account.md) | `src/features/auth/`, `convex/users.ts` |
 | PWA | [pwa.md](pwa.md) | `src/features/pwa/`, `vite.config.ts` |
+| Palettes | [palettes.md](palettes.md) | `src/features/palettes/`, `src/routes/palettes/`, `convex/palettes.ts` |
 | Settings | [settings.md](settings.md) | `src/features/settings/` |
 | App shell and shared UI | [app-shell-ui.md](app-shell-ui.md) | `src/components/`, `src/routes/`, `src/features/feedback/` |
 | Hosting and deploys | [hosting.md](hosting.md) | `wrangler.json`, `scripts/deploy.ts`, `public/_headers` |

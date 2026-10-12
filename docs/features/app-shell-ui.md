@@ -19,6 +19,8 @@
 | `/paints/` | `routes/paints/index.tsx` | `title: "Paints"` | [Search and filters](catalog/search-and-filters.md) |
 | `/paints/$paintId` | `routes/paints/$paintId.tsx` | `back: { to: "/paints", label: "Paints" }` | [Paint detail](catalog/paint-detail.md) |
 | `/my-paints` | `routes/my-paints.tsx` | `title: "My Paints"` | [My Paints](collection/toggles-and-my-paints.md) |
+| `/palettes/` | `routes/palettes/index.tsx` | `title: "Palettes"` | [Palettes](palettes.md) |
+| `/palettes/$paletteId` | `routes/palettes/$paletteId.tsx` | `back: { to: "/palettes", label: "Palettes" }` | [Palettes](palettes.md) |
 | `/settings` | `routes/settings.tsx` | `title: "Settings"` | [Settings](settings.md) |
 
 `src/router.ts` registers the `StaticDataRouteOption` types: `title?` and `back?`. Search params are **validated with Zod** through `validateSearch`.
@@ -38,7 +40,7 @@
 
 `src/components/app-shell.tsx`:
 
-- **Tabs**: Paints, My Paints and Settings, with lucide icons.
+- **Tabs**: Paints, My Paints, Palettes and Settings, with lucide icons. Under 360px the icons hide (DECISIONS 050).
 - **Back button**: if the previous history entry is in the app, it calls `history.back()`, which **keeps the list's search and filters**. Otherwise it links to `to`. It exists because **iOS standalone has no browser back button**.
 - **Collapsing title**: an `IntersectionObserver` watches the page's `<h1>`. When it slides under the header, `data-scrolled` shows the small title (DECISIONS 040, 046).
 - **Status**: "Offline" and "n change(s) waiting to sync". Both are `role="status"`.
