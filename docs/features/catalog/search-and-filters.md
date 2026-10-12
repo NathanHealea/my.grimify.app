@@ -1,0 +1,86 @@
+# Catalog: Search and Filters
+
+> Covers the Paints screen: the search box, chips, the Filters sheet and the result list.
+> User journey: [UX_FLOWS.md Flows 2 and 7](../../UX_FLOWS.md). Rationale: [DECISIONS 009, 021, 022, 023, 024, 031](../../DECISIONS.md).
+
+## TL;DR
+
+- **One parser**: `parseQuery()` in `src/features/catalog/parse-query.ts` splits a query into **hex, brands, hues and free text**. Don't add another search path (AGENTS §3).
+- **One search function**: `searchPaints()` in `search.ts` runs **all in the browser**. There are no backend calls.
+- The query and filters live **in the URL** (`?q=`, `?brand=`, `?line=`, `?type=`, `?hue=`, `?show=`), so Back works and views are linkable.
+- **Filters combine with the query**: OR within one filter, AND across filters and with the search box.
+- **My Paints reuses this same screen**, scoped to the collection (DECISIONS 031).
+
+## Where the code lives
+
+| Path | Role |
+|---|---|
+| `src/routes/paints/index.tsx` | Route `/paints/`; validates search params with Zod; turns changes into navigation |
+| `src/features/catalog/paints-screen.tsx` | `<PaintsScreen>`: search box, chips, hue dots, result list, paging |
+| `src/features/catalog/paints-filters.tsx` | `<PaintsFilters>`: the Filters bottom sheet |
+| `src/features/catalog/parse-query.ts` | `parseQuery`, `removeToken`, `suggest`, `hueLabel` |
+| `src/features/catalog/search.ts` | `createNameIndex` (Fuse.js), `searchPaints` |
+| `src/features/catalog/filters.ts` | `Filters` type; URL parse and serialize; `normalizeFilters`; `scopeFor` |
+| `src/components/search-chip.tsx`, `hue-dots.tsx`, `paint-row.tsx` | Shared UI; see [app-shell-ui.md](../app-shell-ui.md) |
+
+## How a query is parsed
+
+`parseQuery(query, brands)` lowercases the query and removes recognized parts in this order:
+
+1. **Hex.** `#RRGGBB`, `#RGB`, or a bare 6-character form **that contains a digit**, so `facade` stays text. It's normalized to uppercase `#RRGGBB`. Only one hex is used.
+2. **Brands.** It matches the brand name, the name without a leading "the ", and the ID with dashes as spaces. Longest phrase first.
+3. **Hues.** It matches the 13 hue family names, including `red orange` for `red-orange`.
+4. **Free text.** Whatever is left.
+
+**Hue words only filter when nothing else is left.** `mephiston red` is a name search; `red` alone is a hue filter. This is because most paint names contain a color word.
+
+Each recognized part becomes a `QueryToken` with its **character span** in the query. That span lets a chip's ✕ remove exactly its text (`removeToken`).
+
+`suggest()` offers brand and hue completions for the **last word** once it is **2+ characters** and doesn't start with `#`.
+
+## How results are ranked
+
+`searchPaints(catalog, index, query, filters, scope)`:
+
+1. Keeps paints inside `scope` (if given) that match the query's brands and hues and the sheet's filters.
+2. With free text, candidates come from the **Fuse.js index**. The keys are `name` (weight 2) and `aliases` (weight 1), with `threshold: 0.35` and `ignoreLocation: true`.
+3. Sorting:
+
+| Query has | Sort |
+|---|---|
+| Hex | **Delta-E** distance to the hex, closest first, with a match label |
+| Free text | Fuse relevance |
+| Hue (typed or filtered) | Lightness (`lab[0]`), light to dark |
+| Nothing | Name, then brand name (`Intl.Collator`, numeric) |
+
+## How filters work
+
+`Filters` is `{ brands, lines, types, hues, show? }`.
+
+- **URL form**: comma-separated IDs, left out when empty. Example: `?q=red&brand=citadel,vallejo&type=metallic`.
+- `parseFilterParams` drops unknown types and hues. `normalizeFilters` drops unknown brand and line IDs, and **drops lines whose brand isn't selected**.
+- **A ticked line narrows only its own brand.** Other selected brands keep all their lines.
+- **`show`** (`owned`, `wishlist`, `favorites`) is offered **only when signed in** and **not inside My Paints**. `scopeFor` narrows the scope to that part of the collection.
+
+The sheet edits a **draft**. **"Show N paints" commits it**, and the count is live. Closing the sheet any other way **discards** the draft.
+
+## Screen behavior
+
+- Typing is **debounced 100 ms** and written with `replace: true`, so Back skips keystrokes. Chip taps and suggestions push a **new** history entry.
+- Results render in **pages of 60**. An `IntersectionObserver` sentinel loads the next page.
+- With an **empty query and no filters**, hue dots offer one-tap color browsing.
+- A hex query shows the entered color's swatch above the list.
+- No results shows **"No paints match"** and **Clear all**, which clears the query and every filter in one history entry.
+- Each row carries the Own/Want/Favorite toggles from the [collection feature](../collection/).
+
+## Change it safely
+
+- **New search syntax** goes in `parseQuery`. Add a `QueryToken` kind so it gets a chip.
+- **New filter**: add it to `Filters`, `FilterParams`, `parseFilterParams`, `serializeFilters`, `countActive` and `matchesFilters`, **and** to the route's Zod `searchSchema` in both `routes/paints/index.tsx` and `routes/my-paints.tsx`.
+- Tests sit next to each file: `parse-query.test.ts`, `search.test.ts`, `filters.test.ts`, `paints-screen.test.tsx`, `paints-filters.test.tsx`.
+
+## Relations to other features
+
+- **Catalog pipeline** ([data-pipeline.md](data-pipeline.md)): `<CatalogGate>` supplies the catalog and the name index.
+- **Matching** ([matching.md](../matching.md)): `deltaE`, `hexToLab` and `matchLabel` rank hex searches.
+- **Collection** ([collection](../collection/)): `useCollection()` feeds the Show only filter. `useCanSavePaints()` decides whether it appears. My Paints passes `scope`.

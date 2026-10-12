@@ -31,7 +31,9 @@ Before making significant changes, read the relevant documentation in `/docs`:
 - CODE_STYLE.md — conventions
 - TESTING.md — how to validate
 - DECISIONS.md — why things are the way they are (don't re-decide these)
+- features/overview.md — how each feature works in code, by feature (index of `docs/features/`)
 
+The topic docs above win over `docs/features/` when they disagree; flag the conflict.
 Don't contradict these documents without first identifying the conflict.
 Anything marked **TBD** is undecided. **Ask; don't pick.**
 
@@ -117,6 +119,7 @@ Update documentation when implementation changes:
 - Convex functions → API.md
 - Security rules → SECURITY.md
 - Coding conventions → CODE_STYLE.md
+- Any change to how a feature works in code → its doc in `docs/features/`
 - Env vars → ENVIRONMENT.md
 
 ---
