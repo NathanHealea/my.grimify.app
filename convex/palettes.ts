@@ -27,7 +27,11 @@ async function requireOwnPalette(
   return palette;
 }
 
-const groupValidator = v.object({ id: v.string(), name: v.string(), paintIds: v.array(v.string()) });
+const groupValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  paintIds: v.array(v.string()),
+});
 
 const paletteValidator = v.object({
   _id: v.id("palettes"),
