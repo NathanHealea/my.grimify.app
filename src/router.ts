@@ -14,6 +14,6 @@ declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
     title?: string;
     /** Shows a back button in the header instead of relying on the browser's (absent in iOS standalone). */
-    back?: { to: "/paints"; label: string };
+    back?: { to: "/paints" | "/palettes"; label: string };
   }
 }

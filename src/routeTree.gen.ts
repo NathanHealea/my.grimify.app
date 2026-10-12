@@ -14,6 +14,8 @@ import { Route as MyPaintsRouteImport } from './routes/my-paints'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PaintsIndexRouteImport } from './routes/paints/index'
 import { Route as PaintsPaintIdRouteImport } from './routes/paints/$paintId'
+import { Route as PalettesIndexRouteImport } from './routes/palettes/index'
+import { Route as PalettesPaletteIdRouteImport } from './routes/palettes/$paletteId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,20 +42,34 @@ const PaintsPaintIdRoute = PaintsPaintIdRouteImport.update({
   path: '/paints/$paintId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PalettesIndexRoute = PalettesIndexRouteImport.update({
+  id: '/palettes/',
+  path: '/palettes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PalettesPaletteIdRoute = PalettesPaletteIdRouteImport.update({
+  id: '/palettes/$paletteId',
+  path: '/palettes/$paletteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/my-paints': typeof MyPaintsRoute
   '/settings': typeof SettingsRoute
   '/paints/$paintId': typeof PaintsPaintIdRoute
+  '/palettes/$paletteId': typeof PalettesPaletteIdRoute
   '/paints/': typeof PaintsIndexRoute
+  '/palettes/': typeof PalettesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/my-paints': typeof MyPaintsRoute
   '/settings': typeof SettingsRoute
   '/paints/$paintId': typeof PaintsPaintIdRoute
+  '/palettes/$paletteId': typeof PalettesPaletteIdRoute
   '/paints': typeof PaintsIndexRoute
+  '/palettes': typeof PalettesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,20 +77,38 @@ export interface FileRoutesById {
   '/my-paints': typeof MyPaintsRoute
   '/settings': typeof SettingsRoute
   '/paints/$paintId': typeof PaintsPaintIdRoute
+  '/palettes/$paletteId': typeof PalettesPaletteIdRoute
   '/paints/': typeof PaintsIndexRoute
+  '/palettes/': typeof PalettesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/my-paints' | '/settings' | '/paints/$paintId' | '/paints/'
+  fullPaths:
+    | '/'
+    | '/my-paints'
+    | '/settings'
+    | '/paints/$paintId'
+    | '/palettes/$paletteId'
+    | '/paints/'
+    | '/palettes/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/my-paints' | '/settings' | '/paints/$paintId' | '/paints'
+  to:
+    | '/'
+    | '/my-paints'
+    | '/settings'
+    | '/paints/$paintId'
+    | '/palettes/$paletteId'
+    | '/paints'
+    | '/palettes'
   id:
     | '__root__'
     | '/'
     | '/my-paints'
     | '/settings'
     | '/paints/$paintId'
+    | '/palettes/$paletteId'
     | '/paints/'
+    | '/palettes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -82,7 +116,9 @@ export interface RootRouteChildren {
   MyPaintsRoute: typeof MyPaintsRoute
   SettingsRoute: typeof SettingsRoute
   PaintsPaintIdRoute: typeof PaintsPaintIdRoute
+  PalettesPaletteIdRoute: typeof PalettesPaletteIdRoute
   PaintsIndexRoute: typeof PaintsIndexRoute
+  PalettesIndexRoute: typeof PalettesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -122,6 +158,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PaintsPaintIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/palettes/': {
+      id: '/palettes/'
+      path: '/palettes'
+      fullPath: '/palettes/'
+      preLoaderRoute: typeof PalettesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/palettes/$paletteId': {
+      id: '/palettes/$paletteId'
+      path: '/palettes/$paletteId'
+      fullPath: '/palettes/$paletteId'
+      preLoaderRoute: typeof PalettesPaletteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -130,7 +180,9 @@ const rootRouteChildren: RootRouteChildren = {
   MyPaintsRoute: MyPaintsRoute,
   SettingsRoute: SettingsRoute,
   PaintsPaintIdRoute: PaintsPaintIdRoute,
+  PalettesPaletteIdRoute: PalettesPaletteIdRoute,
   PaintsIndexRoute: PaintsIndexRoute,
+  PalettesIndexRoute: PalettesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

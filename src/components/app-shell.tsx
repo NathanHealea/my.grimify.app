@@ -1,7 +1,7 @@
 import "./app-shell.css";
 
 import { Link, useCanGoBack, useMatches, useRouter } from "@tanstack/react-router";
-import { ChevronLeft, Library, Palette, Settings } from "lucide-react";
+import { ChevronLeft, Library, Palette, Settings, SwatchBook } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { useCollection } from "@/features/collection/collection-provider";
@@ -17,6 +17,7 @@ type Props = {
 const TABS = [
   { to: "/paints", label: "Paints", Icon: Palette },
   { to: "/my-paints", label: "My Paints", Icon: Library },
+  { to: "/palettes", label: "Palettes", Icon: SwatchBook },
   { to: "/settings", label: "Settings", Icon: Settings },
 ] as const;
 
@@ -108,7 +109,7 @@ function Shell({ children }: Props) {
 }
 
 /** Goes back when the previous entry is in the app (keeping its search), otherwise opens `to`. */
-function BackButton({ to, label }: { to: "/paints"; label: string }) {
+function BackButton({ to, label }: { to: "/paints" | "/palettes"; label: string }) {
   const router = useRouter();
   const canGoBack = useCanGoBack();
 

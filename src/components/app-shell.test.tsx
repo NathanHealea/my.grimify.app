@@ -24,13 +24,14 @@ async function findMainNav() {
 }
 
 describe("AppShell", () => {
-  it("renders a Main navigation with three labelled tabs", async () => {
+  it("renders a Main navigation with four labelled tabs", async () => {
     renderRoute("/paints");
 
     const links = within(await findMainNav()).getAllByRole("link");
     expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
       ["Paints", "/paints"],
       ["My Paints", "/my-paints"],
+      ["Palettes", "/palettes"],
       ["Settings", "/settings"],
     ]);
   });
@@ -68,8 +69,18 @@ describe("AppShell", () => {
     renderRoute("/paints");
 
     const icons = (await findMainNav()).querySelectorAll("svg");
-    expect(icons).toHaveLength(3);
+    expect(icons).toHaveLength(4);
     icons.forEach((icon) => expect(icon).toHaveAttribute("aria-hidden", "true"));
+  });
+
+  it("shows a back button to Palettes on a palette's screen", async () => {
+    renderRoute("/palettes/some-id");
+
+    const header = await screen.findByRole("banner");
+    expect(await within(header).findByRole("link", { name: "Back to Palettes" })).toHaveAttribute(
+      "href",
+      "/palettes",
+    );
   });
 
   it("shows the Offline pill in the header", async () => {
