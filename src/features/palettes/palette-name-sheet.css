@@ -1,0 +1,21 @@
+/* The form sits between the sheet and its header, body and footer, so it carries the sheet's column layout. */
+.palette-name-sheet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.palette-name-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.palette-name-sheet__label {
+  font-weight: var(--weight-semibold);
+}
+
+.palette-name-sheet__error {
+  color: var(--color-error);
+}
