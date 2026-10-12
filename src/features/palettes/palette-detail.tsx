@@ -4,7 +4,7 @@ import { useUser } from "@clerk/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { Ellipsis } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { PageTitle } from "@/components/page-title";
 import { PaintSwatch } from "@/components/paint-swatch";
@@ -25,8 +25,8 @@ import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
-import { PaletteNameSheet } from "./palette-name-sheet";
-import { OFFLINE_EDIT_NOTE, PalettesLoading, PalettesSignedOut } from "./palettes-screen";
+import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
+import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
 
 type Sheets = "actions" | "rename" | "delete" | null;
 
@@ -35,9 +35,27 @@ export function PaletteDetail({ paletteId }: { paletteId: string }) {
   const { isAuthenticated } = useConvexAuth();
   const palette = useQuery(api.palettes.get, isAuthenticated ? { paletteId } : "skip");
   const online = useOnlineStatus();
+  const [removing, setRemoving] = useState(false);
 
-  if (isLoaded && !isSignedIn) return <PalettesSignedOut />;
-  if (palette === undefined) return <PalettesLoading online={online} label="Loading palette…" />;
+  // The route has no static title, so these states name the page themselves (WCAG 2.4.2).
+  if (isLoaded && !isSignedIn) {
+    return (
+      <>
+        <PageTitle>Palette</PageTitle>
+        <PalettesSignedOut />
+      </>
+    );
+  }
+  if (palette === undefined) {
+    return (
+      <>
+        <PageTitle>Palette</PageTitle>
+        <PalettesLoading online={online} label="Loading palette…" />
+      </>
+    );
+  }
+  // Convex resolves the delete after this query sees null; navigation is a tick behind, so skip "not found".
+  if (palette === null && removing) return null;
   if (palette === null) {
     return (
       <div className="palette-detail__missing">
@@ -46,10 +64,18 @@ export function PaletteDetail({ paletteId }: { paletteId: string }) {
       </div>
     );
   }
-  return <PaletteContent palette={palette} online={online} />;
+  return <PaletteContent palette={palette} online={online} onRemoving={setRemoving} />;
 }
 
-function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online: boolean }) {
+function PaletteContent({
+  palette,
+  online,
+  onRemoving,
+}: {
+  palette: Doc<"palettes">;
+  online: boolean;
+  onRemoving: (removing: boolean) => void;
+}) {
   const rename = useMutation(api.palettes.rename);
   const remove = useMutation(api.palettes.remove);
   const navigate = useNavigate();
@@ -58,10 +84,13 @@ function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online:
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const actionsButton = useRef<HTMLButtonElement>(null);
+  // Convex holds a mutation until the connection returns, so offline a pending delete mustn't trap the user.
+  const locked = deleting && online;
 
   const confirmDelete = () => {
     setDeleting(true);
     setDeleteError(null);
+    onRemoving(true);
     remove({ paletteId: palette._id })
       .then(() => {
         setSheet(null);
@@ -70,6 +99,7 @@ function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online:
       })
       .catch((cause: unknown) => {
         console.error("Deleting the palette failed", cause);
+        onRemoving(false);
         setDeleteError("Couldn't delete the palette. Check your connection and try again.");
       })
       .finally(() => setDeleting(false));
@@ -105,7 +135,13 @@ function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online:
       </CatalogGate>
 
       <Sheet open={sheet === "actions"} onOpenChange={(open) => setSheet(open ? "actions" : null)}>
-        <SheetContent onCloseAutoFocus={(event) => sheet === null && returnFocus(event)}>
+        <SheetContent
+          // Moving on to Rename or Delete hands focus to that sheet, so only a plain close returns it.
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (sheet === null) actionsButton.current?.focus();
+          }}
+        >
           <SheetHeader>
             <SheetTitle>{palette.name}</SheetTitle>
           </SheetHeader>
@@ -134,7 +170,7 @@ function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online:
         open={sheet === "delete"}
         onOpenChange={(open) => {
           // Closing mid-deletion would hide a failure that arrives afterwards.
-          if (deleting) return;
+          if (locked) return;
           setSheet(open ? "delete" : null);
           setDeleteError(null);
         }}
@@ -148,14 +184,17 @@ function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online:
             <p className="palette-detail__error" role="alert">
               {deleteError}
             </p>
+            <p className="palette-detail__note" role="status">
+              {!online && OFFLINE_EDIT_NOTE}
+            </p>
           </SheetBody>
           <SheetFooter>
             <SheetClose asChild>
-              <Button variant="outline" disabled={deleting}>
+              <Button variant="outline" disabled={locked}>
                 Cancel
               </Button>
             </SheetClose>
-            <Button variant="destructive" disabled={deleting} onClick={confirmDelete}>
+            <Button variant="destructive" disabled={deleting || !online} onClick={confirmDelete}>
               Delete
             </Button>
           </SheetFooter>
@@ -166,11 +205,12 @@ function PaletteContent({ palette, online }: { palette: Doc<"palettes">; online:
 }
 
 function PaintList({ paintIds, catalog }: { paintIds: string[]; catalog: Catalog }) {
+  const paints = useMemo(() => new Map(catalog.paints.map((p) => [p.id, p])), [catalog]);
+  const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
+
   if (paintIds.length === 0) {
     return <p className="palette-detail__empty">No paints in this palette yet</p>;
   }
-  const paints = new Map(catalog.paints.map((paint) => [paint.id, paint]));
-  const brands = new Map(catalog.brands.map((brand) => [brand.id, brand.name]));
 
   return (
     <ul className="palette-detail__paints" aria-label="Paints in this palette">

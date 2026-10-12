@@ -19,3 +19,9 @@
 .palette-name-sheet__error {
   color: var(--color-error);
 }
+
+.palette-name-sheet__note {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  color: var(--color-muted-text);
+}

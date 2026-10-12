@@ -14,6 +14,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useOnlineStatus } from "@/features/pwa/use-online-status";
+
+export const OFFLINE_EDIT_NOTE = "Connect to the internet to edit palettes.";
 
 // Matches the server's cap in convex/palettes.ts.
 const MAX_NAME_LENGTH = 60;
@@ -47,6 +50,9 @@ export function PaletteNameSheet({
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const online = useOnlineStatus();
+  // Convex holds a mutation until the connection returns, so offline a pending save mustn't trap the user.
+  const locked = saving && online;
   const fieldId = useId();
   const errorId = useId();
 
@@ -76,7 +82,7 @@ export function PaletteNameSheet({
       open={open}
       onOpenChange={(next) => {
         // Closing mid-save would hide an error that arrives afterwards.
-        if (saving) return;
+        if (locked) return;
         onOpenChange(next);
       }}
     >
@@ -111,14 +117,17 @@ export function PaletteNameSheet({
             <p id={errorId} className="palette-name-sheet__error" role="alert">
               {error}
             </p>
+            <p className="palette-name-sheet__note" role="status">
+              {!online && OFFLINE_EDIT_NOTE}
+            </p>
           </SheetBody>
           <SheetFooter>
             <SheetClose asChild>
-              <Button type="button" variant="outline" disabled={saving}>
+              <Button type="button" variant="outline" disabled={locked}>
                 Cancel
               </Button>
             </SheetClose>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !online}>
               {submitLabel}
             </Button>
           </SheetFooter>

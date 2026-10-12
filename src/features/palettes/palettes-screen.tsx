@@ -13,10 +13,8 @@ import type { CatalogPaint } from "@/features/catalog/schema";
 import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
 import { api } from "../../../convex/_generated/api";
-import { PaletteNameSheet } from "./palette-name-sheet";
+import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { usePaintLookup } from "./use-paint-lookup";
-
-export const OFFLINE_EDIT_NOTE = "Connect to the internet to edit palettes.";
 
 /** The signed-in user's palettes; online only, so nothing is kept on the device. */
 export function PalettesScreen() {
