@@ -172,13 +172,20 @@ async function expectOneLineItems(page: Page, width: number) {
   expect.soft(overflow, `items fit inside the bar at ${width}px`).toBeLessThanOrEqual(0);
   for (const tab of await tabs.all()) {
     const name = `${await tab.innerText()} at ${width}px`;
-    const icon = await box(tab.locator("svg.app-shell__tab-icon"));
     const labelEl = tab.locator("span");
     const label = await box(labelEl);
     const lineHeight = await labelEl.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
     const item = await box(tab);
     expect.soft(item.width, `${name}: target width`).toBeGreaterThanOrEqual(44);
     expect.soft(item.height, `${name}: target height`).toBeGreaterThanOrEqual(44);
+    expect.soft(label.height, `${name}: label on one line`).toBeLessThanOrEqual(lineHeight + 1);
+    if (width < 360) {
+      await expect
+        .soft(tab.locator("svg.app-shell__tab-icon"), `${name}: icon hidden`)
+        .toBeHidden();
+      continue;
+    }
+    const icon = await box(tab.locator("svg.app-shell__tab-icon"));
     expect.soft(icon.width, `${name}: icon width`).toBeCloseTo(24, 0);
     expect.soft(icon.height, `${name}: icon height`).toBeCloseTo(24, 0);
 
@@ -189,7 +196,6 @@ async function expectOneLineItems(page: Page, width: number) {
       )
       .toBeLessThanOrEqual(2);
     expect.soft(icon.x + icon.width, `${name}: icon left of label`).toBeLessThanOrEqual(label.x);
-    expect.soft(label.height, `${name}: label on one line`).toBeLessThanOrEqual(lineHeight + 1);
   }
 }
 
@@ -215,7 +221,7 @@ test("lays the nav out per screen size", async ({ page }) => {
   await expectOneLineItems(page, device.width);
   await expectBottomBar(page, device.width);
 
-  // R1 says every width; 320px is the narrowest phone and the tightest fit (risk 3).
+  // R1 says every width; 320px is the narrowest phone and the tightest fit (risk 3). Icons hide there.
   await page.setViewportSize({ width: 320, height: 640 });
   await expectOneLineItems(page, 320);
   await expectBottomBar(page, 320);

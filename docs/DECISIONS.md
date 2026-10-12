@@ -1057,3 +1057,25 @@ Alternatives:
 Consequences:
 Positive: simple, and Convex's reactive queries show the other device's change right away.
 Trade-off: if two devices change the same list at nearly the same moment, the earlier change is lost.
+
+---
+
+## Decision 050 — Hide nav icons on the narrowest phones
+
+Date: 2026-10-12
+Status: Accepted
+
+Context:
+The Palettes tab (DECISIONS 047) makes four nav items. With icons, they overflow a 320px bar by up to 43px and "My Paints" wraps, and phone padding is already `--space-1`. At 640px the desktop bar, with the back link and both status pills showing, ran 19px past the screen.
+
+Decision:
+Under 360px the tab icons are hidden and the labels alone name the tabs. Icons stay at every other width. From 640px to 767px the tabs' side padding drops from `--space-4` to `--space-2`.
+
+Alternatives:
+- Shorter labels (for example "Mine" for My Paints): keeps icons, but renames a tab people already know
+- Let labels wrap at 320px: keeps icons, but the bar grows taller than the space reserved for it
+- Hide icons from 640px to 767px too: works, but drops icons where tighter padding is enough
+
+Consequences:
+Positive: every label stays on one line at 320px and 640px with no renamed tabs.
+Trade-off: phones under 360px lose the icons; the labels and `aria-current` pill still mark each tab.

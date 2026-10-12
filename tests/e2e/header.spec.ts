@@ -278,7 +278,7 @@ test("merges the header and nav into one bar on desktop", async ({
   const pending = page.locator(".app-shell__pending");
   await pending.evaluate((el) => (el.textContent = "3 changes waiting to sync"));
   const tabs = nav(page).locator(".app-shell__tab");
-  await expect(tabs).toHaveCount(3);
+  await expect(tabs).toHaveCount(4);
 
   for (const width of [1280, 768]) {
     await page.setViewportSize({ width, height: 900 });
@@ -416,7 +416,7 @@ test("scrolls content under the desktop bar", async ({ page }) => {
 test("spaces the desktop bar", async ({ page }) => {
   await page.goto("/paints");
   const tabs = nav(page).locator(".app-shell__tab");
-  await expect(tabs).toHaveCount(3);
+  await expect(tabs).toHaveCount(4);
 
   for (const width of [1280, 768]) {
     await page.setViewportSize({ width, height: 900 });
@@ -737,7 +737,7 @@ test("keeps the desktop bar readable", async ({ page }) => {
       over(glass, { r: 255, g: 255, b: 255, a: 1 }),
     ];
     const inactive = nav(page).locator('.app-shell__tab:not([aria-current="page"]) span');
-    await expect(inactive).toHaveCount(2);
+    await expect(inactive).toHaveCount(3);
     const active = nav(page).locator('.app-shell__tab[aria-current="page"]');
     await expect(active).toHaveCount(1);
 

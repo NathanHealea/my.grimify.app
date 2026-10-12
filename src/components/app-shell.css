@@ -223,6 +223,13 @@
   height: var(--icon-size-tab);
 }
 
+/* Four labels plus icons overflow a 320px bar; under 360px the labels carry the tabs alone (DECISIONS 050). */
+@media (width < 360px) {
+  .app-shell__tab-icon {
+    display: none;
+  }
+}
+
 @media (width >= 640px) {
   .app-shell__bar {
     --title-row-height: calc(var(--leading-body) + 2 * var(--space-2) + var(--border-width));
@@ -350,5 +357,12 @@
   .app-shell__tab {
     gap: var(--space-2);
     padding-inline: var(--space-4);
+  }
+}
+
+/* Four tabs, the back link and both status pills overflow the bar at 640px with the wider padding (DECISIONS 050). */
+@media (width >= 640px) and (width < 768px) {
+  .app-shell__tab {
+    padding-inline: var(--space-2);
   }
 }
