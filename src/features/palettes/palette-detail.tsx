@@ -3,7 +3,7 @@ import "./palette-detail.css";
 import { useUser } from "@clerk/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { Ellipsis, X } from "lucide-react";
+import { Ellipsis, Layers, X } from "lucide-react";
 import { type RefObject, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PageTitle } from "@/components/page-title";
@@ -25,6 +25,7 @@ import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { GroupMembershipSheet } from "./group-membership-sheet";
 import { PaletteGroups } from "./palette-groups";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
@@ -140,6 +141,7 @@ function PaletteContent({
               <PaintList
                 paletteId={palette._id}
                 paintIds={palette.paintIds}
+                groups={palette.groups}
                 catalog={catalog}
                 online={online}
                 lastFocus={actionsButton}
@@ -228,12 +230,14 @@ function PaletteContent({
 function PaintList({
   paletteId,
   paintIds,
+  groups,
   catalog,
   online,
   lastFocus,
 }: {
   paletteId: Id<"palettes">;
   paintIds: string[];
+  groups: Doc<"palettes">["groups"];
   catalog: Catalog;
   online: boolean;
   /** Where focus goes once the last paint is removed. */
@@ -245,6 +249,18 @@ function PaintList({
   const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const buttons = useRef(new Map<string, HTMLButtonElement>());
+  const groupsButtons = useRef(new Map<string, HTMLButtonElement>());
+  // Kept after closing so the sheet keeps its title while it animates out and focus knows where to return.
+  const [groupsFor, setGroupsFor] = useState({ paintId: "", name: "" });
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const groupsReturn = useMemo<RefObject<HTMLElement | null>>(
+    () => ({
+      get current() {
+        return groupsButtons.current.get(groupsFor.paintId) ?? null;
+      },
+    }),
+    [groupsFor],
+  );
   // The focused Remove button leaves with its row, so focus moves to a neighbour's (WCAG 2.4.3).
   const focusAfter = useRef<{ removed: string; next: string | undefined } | null>(null);
 
@@ -281,6 +297,26 @@ function PaintList({
       );
   };
 
+  const groupsButton = (paintId: string, name: string) =>
+    groups.length > 0 && (
+      <Button
+        variant="ghost"
+        size="icon"
+        ref={(element) => {
+          if (element) groupsButtons.current.set(paintId, element);
+          else groupsButtons.current.delete(paintId);
+        }}
+        aria-label={`Groups for ${name}`}
+        disabled={!online}
+        onClick={() => {
+          setGroupsFor({ paintId, name });
+          setGroupsOpen(true);
+        }}
+      >
+        <Layers aria-hidden="true" />
+      </Button>
+    );
+
   const removeButton = (paintId: string, name: string) => (
     <Button
       variant="ghost"
@@ -300,31 +336,49 @@ function PaintList({
   );
 
   return (
-    <ul className="palette-detail__paints" aria-label="Paints in this palette">
-      {paintIds.map((paintId) => {
-        const paint = paints.get(paintId);
-        if (!paint) {
+    <>
+      <ul className="palette-detail__paints" aria-label="Paints in this palette">
+        {paintIds.map((paintId) => {
+          const paint = paints.get(paintId);
+          if (!paint) {
+            return (
+              <li key={paintId} className="palette-detail__paint">
+                <span className="palette-detail__unknown-swatch" aria-hidden="true" />
+                <span className="palette-detail__name">Unknown paint</span>
+                {groupsButton(paintId, "unknown paint")}
+                {removeButton(paintId, "unknown paint")}
+              </li>
+            );
+          }
           return (
             <li key={paintId} className="palette-detail__paint">
-              <span className="palette-detail__unknown-swatch" aria-hidden="true" />
-              <span className="palette-detail__name">Unknown paint</span>
-              {removeButton(paintId, "unknown paint")}
+              <Link
+                to="/paints/$paintId"
+                params={{ paintId }}
+                className="palette-detail__paint-link"
+              >
+                <PaintSwatch hex={paint.hex} type={paint.type} />
+                <span className="palette-detail__text">
+                  <span className="palette-detail__name">{paint.name}</span>
+                  <span className="palette-detail__brand">{brands.get(paint.brandId)}</span>
+                </span>
+              </Link>
+              {groupsButton(paintId, paint.name)}
+              {removeButton(paintId, paint.name)}
             </li>
           );
-        }
-        return (
-          <li key={paintId} className="palette-detail__paint">
-            <Link to="/paints/$paintId" params={{ paintId }} className="palette-detail__paint-link">
-              <PaintSwatch hex={paint.hex} type={paint.type} />
-              <span className="palette-detail__text">
-                <span className="palette-detail__name">{paint.name}</span>
-                <span className="palette-detail__brand">{brands.get(paint.brandId)}</span>
-              </span>
-            </Link>
-            {removeButton(paintId, paint.name)}
-          </li>
-        );
-      })}
-    </ul>
+        })}
+      </ul>
+      <GroupMembershipSheet
+        open={groupsOpen}
+        onOpenChange={setGroupsOpen}
+        paletteId={paletteId}
+        paintId={groupsFor.paintId}
+        paintName={groupsFor.name}
+        groups={groups}
+        online={online}
+        returnFocus={groupsReturn}
+      />
+    </>
   );
 }
