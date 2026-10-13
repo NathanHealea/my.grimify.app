@@ -163,6 +163,10 @@ export const removePaint = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const inPalette =
+      palette.paintIds.includes(args.paintId) ||
+      palette.groups.some((g) => g.paintIds.includes(args.paintId));
+    if (!inPalette) return null;
     const without = (ids: string[]) => ids.filter((id) => id !== args.paintId);
     await ctx.db.patch("palettes", args.paletteId, {
       paintIds: without(palette.paintIds),

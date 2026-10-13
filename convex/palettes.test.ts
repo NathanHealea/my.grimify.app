@@ -298,7 +298,7 @@ describe("palettes", () => {
     expect(
       await as.mutation(api.palettes.removePaint, { paletteId: id, paintId: "p-9" }),
     ).toBeNull();
-    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject(expected);
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({ ...expected, updatedAt: 2_000 });
   });
 
   it("keeps add and remove to the owner", async () => {
