@@ -1,16 +1,17 @@
-/* Sits where toasts and the update prompt do: just above the floating nav, or at the bottom edge from 640px. */
+/*
+ * Sticky, not fixed: it rides just above the floating nav while the list scrolls, then settles after
+ * the last row, so it can never cover it however tall it wraps. `order` puts it last on screen while
+ * it stays early in the DOM for keyboard users.
+ */
 .selection-bar {
-  position: fixed;
-  right: calc(var(--space-3) + env(safe-area-inset-right));
+  position: sticky;
   bottom: calc(
     var(--space-3) + env(safe-area-inset-bottom) + var(--tab-bar-height) + var(--space-2)
   );
-  left: calc(var(--space-3) + env(safe-area-inset-left));
+  order: 1;
   z-index: var(--z-tab-bar);
   display: flex;
   flex-wrap: wrap;
-  max-width: var(--content-max-width);
-  margin-inline: auto;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
@@ -45,8 +46,9 @@
   }
 }
 
+/* An auto basis lets the count claim its width, so the buttons drop to a second row when space runs out. */
 .selection-bar__text {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
 }
 

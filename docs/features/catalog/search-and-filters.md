@@ -82,7 +82,7 @@ The sheet edits a **draft**. **"Show N paints" commits it**, and the count is li
 - While selecting, `<PaintRow>` gets `selection` instead of the link and toggles: the row is a `<label>` for a checkbox named **"Select <name>"**, so a tap anywhere on it ticks.
 - Order is **tick order**; that's the order paints are added. At **200** ticks (`MAX_SELECTED`, the palette cap) the unticked boxes are disabled.
 - `<SelectionBar>` (a `section` named "Selection") shows **"n selected"** in a `status` region, **Add to palette** (disabled at 0 or offline, with the offline note) and **Done**. A successful add or Done turns the mode off.
-- Focus goes to the first checkbox when the mode starts and back to Select when it ends. `data-selecting` on the screen adds bottom padding for the fixed bar.
+- Focus goes to the first checkbox when the mode starts and back to the Add to palette button when it ends. That button is hidden when there are no results. The bar is rendered right after the count row so Tab reaches it before the list; it's `position: sticky` with `order: 1`, so it shows at the bottom and can't cover the last row.
 
 ## Change it safely
 

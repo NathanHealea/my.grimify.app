@@ -173,7 +173,7 @@ function PaintsSearch({
   ];
 
   return (
-    <div className="paints-screen" data-selecting={selected ? true : undefined}>
+    <div className="paints-screen">
       <form className="paints-screen__search" role="search" onSubmit={(e) => e.preventDefault()}>
         <div className="paints-screen__search-row">
           <Input
@@ -254,13 +254,15 @@ function PaintsSearch({
             <p className="paints-screen__count" role="status">
               {results.length === 1 ? "1 paint" : `${results.length.toLocaleString("en")} paints`}
             </p>
-            {isSignedIn && selected === null && (
+            {isSignedIn && selected === null && results.length > 0 && (
               <Button ref={selectButton} variant="outline" onClick={() => setSelected([])}>
                 <SwatchBook aria-hidden="true" />
                 Add to palette
               </Button>
             )}
           </div>
+          {/* Early in the DOM so Tab reaches it before the endless list; CSS shows it at the bottom. */}
+          {selected && <SelectionBar paintIds={selected} onDone={() => setSelected(null)} />}
 
           {results.length === 0 ? (
             <div className="paints-screen__empty">
@@ -314,7 +316,6 @@ function PaintsSearch({
           )}
         </>
       )}
-      {selected && <SelectionBar paintIds={selected} onDone={() => setSelected(null)} />}
     </div>
   );
 }
