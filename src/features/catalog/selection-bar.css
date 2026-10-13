@@ -15,9 +15,34 @@
   align-items: center;
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
   background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
+
+  /* Not the nav's pill: the bar wraps to two rows on narrow phones, and a pill that tall looks swollen. */
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+
+  /* The grey ring falls under 3:1 on glass over dark content, as on the nav. */
+  & :focus-visible {
+    outline-color: var(--color-text);
+  }
+}
+
+/* Same glass as the nav bar, with the same fallbacks (DECISIONS 039). */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and
+  (color: color-mix(in srgb, currentcolor 50%, transparent)) {
+  .selection-bar {
+    background: var(--color-glass);
+    /* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 only knows the prefixed name */
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .selection-bar {
+    background: var(--color-surface);
+    /* stylelint-disable-next-line property-no-vendor-prefix -- matches the rule above */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 .selection-bar__text {
@@ -29,16 +54,10 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Text colour, not muted grey: muted falls under 4.5:1 on glass over a dark swatch. */
 .selection-bar__note {
   font-size: var(--text-small);
   line-height: var(--leading-small);
-  color: var(--color-muted-text);
-}
-
-@media (prefers-color-scheme: dark) {
-  .selection-bar {
-    box-shadow: none;
-  }
 }
 
 @media (width >= 640px) {
