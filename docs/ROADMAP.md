@@ -20,7 +20,7 @@
 - Deploy to Cloudflare (Worker static assets) + Convex production at grimify.app (DECISIONS 041, 043); dev and stage environments (DECISIONS 044)
 - Ask PaintPad for permission to use the derived hex data (DECISIONS 015); before anything public
 - Private beta with friends
-- Color palettes, online only (pulled forward from LATER, DECISIONS 047): palettes tab and CRUD, then adding paints, groups, and drag and drop (`docs/implementation-plans/palettes/`)
+- Color palettes, online only (pulled forward from LATER, DECISIONS 047): palettes tab and CRUD, adding paints, groups, and drag and drop with a menu and keyboard path (`docs/implementation-plans/palettes/`, DECISIONS 053)
 
 ## NEXT
 - Visual color picker for color search

@@ -191,7 +191,7 @@ Purpose:
 Let painters collect the paints for a scheme ("Ultramarines", "Nurgle Rot") in one named place. Pulled forward from Future as an online-only first version (DECISIONS 047).
 
 User Flow:
-Palettes tab → New palette → name it → the palette opens. Rename or delete it from its actions button. Add a paint from its page with "Add to palette", or tap "Add to palette" beside the result count in Paints or My Paints, tick several paints and add them at once. Remove a paint with the ✕ on its row in the palette. Make named groups ("Armor", "Highlights") with New group, put a paint in groups from its Groups button, and move, copy or remove it within groups from its actions in a group. Drag and drop follows in a later story of the palettes epic.
+Palettes tab → New palette → name it → the palette opens. Rename or delete it from its actions button. Add a paint from its page with "Add to palette", or tap "Add to palette" beside the result count in Paints or My Paints, tick several paints and add them at once. Remove a paint with the ✕ on its row in the palette. Make named groups ("Armor", "Highlights") with New group, put a paint in groups from its Groups button, and move, copy or remove it within groups from its actions in a group. Tap Arrange to reorder paints and groups by dragging, drag a paint from All paints into a group, or from one group to another; every move also works from a Move menu or the keyboard.
 
 Acceptance Criteria:
 - Requires sign-in; signed-out users see "Sign in to keep color palettes on any device." and a Sign in button

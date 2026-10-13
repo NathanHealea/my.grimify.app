@@ -222,6 +222,12 @@ Detected brand / hue / hex appear as removable pill chips under the search box (
 - Empty: "No paints in this group yet" in `--color-muted-text`. "New group" (outline) follows the last group, aligned left
 - Inline rename replaces the heading with a "Group name" label (semibold), the field, an always-present `alert` error line and Cancel (outline) and Save (primary), right-aligned
 
+### Arrange mode and drag preview
+- "Arrange" / "Done" (outline, 44px) sits at the end of the "All paints" heading row. In arrange mode every paint row and group heading ends with two ghost icon buttons, 44×44px: Move (`ArrowUpDown`) and the drag handle (`GripVertical`, `cursor: grab`, `touch-action: none` so only the handle takes a touch drag)
+- While dragging, the row left behind drops to `--opacity-muted`. Rows in the same list slide with dnd-kit's transition, passed as `--drag-x`, `--drag-y` and `--drag-transition` custom properties; none with `prefers-reduced-motion: reduce`, which also drops the drop animation
+- Drops into another list: the target group gets a dashed `--focus-ring-width` outline in `--color-ring`, and the row the paint will land before gets a `--focus-ring-width` line in `--color-text` along its top
+- Drag preview (`.drag-preview`): swatch · name (semibold) · brand (small), or a group's name, on `--color-glass` with `backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))`, `--color-border`, `--radius-md`, `--shadow-lg`. Text is `--color-text`, never muted grey, so it keeps 4.5:1 over the glass blended over black or white (checked against `tokens.css` in `drag-preview.test.tsx`). Solid `--color-surface` without `backdrop-filter` or `color-mix()`, or with `prefers-reduced-transparency: reduce`
+
 ---
 
 ## 11. Navigation

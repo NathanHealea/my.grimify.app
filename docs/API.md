@@ -189,12 +189,12 @@ Returns: `null`
 
 ### palettes.addPaintToGroup — mutation
 Authentication: Required
-Args: `{ paletteId: Id<"palettes">, groupId: string, paintId: string }`
+Args: `{ paletteId: Id<"palettes">, groupId: string, paintId: string, toIndex?: number }`
 Behavior:
-- A `paintId` that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`
+- A `paintId` that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`; a `toIndex` that isn't a whole number ≥ 0 → `INVALID_INDEX`
 - A missing palette or someone else's → `NOT_FOUND`; an unknown `groupId` → `GROUP_NOT_FOUND`
 - A paint not in the main list → `PAINT_NOT_IN_PALETTE`
-- Appends the paint to the end of the group and sets `updatedAt = now`; a paint already in the group changes nothing, `updatedAt` included
+- Inserts the paint at `toIndex` (past the end appends), or at the end without it, and sets `updatedAt = now`; a paint already in the group changes nothing, `updatedAt` included
 Returns: `null`
 
 ### palettes.removePaintFromGroup — mutation
@@ -208,15 +208,38 @@ Returns: `null`
 
 ### palettes.movePaintToGroup — mutation
 Authentication: Required
-Args: `{ paletteId: Id<"palettes">, paintId: string, fromGroupId: string, toGroupId: string }`
+Args: `{ paletteId: Id<"palettes">, paintId: string, fromGroupId: string, toGroupId: string, toIndex?: number }`
 Behavior:
-- A `paintId` that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`
+- A `paintId` that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`; a `toIndex` that isn't a whole number ≥ 0 → `INVALID_INDEX`
 - A missing palette or someone else's → `NOT_FOUND`; an unknown `fromGroupId` or `toGroupId` → `GROUP_NOT_FOUND`
-- In one write: removes the paint from `fromGroupId` and appends it to the end of `toGroupId`, then sets `updatedAt = now`. If the target already holds it, it's only removed from the source
+- In one write: removes the paint from `fromGroupId` and inserts it into `toGroupId` at `toIndex` (past the end appends), or at the end without it, then sets `updatedAt = now`. If the target already holds it, it's only removed from the source
 - A paint not in the source group, or the same group for both, changes nothing, `updatedAt` included
 Returns: `null`
 
-Palette errors are thrown as `ConvexError` with the code string as data: `UNAUTHENTICATED`, `PALETTE_NAME_INVALID`, `PALETTE_LIMIT`, `NOT_FOUND`, `INVALID_PAINT_ID`, `PALETTE_FULL`, `GROUP_NAME_INVALID`, `GROUP_LIMIT`, `GROUP_NOT_FOUND`, `PAINT_NOT_IN_PALETTE`. The name sheet shows "Give the palette a name" for `PALETTE_NAME_INVALID`, "You can have up to 50 palettes" for `PALETTE_LIMIT`, and "Couldn't save the palette. Check your connection and try again." for anything else. The Add to palette sheet shows "This palette is full (200 paints)" for `PALETTE_FULL` and "Couldn't add to the palette. Check your connection and try again." for anything else. A failed remove toasts "Couldn't remove <name>. Check your connection and try again." In group mode the name sheet shows "Give the group a name" for `GROUP_NAME_INVALID`, "A palette can have up to 30 groups" for `GROUP_LIMIT`, and "Couldn't save the group. Check your connection and try again." for anything else. Inline rename shows "Give the group a name" for `GROUP_NAME_INVALID` and "Couldn't rename the group. Check your connection and try again." for anything else. A paint's group actions sheet shows "This paint is no longer in the palette." for `PAINT_NOT_IN_PALETTE` and "Couldn't move <name>…", "Couldn't copy <name>…" or "Couldn't remove <name>…" (each ending "Check your connection and try again.") for anything else. The Groups sheet shows "Couldn't update <group>. Check your connection and try again." for any error, and a failed group delete shows "Couldn't delete the group. Check your connection and try again."
+### palettes.movePaint — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes">, paintId: string, toIndex: number }`
+Behavior:
+- A `paintId` that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`; a `toIndex` that isn't a whole number ≥ 0 → `INVALID_INDEX`
+- A missing palette or someone else's → `NOT_FOUND`
+- Moves the paint within the main list so it ends up at `toIndex` (past the end means last) and sets `updatedAt = now`. A paint not in the list, or already at that place, changes nothing, `updatedAt` included. Groups don't change
+Returns: `null`
+
+### palettes.moveGroupPaint — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes">, groupId: string, paintId: string, toIndex: number }`
+Behavior: as `movePaint`, within one group's `paintIds`; an unknown `groupId` → `GROUP_NOT_FOUND`
+Returns: `null`
+
+### palettes.moveGroup — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes">, groupId: string, toIndex: number }`
+Behavior: `INVALID_INDEX`, `NOT_FOUND` and `GROUP_NOT_FOUND` as above; moves the group, with its paints, to `toIndex` among the palette's groups (past the end means last) and sets `updatedAt = now`. Already there → no change
+Returns: `null`
+
+Moves send one item and its target position, never the whole order, so an add from another device at the same moment isn't overwritten (DECISIONS 053).
+
+Palette errors are thrown as `ConvexError` with the code string as data: `UNAUTHENTICATED`, `PALETTE_NAME_INVALID`, `PALETTE_LIMIT`, `NOT_FOUND`, `INVALID_PAINT_ID`, `PALETTE_FULL`, `GROUP_NAME_INVALID`, `GROUP_LIMIT`, `GROUP_NOT_FOUND`, `PAINT_NOT_IN_PALETTE`, `INVALID_INDEX`. The name sheet shows "Give the palette a name" for `PALETTE_NAME_INVALID`, "You can have up to 50 palettes" for `PALETTE_LIMIT`, and "Couldn't save the palette. Check your connection and try again." for anything else. The Add to palette sheet shows "This palette is full (200 paints)" for `PALETTE_FULL` and "Couldn't add to the palette. Check your connection and try again." for anything else. A failed remove toasts "Couldn't remove <name>. Check your connection and try again." In group mode the name sheet shows "Give the group a name" for `GROUP_NAME_INVALID`, "A palette can have up to 30 groups" for `GROUP_LIMIT`, and "Couldn't save the group. Check your connection and try again." for anything else. Inline rename shows "Give the group a name" for `GROUP_NAME_INVALID` and "Couldn't rename the group. Check your connection and try again." for anything else. A paint's group actions sheet shows "This paint is no longer in the palette." for `PAINT_NOT_IN_PALETTE` and "Couldn't move <name>…", "Couldn't copy <name>…" or "Couldn't remove <name>…" (each ending "Check your connection and try again.") for anything else. The Groups sheet shows "Couldn't update <group>. Check your connection and try again." for any error, and a failed group delete shows "Couldn't delete the group. Check your connection and try again." A failed drag or Move-sheet move toasts "Couldn't move <name>. Check your connection and try again." (or "group <name>"), after the optimistic update rolls back.
 
 ---
 
@@ -243,13 +266,14 @@ The client reads the code from `error.data` (`src/features/collection/outbox.ts`
 | code | Thrown by | Meaning |
 |---|---|---|
 | `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`) | No signed-in user, or no `users` row yet |
-| `INVALID_PAINT_ID` | `userPaints.set`, `palettes.addPaints`, `palettes.removePaint`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
+| `INVALID_PAINT_ID` | `userPaints.set`, `palettes.addPaints`, `palettes.removePaint`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup`, `palettes.movePaint`, `palettes.moveGroupPaint` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
 | `NO_FLAGS` | `userPaints.set` | None of `owned` / `wishlisted` / `favorite` given |
 | `CLOCK_IN_FUTURE` | `userPaints.set` | `clientUpdatedAt` more than 5 minutes ahead |
 | `GROUP_NAME_INVALID` | `palettes.createGroup`, `palettes.renameGroup` | A group name is empty or over 60 characters after trimming |
 | `GROUP_LIMIT` | `palettes.createGroup` | The palette already has 30 groups |
-| `GROUP_NOT_FOUND` | `palettes.renameGroup`, `palettes.removeGroup`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup` | No group with that ID in the palette |
+| `GROUP_NOT_FOUND` | `palettes.renameGroup`, `palettes.removeGroup`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup`, `palettes.moveGroupPaint`, `palettes.moveGroup` | No group with that ID in the palette |
 | `PAINT_NOT_IN_PALETTE` | `palettes.addPaintToGroup` | The paint isn't in the palette's main list |
+| `INVALID_INDEX` | `palettes.movePaint`, `palettes.moveGroupPaint`, `palettes.moveGroup`, `palettes.addPaintToGroup`, `palettes.movePaintToGroup` | `toIndex` isn't a whole number ≥ 0 |
 
 The outbox drops an entry on `INVALID_PAINT_ID`, `NO_FLAGS` or `CLOCK_IN_FUTURE` and toasts "Couldn't save that change." Any other error keeps the entry (§2b).
 

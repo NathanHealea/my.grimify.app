@@ -1,7 +1,7 @@
 # Palettes
 
 > Covers the Palettes tab (`/palettes` and `/palettes/$paletteId`) with its groups, and adding paints from paint detail and from Select mode in Paints and My Paints.
-> User journey: [UX_FLOWS.md Flow 10](../UX_FLOWS.md). Storage and rules: DATABASE, API, DECISIONS 047–052.
+> User journey: [UX_FLOWS.md Flow 10](../UX_FLOWS.md). Storage and rules: DATABASE, API, DECISIONS 047–053.
 
 ## TL;DR
 
@@ -12,12 +12,13 @@
 - **Adding** goes through one picker sheet, `<AddToPaletteSheet>`, opened from paint detail or from Select mode's bar. New paints go to the end, in order; paints already there are skipped (DECISIONS 051).
 - **Removing** is a ✕ button on each paint of the palette screen. No confirmation; it also removes the paint from every group.
 - **Groups** only point at paints in the main list. A paint can be in any number of groups, once per group. Group IDs are made on the server. Groups are edited through menus: a Groups checkbox sheet on main-list rows, an actions sheet on group rows, and Rename and Delete group on each heading (DECISIONS 052).
+- **Arrange mode** reorders paints and groups and moves paints between lists by drag and drop (`@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10.0.0), with a Move sheet as the non-drag path. Moves are sent as one item and a position, and show at once through Convex optimistic updates (DECISIONS 053).
 
 ## Where the code lives
 
 | Path | Role |
 |---|---|
-| `convex/palettes.ts` | `listMine`, `get`, `create`, `rename`, `remove`, `addPaints`, `removePaint`, and the group mutations `createGroup`, `renameGroup`, `removeGroup`, `addPaintToGroup`, `removePaintFromGroup`, `movePaintToGroup` |
+| `convex/palettes.ts` | `listMine`, `get`, `create`, `rename`, `remove`, `addPaints`, `removePaint`, and the group mutations `createGroup`, `renameGroup`, `removeGroup`, `addPaintToGroup`, `removePaintFromGroup`, `movePaintToGroup`, and the reorder mutations `movePaint`, `moveGroupPaint`, `moveGroup` |
 | `convex/userPaints.ts` | Exports `PAINT_ID`, the paint ID shape the palette mutations check |
 | `convex/schema.ts` | `palettes` table, index `by_userId` |
 | `convex/users.ts` | `deleteAccount` also deletes the caller's palettes |
@@ -28,6 +29,10 @@
 | `src/features/palettes/palette-groups.tsx` | `<PaletteGroups>`: group sections, New group, inline rename, group actions and delete sheets |
 | `src/features/palettes/group-membership-sheet.tsx` | `<GroupMembershipSheet>`: the Groups sheet, one checkbox per group for a main-list paint |
 | `src/features/palettes/group-paint-actions-sheet.tsx` | `<GroupPaintActionsSheet>`: move, copy or remove a paint in a group |
+| `src/features/palettes/palette-arrange.tsx` | `<PaletteArrange>` (the `DndContext`: sensors, collision detection, announcements, focus after a drop, the drag overlay and Move sheet), `usePaletteMoves`, `<SortableItem>`, `<DragHandle>`, `<MoveButton>` |
+| `src/features/palettes/drop-plan.ts` | Pure: `planDrop` (drag → mutation), `applyPlan` and `optimisticMove` (the optimistic update), the announcement texts, `positionOf` |
+| `src/features/palettes/drag-preview.tsx` | `<DragPreview>`: the glass preview under the pointer |
+| `src/features/palettes/move-sheet.tsx` | `<MoveSheet>`: Move to top, up, down, to bottom |
 | `src/features/palettes/palette-name-sheet.tsx` | `<PaletteNameSheet>` for creating and renaming palettes and creating groups (`kind`); exports `OFFLINE_EDIT_NOTE` |
 | `src/features/palettes/add-to-palette-sheet.tsx` | `<AddToPaletteSheet>`: the picker; adds `paintIds` to a chosen or new palette |
 | `src/features/catalog/paint-detail.tsx` | `AddToPalette`: the "Add to palette" button on a paint's page |
@@ -52,9 +57,12 @@ Every function starts with **`requireUser(ctx)`**, so signed-out calls throw `UN
 | `createGroup({ paletteId, name })` | The new group's ID | `GROUP_NAME_INVALID`, `NOT_FOUND`, `GROUP_LIMIT` |
 | `renameGroup({ paletteId, groupId, name })` | `null` | `GROUP_NAME_INVALID`, `NOT_FOUND`, `GROUP_NOT_FOUND` |
 | `removeGroup({ paletteId, groupId })` | `null` | `NOT_FOUND`, `GROUP_NOT_FOUND` |
-| `addPaintToGroup({ paletteId, groupId, paintId })` | `null` | `INVALID_PAINT_ID`, `NOT_FOUND`, `GROUP_NOT_FOUND`, `PAINT_NOT_IN_PALETTE` |
+| `addPaintToGroup({ paletteId, groupId, paintId, toIndex? })` | `null` | `INVALID_PAINT_ID`, `INVALID_INDEX`, `NOT_FOUND`, `GROUP_NOT_FOUND`, `PAINT_NOT_IN_PALETTE` |
 | `removePaintFromGroup({ paletteId, groupId, paintId })` | `null` | `INVALID_PAINT_ID`, `NOT_FOUND`, `GROUP_NOT_FOUND` |
-| `movePaintToGroup({ paletteId, paintId, fromGroupId, toGroupId })` | `null` | `INVALID_PAINT_ID`, `NOT_FOUND`, `GROUP_NOT_FOUND` |
+| `movePaintToGroup({ paletteId, paintId, fromGroupId, toGroupId, toIndex? })` | `null` | `INVALID_PAINT_ID`, `INVALID_INDEX`, `NOT_FOUND`, `GROUP_NOT_FOUND` |
+| `movePaint({ paletteId, paintId, toIndex })` | `null` | `INVALID_PAINT_ID`, `INVALID_INDEX`, `NOT_FOUND` |
+| `moveGroupPaint({ paletteId, groupId, paintId, toIndex })` | `null` | `INVALID_PAINT_ID`, `INVALID_INDEX`, `NOT_FOUND`, `GROUP_NOT_FOUND` |
+| `moveGroup({ paletteId, groupId, toIndex })` | `null` | `INVALID_INDEX`, `NOT_FOUND`, `GROUP_NOT_FOUND` |
 
 **`get` takes a plain string**, not `v.id("palettes")`, and normalizes it with `ctx.db.normalizeId`. The ID comes from the URL, so a mangled one shows "Palette not found" instead of failing argument validation.
 
@@ -87,6 +95,10 @@ Every function starts with **`requireUser(ctx)`**, so signed-out calls throw `UN
 **Groups sheet (`<GroupMembershipSheet>`).** When the palette has at least one group, each main-list row gets a ghost icon button (`Layers` icon) named **"Groups for <name>"** before Remove. It opens a sheet titled "Groups for <name>" with one checkbox per group, ticked where the paint is. Ticking runs `addPaintToGroup` and unticking runs `removePaintFromGroup`, saved at once. There's no toast; the checkbox is the feedback. While a save is in flight the box shows the asked-for state and is `aria-disabled` (not `disabled`, which would drop focus). A failure → **"Couldn't update <group>. Check your connection and try again."** and the box goes back to the palette's state. **Done** closes the sheet and focus returns to the row's Groups button. While a save is in flight online, Done is disabled and Escape doesn't close the sheet, so a failure is never hidden.
 
 **Group row actions (`<GroupPaintActionsSheet>`).** Each paint in a group ends with a ghost icon button **"Actions for <name> in <group>"**. Its sheet, titled "<name> in <group>", offers **Move to group…**, **Copy to group…** (both disabled when the palette has no other group) and **Remove from group**. Move and Copy switch the sheet to "Move <name> to" or "Copy <name> to", listing the other groups as buttons, with **Back**. A group that already holds the paint is disabled and reads "<group> (already in it)". Move runs `movePaintToGroup` and toasts **"Moved to <group>"**; Copy runs `addPaintToGroup` and toasts **"Copied to <group>"**; Remove runs `removePaintFromGroup` and toasts **"Removed from <group>"**. The sheet closes on success. `PAINT_NOT_IN_PALETTE` → **"This paint is no longer in the palette."**; anything else → "Couldn't move <name>. Check your connection and try again." (or copy, remove). While a save is in flight online, the sheet won't close. On close, focus returns to the row's actions button; after a move or remove takes the row away, it goes to the next row in the group, the previous one at the end, then the group's actions button, then New group.
+
+**Moves by position.** `movePaint`, `moveGroupPaint` and `moveGroup` take one item and `toIndex`, its index in the resulting list: a whole number ≥ 0 (`INVALID_INDEX` otherwise), clamped to the end. A missing paint, or a move to where it already is, writes nothing. `addPaintToGroup` and `movePaintToGroup` take an optional `toIndex` for drops on a spot; without it they append as before.
+
+**Arrange mode.** "Arrange" sits in the "All paints" heading row whenever there's something to arrange (any paint, or two groups), and becomes "Done". `arranging` lives in `PaletteContent`; `PaintList` and `<PaletteGroups>` render sortable rows instead of their usual ones (the groups render a separate tree, so their sheets and New group aren't mounted). One `<PaletteArrange>` (`DndContext`) wraps both sections, always mounted, with its live region portalled to `document.body`. Sortable IDs keep a paint in two lists apart: `main:<paintId>`, `group:<groupId>:<paintId>`, `heading:<groupId>`, plus a `zone:<groupId>` droppable around each group. Sensors: mouse after 5px, touch after a 150ms hold (5px tolerance), keyboard with `sortableKeyboardCoordinates`. Collision detection lets a group only land on group headings, and a paint prefer the row under the pointer, then a group's zone, then the nearest item. `planDrop` turns a drop into one mutation (the table in DECISIONS 053); `usePaletteMoves` runs it with an optimistic update that rewrites the cached `palettes.get` through `applyPlan`, so Convex rolls it back on failure, and toasts "Couldn't move <name>…". A drop while offline does nothing. dnd-kit's focus restore is off; after a keyboard drop or cancel, focus goes to the handle (`data-drag-handle`) of the item in its new place. The **Move sheet** (`<MoveSheet>`) opens from each row's or heading's Move button, shows "Position n of m", and calls the same mutations; focus returns to the Move button (`data-move-button`). Announcements come from `announcePickUp`, `announceOver`, `announceDrop` and `announceCancel` in `drop-plan.ts`.
 
 **Picker (`<AddToPaletteSheet>`).** Props: `paintIds`, `open`, `onOpenChange`, optional `onAdded` and `returnFocus`. It runs `listMine` only while open, and lists each palette as a button with its name and "n paints", then **New palette**. Choosing a palette calls `addPaints`, closes the sheet and toasts from `added`: **"Added to X"** (1), **"Added n paints to X"** (n), **"Already in X"** (0). `PALETTE_FULL` → **"This palette is full (200 paints)"** in the sheet's `role="alert"` region, and the sheet stays open. Any other error → **"Couldn't add to the palette. Check your connection and try again."** While an add is in flight online, the buttons are disabled and the sheet won't close. **New palette** closes the picker and opens `<PaletteNameSheet>`; Save runs `create`, then `addPaints` with the new ID, then the same toast. Focus returns to `returnFocus` when the sheets close.
 

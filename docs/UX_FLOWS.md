@@ -273,6 +273,17 @@ Move, copy or remove in a group:
 6. If it fails: "This paint is no longer in the palette." when it was removed elsewhere, or "Couldn't move Macragge Blue. Check your connection and try again." (copy, remove) in the sheet
 7. Removing a paint from the palette with ✕ also takes it out of every group
 
+Arrange (drag and drop, DECISIONS 053):
+1. Tap **Arrange** (next to "All paints") → every paint row and group heading swaps its controls for **Move <name>** (or **Move group <name>**) and a **Drag <name>** handle. Links, Groups, Remove, Actions and New group are hidden. The button reads **Done**; tapping it puts everything back and keeps focus on it. Offline, Arrange is disabled
+2. Drag a handle (hold briefly on touch; the rest of the row scrolls the page). A frosted preview of the paint (swatch, name, brand) or the group's name follows the finger
+   - Within All paints or one group, or among groups: rows shift to make room; drop to reorder
+   - From All paints into a group: the group is outlined and a line marks the spot. Drop adds the paint there; it stays in All paints. Dropping on the group's heading or empty space puts it at the end
+   - From one group to another: the same, but the paint leaves the first group
+   - Onto a group that already holds it, or from a group back to All paints: nothing changes
+3. Keyboard: focus a handle, Space to pick up, arrow keys to move, Space to drop, Escape to cancel. A screen reader hears the paint, list and position at each step, e.g. "Dropped Macragge Blue at position 4 of 5 in All paints." or "Macragge Blue is already in Trim; nothing changed." After a keyboard drop, focus is on the paint's handle in its new place
+4. Without dragging: **Move <name>** → sheet "Move <name>" with "Position 2 of 5", **Move to top**, **Move up**, **Move down** and **Move to bottom** (the ones that don't apply are disabled). Choosing one closes the sheet and focus returns to the Move button. Moving between lists keeps its menus outside arrange mode (Groups sheet, Move to group…)
+5. A move shows at once. If the server refuses it, the item goes back and a toast says "Couldn't move Macragge Blue. Check your connection and try again."
+
 Rename and delete:
 1. Tap the **Palette actions** button (next to the title) → a sheet with Rename and Delete palette
 2. Rename → sheet "Rename palette", field filled with the current name, Cancel and Save; same errors as Create

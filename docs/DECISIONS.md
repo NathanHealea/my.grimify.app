@@ -1113,7 +1113,7 @@ Trade-off: adding from the list takes Add to palette, tick, Add to palette, choo
 ## Decision 052 — Group paints through menus, with server-made group IDs
 
 Date: 2026-10-13
-Status: Accepted
+Status: Accepted; reordering added by 053
 
 Context:
 Groups have been in the palette document since DECISIONS 048 but nothing created them. Painters want to sort a palette's paints into named groups such as "Armor" and "Highlights", with a paint in several groups at once. Every paint stays in the main list; a group only points at paints already there. Drag and drop comes in a later story (palette-drag-drop), and every action needs a menu path for keyboard and screen reader users anyway.
@@ -1139,3 +1139,36 @@ Alternatives:
 Consequences:
 Positive: every group action works by keyboard and screen reader, a paint can sit in any number of groups with one tap each, and group IDs can't collide or be guessed into another palette.
 Trade-off: main-list rows carry two 44px buttons (Groups and Remove), which leaves the paint name about 150px at 320px, down from about 200px; long names wrap. At the theoretical worst, 30 groups each holding 200 paint IDs of 100 characters, a palette is about 600 KB, under Convex's 1 MiB limit but not by much; with real IDs it's about 180 KB. Group edits follow last write wins (DECISIONS 049), so two devices editing groups at once can lose one change. Painters can't open a paint from its group row.
+
+---
+
+## Decision 053 — Arrange palettes by drag and drop, in an arrange mode, with moves sent by position
+
+Date: 2026-10-13
+Status: Accepted
+
+Context:
+The palettes epic's last story: painters want paints and groups in their own order and want to drag paints into and between groups (epic R6–R8). Main-list rows already carry two 44px buttons, so a permanent drag handle would leave a long name about 100px at 320px. Native HTML5 drag and drop doesn't fire on iOS touch. Every drag needs a keyboard and non-drag path (WCAG 2.1.1), and screen readers need to hear what moved where.
+
+Decision:
+- **Arrange mode.** An "Arrange" button next to "All paints" swaps every row's and heading's controls for a Move button and a drag handle; "Done" swaps them back. Like Select mode (051), the row never carries more than two buttons.
+- **dnd-kit**, `@dnd-kit/core` 6.3.1 and `@dnd-kit/sortable` 10.0.0, pinned exactly: mouse, touch and keyboard sensors, sortable lists and a drag overlay. Only the handle takes a drag (`touch-action: none`), so a swipe elsewhere scrolls; touch starts after a 150ms hold.
+- **What a drop does:** reorder within All paints, within a group, or among groups; All paints → group adds the paint at the drop spot (it stays in All paints); group → group moves it; a drop that would duplicate a paint in a group, or go from a group to All paints, does nothing and says so. Copying stays in "Copy to group…".
+- **Moves are sent by position:** `movePaint`, `moveGroupPaint` and `moveGroup` take one item and `toIndex`; `addPaintToGroup` and `movePaintToGroup` gain an optional `toIndex`. A move to the same place writes nothing.
+- **Optimistic updates** show each move at once; Convex rolls it back if the server refuses, and a toast says so.
+- **Rows in other lists don't shift** during a cross-list drag; a line and a group outline mark the drop spot instead.
+- **The non-drag path** is a Move sheet (top, up, down, bottom) per row and group heading; moving between lists keeps its existing menus.
+- **The drag preview** is the nav's glass with only swatch, name and brand, in `--color-text`. **Announcements** name the paint, list and position.
+
+Alternatives:
+- Always-on drag handles: no mode to enter, but a third 44px button per row at 320px
+- `@dnd-kit/react` 0.5: the maintained successor, but before 1.0
+- A hand-built pointer drag: no dependency, but touch, auto-scroll, keyboard and announcements would all be ours to build and test
+- Sending the whole new order: one simple call, but it overwrites a paint added on another device at the same moment
+- Live cross-list shifting (dnd-kit's multiple-containers pattern): shows the gap, but needs drag-over state that copies or moves rows mid-drag
+- Long-press anywhere on a row to drag: no handle needed, but it fights scrolling and text selection on iOS
+
+Consequences:
+Positive: reordering and grouping work by touch, mouse, keyboard and menu, each move is one atomic write, and moves feel instant.
+Trade-off: removing a paint or opening its groups needs "Done" first. Keyboard moves between lists step through every row in between. Two dependencies, last released 2024-12. An optimistic move against a palette another device just changed can show the wrong order until the server answers (last write still wins, 049). Touch behaviour is only verifiable on a real iPhone.
+
