@@ -113,13 +113,11 @@ export function GroupPaintActionsSheet({
       }}
     >
       <SheetContent
-        // Each opening starts on the first view, not wherever the last one ended.
-        onOpenAutoFocus={() => {
-          setView("actions");
-          setError(null);
-        }}
+        // Reset on close, not open: by the time onOpenAutoFocus runs, Radix has picked a button from the old view.
         onCloseAutoFocus={(event) => {
           event.preventDefault();
+          setView("actions");
+          setError(null);
           onClosed();
         }}
       >
@@ -145,7 +143,9 @@ export function GroupPaintActionsSheet({
               </Button>
               <Button
                 variant="outline"
-                disabled={saving || !online}
+                disabled={!online}
+                // aria-disabled, not disabled: a disabled button drops focus, which a failed save would strand.
+                aria-disabled={saving || undefined}
                 onClick={() =>
                   run(
                     "remove",
@@ -165,7 +165,8 @@ export function GroupPaintActionsSheet({
                   <Button
                     key={target.id}
                     variant="outline"
-                    disabled={holds || saving || !online}
+                    disabled={holds || !online}
+                    aria-disabled={saving || undefined}
                     onClick={() => choose(target)}
                   >
                     {holds ? `${target.name} (already in it)` : target.name}

@@ -123,6 +123,48 @@ afterEach(() => {
 });
 
 describe("group paint actions move, copy and remove", () => {
+  it("reopens on the first view after a copy", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    const store = signedInWith(palette([armor([red.id]), trim()]));
+    const addPaintToGroup = vi.fn(() => {
+      store.current = palette([armor([red.id]), trim([red.id])]);
+      return Promise.resolve(null);
+    });
+    mockMutations({ [nameOf(api.palettes.addPaintToGroup)]: addPaintToGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const { button, sheet } = await openActions("Mephiston Red", "Armor");
+    fireEvent.click(within(sheet).getByRole("button", { name: "Copy to group…" }));
+    const list = await screen.findByRole("dialog", { name: "Copy Mephiston Red to" });
+    fireEvent.click(within(list).getByRole("button", { name: "Trim" }));
+    await serverPushes(onLine);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    fireEvent.click(button);
+    const reopened = await screen.findByRole("dialog", { name: "Mephiston Red in Armor" });
+    await waitFor(() =>
+      expect(within(reopened).getByRole("button", { name: "Move to group…" })).toHaveFocus(),
+    );
+  });
+
+  it("keeps focus on Remove from group while it saves", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    const removePaintFromGroup = vi.fn(() => new Promise(() => {}));
+    mockMutations({ [nameOf(api.palettes.removePaintFromGroup)]: removePaintFromGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const { sheet } = await openActions("Mephiston Red", "Armor");
+    const remove = within(sheet).getByRole("button", { name: "Remove from group" });
+    remove.focus();
+    fireEvent.click(remove);
+    fireEvent.click(remove);
+
+    expect(remove).toHaveFocus();
+    expect(remove).toHaveAttribute("aria-disabled", "true");
+    expect(removePaintFromGroup).toHaveBeenCalledOnce();
+  });
+
   it("gives each row in a group an actions button named for the paint and group", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     signedInWith(
