@@ -63,6 +63,7 @@ export function PaletteGroups({
   const [renaming, setRenaming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [lastSheetName, setLastSheetName] = useState("");
   const actionButtons = useRef(new Map<string, HTMLButtonElement>());
   const headings = useRef(new Map<string, HTMLHeadingElement>());
   const newGroupButton = useRef<HTMLButtonElement>(null);
@@ -161,13 +162,17 @@ export function PaletteGroups({
   const rowGroup = groups.find((g) => g.id === rowSheet.groupId);
   const sheetGroup =
     sheet && sheet.kind !== "new" ? groups.find((g) => g.id === sheet.groupId) : undefined;
+  // Kept after closing, or after a delete removes the group, so titles don't blank while the sheet animates out.
+  const shownName = sheetGroup?.name ?? lastSheetName;
 
   const restoreFocus = (event: Event) => {
     event.preventDefault();
     focusOnClose.current()?.focus();
   };
 
-  const openActions = (groupId: string) => {
+  const openActions = (group: Group) => {
+    const groupId = group.id;
+    setLastSheetName(group.name);
     focusOnClose.current = actionsFor(groupId);
     setSheet({ kind: "actions", groupId });
   };
@@ -244,7 +249,7 @@ export function PaletteGroups({
                   }}
                   aria-label={`Actions for group ${group.name}`}
                   disabled={!online}
-                  onClick={() => openActions(group.id)}
+                  onClick={() => openActions(group)}
                 >
                   <Ellipsis aria-hidden="true" />
                 </Button>
@@ -345,7 +350,7 @@ export function PaletteGroups({
       />
 
       <Sheet
-        open={sheet?.kind === "actions" && sheetGroup !== undefined}
+        open={sheet?.kind === "actions"}
         onOpenChange={(open) => {
           if (!open) setSheet(null);
         }}
@@ -358,7 +363,7 @@ export function PaletteGroups({
           }}
         >
           <SheetHeader>
-            <SheetTitle>{sheetGroup?.name}</SheetTitle>
+            <SheetTitle>{shownName}</SheetTitle>
           </SheetHeader>
           <SheetBody className="palette-groups__actions">
             <Button variant="outline" onClick={() => sheetGroup && startRename(sheetGroup.id)}>
@@ -375,7 +380,7 @@ export function PaletteGroups({
       </Sheet>
 
       <Sheet
-        open={sheet?.kind === "delete" && sheetGroup !== undefined}
+        open={sheet?.kind === "delete"}
         onOpenChange={(open) => {
           // Closing mid-deletion would hide a failure that arrives afterwards.
           if (locked || open) return;
@@ -385,7 +390,7 @@ export function PaletteGroups({
       >
         <SheetContent onCloseAutoFocus={restoreFocus}>
           <SheetHeader>
-            <SheetTitle>{`Delete group "${sheetGroup?.name}"?`}</SheetTitle>
+            <SheetTitle>{`Delete group "${shownName}"?`}</SheetTitle>
           </SheetHeader>
           <SheetBody>
             <p>Its paints stay in the palette.</p>
