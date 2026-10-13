@@ -2,9 +2,12 @@
   transform: translate3d(var(--drag-x, 0), var(--drag-y, 0), 0);
   transition: var(--drag-transition, none);
 
-  /* The glass preview follows the pointer; the row left behind marks where the paint will land. */
+  /* The glass preview follows the pointer; the row left behind marks where the paint will land.
+     An outline, not opacity: dimming would take the focused handle's ring and the brand text under AA. */
   &[data-dragging] {
-    opacity: var(--opacity-muted);
+    border-radius: var(--radius-md);
+    outline: var(--focus-ring-width) dashed var(--color-ring);
+    outline-offset: calc(var(--focus-ring-width) * -1);
   }
 
   &[data-drop-before] {
