@@ -7,6 +7,9 @@ import { AddToPaletteSheet } from "@/features/palettes/add-to-palette-sheet";
 import { OFFLINE_EDIT_NOTE } from "@/features/palettes/palette-name-sheet";
 import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
+/** The most paints select mode ticks; matches the palette cap in convex/palettes.ts. */
+export const MAX_SELECTED = 200;
+
 type Props = {
   /** Selected paint IDs in the order they were ticked. */
   paintIds: string[];
@@ -26,7 +29,10 @@ export function SelectionBar({ paintIds, onDone }: Props) {
           {`${paintIds.length} selected`}
         </p>
         <p className="selection-bar__note" role="status">
-          {!online && OFFLINE_EDIT_NOTE}
+          {!online
+            ? OFFLINE_EDIT_NOTE
+            : paintIds.length >= MAX_SELECTED &&
+              `You can add up to ${MAX_SELECTED} paints at once.`}
         </p>
       </div>
       <Button

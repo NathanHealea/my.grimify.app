@@ -270,6 +270,9 @@ describe("PaintsScreen", () => {
       for (const box of boxes.slice(0, 200)) fireEvent.click(box);
 
       expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
+      expect(
+        within(selectionBar()).getByText("You can add up to 200 paints at once."),
+      ).toBeInTheDocument();
       const last = boxes[200];
       expect(last).not.toBeChecked();
       expect(last).toBeDisabled();

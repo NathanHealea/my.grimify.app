@@ -28,7 +28,7 @@ import { PaintsFilters } from "./paints-filters";
 import { hueLabel, type ParsedQuery, parseQuery, removeToken, suggest } from "./parse-query";
 import type { Catalog } from "./schema";
 import { type NameIndex, searchPaints, type SearchResult } from "./search";
-import { SelectionBar } from "./selection-bar";
+import { MAX_SELECTED, SelectionBar } from "./selection-bar";
 
 type Props = {
   /** The committed query from the URL. */
@@ -50,8 +50,6 @@ type Props = {
 
 const PAGE_SIZE = 60;
 const TYPING_DEBOUNCE_MS = 100;
-// Matches the palette cap in convex/palettes.ts, so one add can always fit an empty palette.
-const MAX_SELECTED = 200;
 
 export function PaintsScreen(props: Props) {
   return (
