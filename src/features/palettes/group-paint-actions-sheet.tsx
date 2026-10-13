@@ -165,6 +165,7 @@ export function GroupPaintActionsSheet({
                   <Button
                     key={target.id}
                     variant="outline"
+                    className="group-paint-actions-sheet__target"
                     disabled={holds || !online}
                     aria-disabled={saving || undefined}
                     onClick={() => choose(target)}
