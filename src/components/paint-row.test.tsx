@@ -1,5 +1,5 @@
-import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { catalogPaint } from "@/test/catalog-fixture";
 import { renderWithRouter } from "@/test/render-with-router";
@@ -63,5 +63,65 @@ describe("PaintRow", () => {
     const own = screen.getByRole("button", { name: "Own" });
     expect(link).not.toContainElement(own);
     expect(screen.getByRole("listitem")).toContainElement(own);
+  });
+
+  describe("selection variant", () => {
+    async function renderSelecting(selection: { selected: boolean; disabled?: boolean }) {
+      const paint = catalogPaint({ brandId: "citadel", name: "Mephiston Red", hex: "#9B130B" });
+      const onToggle = vi.fn();
+      await renderWithRouter(
+        <ul>
+          <PaintRow
+            paint={paint}
+            brandName="Citadel"
+            lineName="Base"
+            actions={<button type="button">Own</button>}
+            selection={{ ...selection, onToggle }}
+          />
+        </ul>,
+      );
+      return onToggle;
+    }
+
+    it("shows a checkbox labelled with the paint name instead of a link and toggles", async () => {
+      await renderSelecting({ selected: false });
+
+      expect(screen.getByRole("checkbox", { name: "Select Mephiston Red" })).not.toBeChecked();
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Own" })).toBeNull();
+    });
+
+    it("reflects the selected state", async () => {
+      await renderSelecting({ selected: true });
+
+      expect(screen.getByRole("checkbox", { name: "Select Mephiston Red" })).toBeChecked();
+    });
+
+    it("toggles once when the row text is tapped", async () => {
+      const onToggle = await renderSelecting({ selected: false });
+
+      fireEvent.click(screen.getByText("Mephiston Red"));
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+    });
+
+    it("toggles once when the checkbox is tapped", async () => {
+      const onToggle = await renderSelecting({ selected: false });
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores taps when disabled", async () => {
+      const onToggle = await renderSelecting({ selected: false, disabled: true });
+
+      const checkbox = screen.getByRole("checkbox", { name: "Select Mephiston Red" });
+      expect(checkbox).toBeDisabled();
+      fireEvent.click(checkbox);
+      fireEvent.click(screen.getByText("Mephiston Red"));
+
+      expect(onToggle).not.toHaveBeenCalled();
+    });
   });
 });

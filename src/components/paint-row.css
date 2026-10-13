@@ -20,6 +20,19 @@
   &:focus-visible {
     outline-offset: calc(var(--focus-ring-offset) * -1);
   }
+
+  &[data-disabled] {
+    cursor: not-allowed;
+    opacity: var(--opacity-disabled);
+  }
+}
+
+/* The row is the label, so the whole 56px row is the tap target; the box itself just shows state. */
+.paint-row__checkbox {
+  flex-shrink: 0;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  accent-color: var(--color-primary);
 }
 
 .paint-row__text {
