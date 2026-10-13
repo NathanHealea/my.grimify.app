@@ -123,7 +123,7 @@ test("groups a palette's paints", async ({ page }, info) => {
   await expect(page.getByText(`Added to ${name}`)).toBeVisible();
   await page.goto(paletteUrl);
 
-  for (const group of ["Armor", "Trim"]) {
+  for (const group of ["Armor", "Trim", "Highlights"]) {
     await main.getByRole("button", { name: "New group" }).click();
     const sheet = page.getByRole("dialog", { name: "New group" });
     await sheet.getByLabel("Group name").fill(group);
@@ -133,21 +133,25 @@ test("groups a palette's paints", async ({ page }, info) => {
 
   await main.getByRole("button", { name: "Groups for Mephiston Red" }).click();
   const membership = page.getByRole("dialog", { name: "Groups for Mephiston Red" });
-  await membership.getByRole("checkbox", { name: "Armor" }).check();
-  await expect(membership.getByRole("checkbox", { name: "Armor" })).toBeChecked();
+  for (const group of ["Armor", "Trim"]) {
+    await membership.getByRole("checkbox", { name: group }).check();
+    await expect(membership.getByRole("checkbox", { name: group })).toBeChecked();
+  }
   await membership.getByRole("button", { name: "Done" }).click();
 
   const armor = main.getByRole("region", { name: "Armor" });
   const trim = main.getByRole("region", { name: "Trim" });
+  const highlights = main.getByRole("region", { name: "Highlights" });
   await expect(armor).toContainText("Mephiston Red");
+  await expect(trim).toContainText("Mephiston Red");
   await armor.getByRole("button", { name: "Actions for Mephiston Red in Armor" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Move to group…" }).click();
-  await page
-    .getByRole("dialog", { name: "Move Mephiston Red to" })
-    .getByRole("button", { name: "Trim" })
-    .click();
-  await expect(page.getByText("Moved to Trim")).toBeVisible();
+  const moveTo = page.getByRole("dialog", { name: "Move Mephiston Red to" });
+  await expect(moveTo.getByRole("button", { name: "Trim (already in it)" })).toBeDisabled();
+  await moveTo.getByRole("button", { name: "Highlights" }).click();
+  await expect(page.getByText("Moved to Highlights")).toBeVisible();
   await expect(armor).toContainText("No paints in this group yet");
+  await expect(highlights).toContainText("Mephiston Red");
   await expect(trim).toContainText("Mephiston Red");
 
   await trim.getByRole("button", { name: "Actions for group Trim" }).click();

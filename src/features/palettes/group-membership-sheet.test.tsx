@@ -290,4 +290,143 @@ describe("Groups sheet adds and removes a paint from groups", () => {
     ).toBeDisabled();
     expect(within(section).getByRole("button", { name: "Groups for Blood Red" })).toBeDisabled();
   });
+
+  it("shows a ticked box as checked before its save resolves", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    mockMutations({ [nameOf(api.palettes.addPaintToGroup)]: vi.fn(() => new Promise(() => {})) });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+
+    expect(within(sheet).getByRole("checkbox", { name: "Trim" })).toBeChecked();
+    expect(within(sheet).getByRole("checkbox", { name: "Trim" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("saves a box once when it is clicked twice while saving", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    const addPaintToGroup = vi.fn(() => new Promise(() => {}));
+    const removePaintFromGroup = vi.fn(() => Promise.resolve(null));
+    mockMutations({
+      [nameOf(api.palettes.addPaintToGroup)]: addPaintToGroup,
+      [nameOf(api.palettes.removePaintFromGroup)]: removePaintFromGroup,
+    });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+
+    expect(addPaintToGroup).toHaveBeenCalledOnce();
+    expect(removePaintFromGroup).not.toHaveBeenCalled();
+  });
+
+  it("disables the boxes and says why when the connection drops", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+
+    expect(within(sheet).getByRole("checkbox", { name: "Armor" })).toBeDisabled();
+    expect(within(sheet).getByRole("checkbox", { name: "Trim" })).toBeDisabled();
+    expect(within(sheet).getByRole("status")).toHaveTextContent(
+      "Connect to the internet to edit palettes.",
+    );
+  });
+
+  it("lets Done close the sheet once offline while a change is saving", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    mockMutations({ [nameOf(api.palettes.addPaintToGroup)]: vi.fn(() => new Promise(() => {})) });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    fireEvent.click(within(sheet).getByRole("button", { name: "Done" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("doesn't show an error that lands after closing on the next opening", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    signedInWith(palette([armor([red.id]), trim()]));
+    let fail: () => void = () => {};
+    const addPaintToGroup = vi.fn(
+      () =>
+        new Promise<null>((_, reject) => {
+          fail = () => reject(new Error("network down"));
+        }),
+    );
+    mockMutations({ [nameOf(api.palettes.addPaintToGroup)]: addPaintToGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    const button = within(section).getByRole("button", { name: "Groups for Mephiston Red" });
+    fireEvent.click(button);
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    fireEvent.click(within(sheet).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await act(() => Promise.resolve(fail()));
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+
+    fireEvent.click(button);
+    const again = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    expect(within(again).getByRole("alert")).toBeEmptyDOMElement();
+  });
+
+  it("shows another paint's own state while the first paint's change is still saving", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    const addPaintToGroup = vi.fn(() => new Promise(() => {}));
+    mockMutations({ [nameOf(api.palettes.addPaintToGroup)]: addPaintToGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    fireEvent.click(within(sheet).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Blood Red" }));
+    const other = await screen.findByRole("dialog", { name: "Groups for Blood Red" });
+    const box = within(other).getByRole("checkbox", { name: "Trim" });
+    expect(box).not.toBeChecked();
+    expect(box).not.toHaveAttribute("aria-disabled");
+    fireEvent.click(box);
+
+    expect(addPaintToGroup).toHaveBeenLastCalledWith({
+      paletteId: PALETTE_ID,
+      groupId: "group-trim",
+      paintId: vallejo.id,
+    });
+    expect(addPaintToGroup).toHaveBeenCalledTimes(2);
+  });
 });

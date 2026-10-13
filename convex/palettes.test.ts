@@ -646,6 +646,31 @@ describe("palettes", () => {
     expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({ ...expected, updatedAt: 4_000 });
   });
 
+  it("leaves the palette untouched when a move has nothing to move", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    const groups = [
+      { id: "g-1", name: "Armour", paintIds: ["p-1"] },
+      { id: "g-2", name: "Trim", paintIds: [] },
+    ];
+    await t.run((ctx) => ctx.db.patch(id, { paintIds: ["p-1", "p-2"], groups }));
+
+    vi.setSystemTime(2_000);
+    const move = (paintId: string, fromGroupId: string, toGroupId: string) =>
+      as.mutation(api.palettes.movePaintToGroup, { paletteId: id, paintId, fromGroupId, toGroupId });
+    expect(await move("p-2", "g-1", "g-2")).toBeNull();
+    expect(await move("p-9", "g-1", "g-2")).toBeNull();
+    expect(await move("p-1", "g-1", "g-1")).toBeNull();
+
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      paintIds: ["p-1", "p-2"],
+      groups,
+      updatedAt: 1_000,
+    });
+  });
+
   it("keeps group changes to the owner", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);

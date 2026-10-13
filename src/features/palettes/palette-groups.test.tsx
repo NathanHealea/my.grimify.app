@@ -381,6 +381,132 @@ describe("shows groups and creates, renames and deletes them", () => {
     expect(removeGroup).toHaveBeenLastCalledWith({ paletteId: PALETTE_ID, groupId: "group-trim" });
     await waitFor(() => expect(screen.getByRole("button", { name: "New group" })).toHaveFocus());
   });
+
+  it("explains a failed group delete and keeps the group and the sheet", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    signedInWith(palette([armor(), trim()]));
+    const removeGroup = vi.fn(() => Promise.reject(new Error("network down")));
+    mockMutations({ [nameOf(api.palettes.removeGroup)]: removeGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Delete group",
+      }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete group "Armor"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(within(confirm).getByRole("alert")).toHaveTextContent(
+        "Couldn't delete the group. Check your connection and try again.",
+      ),
+    );
+    expect(screen.getByRole("dialog", { name: 'Delete group "Armor"?' })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Armor", hidden: true })).toBeInTheDocument();
+    expect(screen.queryByText("Deleted group Armor")).not.toBeInTheDocument();
+  });
+
+  it("keeps the delete confirmation open while the delete saves", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor(), trim()]));
+    const removeGroup = vi.fn(() => new Promise(() => {}));
+    mockMutations({ [nameOf(api.palettes.removeGroup)]: removeGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Delete group",
+      }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete group "Armor"?' });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+    fireEvent.keyDown(confirm, { key: "Escape" });
+
+    expect(screen.getByRole("dialog", { name: 'Delete group "Armor"?' })).toBeVisible();
+    expect(within(confirm).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
+
+  it("refuses a group name over 60 characters when renaming", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor()]));
+    const renameGroup = vi.fn(() => Promise.resolve(null));
+    mockMutations({ [nameOf(api.palettes.renameGroup)]: renameGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Rename",
+      }),
+    );
+    const field = await screen.findByRole("textbox", { name: "Group name" });
+    fireEvent.change(field, { target: { value: "x".repeat(61) } });
+    fireEvent.submit(field);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Use 60 characters or fewer");
+    expect(renameGroup).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Group name" })).toBeInTheDocument();
+  });
+
+  it("focuses the group's heading when a rename is cancelled offline", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor(), trim()]));
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Rename",
+      }),
+    );
+    await screen.findByRole("textbox", { name: "Group name" });
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const heading = await screen.findByRole("heading", { level: 2, name: "Armor" });
+    await waitFor(() => expect(heading).toHaveFocus());
+  });
+
+  it("doesn't close another group's rename when an earlier rename lands", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor(), trim()]));
+    let land: () => void = () => {};
+    const renameGroup = vi.fn(
+      () =>
+        new Promise<null>((resolve) => {
+          land = () => resolve(null);
+        }),
+    );
+    mockMutations({ [nameOf(api.palettes.renameGroup)]: renameGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Rename",
+      }),
+    );
+    const field = await screen.findByRole("textbox", { name: "Group name" });
+    fireEvent.change(field, { target: { value: "Armour" } });
+    fireEvent.submit(field);
+
+    fireEvent.click(screen.getByRole("button", { name: "Actions for group Trim" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Trim" })).getByRole("button", {
+        name: "Rename",
+      }),
+    );
+    expect(await screen.findByRole("textbox", { name: "Group name" })).toHaveValue("Trim");
+    await act(() => Promise.resolve(land()));
+
+    expect(screen.getByRole("textbox", { name: "Group name" })).toHaveValue("Trim");
+    expect(within(screen.getByRole("region", { name: "Trim" })).getByRole("textbox")).toBeVisible();
+  });
 });
 
 it("group controls are disabled offline", async () => {
