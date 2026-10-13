@@ -1,6 +1,7 @@
 import "./palette-detail.css";
 
 import { useUser } from "@clerk/react";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { Ellipsis, Layers, X } from "lucide-react";
@@ -26,6 +27,7 @@ import { useOnlineStatus } from "@/features/pwa/use-online-status";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { GroupMembershipSheet } from "./group-membership-sheet";
+import { PaletteArrange, SortableItem } from "./palette-arrange";
 import { PaletteGroups } from "./palette-groups";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
@@ -86,6 +88,8 @@ function PaletteContent({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const actionsButton = useRef<HTMLButtonElement>(null);
+  const arrangeButton = useRef<HTMLButtonElement>(null);
+  const [arranging, setArranging] = useState(false);
   const allPaintsId = useId();
   // Convex holds a mutation until the connection returns, so offline a pending delete mustn't trap the user.
   const locked = deleting && online;
@@ -135,15 +139,32 @@ function PaletteContent({
 
       <CatalogGate>
         {(catalog) => (
-          <>
+          <PaletteArrange palette={palette} online={online} nameOf={paintNamer(catalog)}>
             <section className="palette-detail__section" aria-labelledby={allPaintsId}>
-              <h2 id={allPaintsId}>All paints</h2>
+              <div className="palette-detail__section-heading">
+                <h2 id={allPaintsId}>All paints</h2>
+                {palette.paintIds.length > 0 && (
+                  <Button
+                    ref={arrangeButton}
+                    variant="outline"
+                    // Offline, Done still has to work so the user can leave the mode.
+                    disabled={!online && !arranging}
+                    onClick={() => {
+                      setArranging(!arranging);
+                      arrangeButton.current?.focus();
+                    }}
+                  >
+                    {arranging ? "Done" : "Arrange"}
+                  </Button>
+                )}
+              </div>
               <PaintList
                 paletteId={palette._id}
                 paintIds={palette.paintIds}
                 groups={palette.groups}
                 catalog={catalog}
                 online={online}
+                arranging={arranging}
                 lastFocus={actionsButton}
               />
             </section>
@@ -153,7 +174,7 @@ function PaletteContent({
               catalog={catalog}
               online={online}
             />
-          </>
+          </PaletteArrange>
         )}
       </CatalogGate>
 
@@ -227,12 +248,17 @@ function PaletteContent({
   );
 }
 
+function paintNamer(catalog: Catalog): (paintId: string) => string {
+  return (paintId) => catalog.paints.find((p) => p.id === paintId)?.name ?? "unknown paint";
+}
+
 function PaintList({
   paletteId,
   paintIds,
   groups,
   catalog,
   online,
+  arranging,
   lastFocus,
 }: {
   paletteId: Id<"palettes">;
@@ -240,6 +266,7 @@ function PaintList({
   groups: Doc<"palettes">["groups"];
   catalog: Catalog;
   online: boolean;
+  arranging: boolean;
   /** Where focus goes once the last paint is removed. */
   lastFocus: RefObject<HTMLElement | null>;
 }) {
@@ -335,40 +362,69 @@ function PaintList({
     </Button>
   );
 
+  const sortableRow = (paintId: string) => {
+    const paint = paints.get(paintId);
+    return (
+      <SortableItem
+        key={paintId}
+        id={sortableId(paintId)}
+        data={{ type: "paint", groupId: null, paintId }}
+        label={`Drag ${paint?.name ?? "unknown paint"}`}
+        disabled={!online}
+        className="palette-detail__paint"
+      >
+        <span className="palette-detail__paint-body">
+          {paint ? (
+            <PaintSwatch hex={paint.hex} type={paint.type} />
+          ) : (
+            <span className="palette-detail__unknown-swatch" aria-hidden="true" />
+          )}
+          <span className="palette-detail__text">
+            <span className="palette-detail__name">{paint?.name ?? "Unknown paint"}</span>
+            {paint && <span className="palette-detail__brand">{brands.get(paint.brandId)}</span>}
+          </span>
+        </span>
+      </SortableItem>
+    );
+  };
+
   return (
     <>
-      <ul className="palette-detail__paints" aria-label="Paints in this palette">
-        {paintIds.map((paintId) => {
-          const paint = paints.get(paintId);
-          if (!paint) {
+      <SortableContext items={paintIds.map(sortableId)} strategy={verticalListSortingStrategy}>
+        <ul className="palette-detail__paints" aria-label="Paints in this palette">
+          {paintIds.map((paintId) => {
+            if (arranging) return sortableRow(paintId);
+            const paint = paints.get(paintId);
+            if (!paint) {
+              return (
+                <li key={paintId} className="palette-detail__paint">
+                  <span className="palette-detail__unknown-swatch" aria-hidden="true" />
+                  <span className="palette-detail__name">Unknown paint</span>
+                  {groupsButton(paintId, "unknown paint")}
+                  {removeButton(paintId, "unknown paint")}
+                </li>
+              );
+            }
             return (
               <li key={paintId} className="palette-detail__paint">
-                <span className="palette-detail__unknown-swatch" aria-hidden="true" />
-                <span className="palette-detail__name">Unknown paint</span>
-                {groupsButton(paintId, "unknown paint")}
-                {removeButton(paintId, "unknown paint")}
+                <Link
+                  to="/paints/$paintId"
+                  params={{ paintId }}
+                  className="palette-detail__paint-link"
+                >
+                  <PaintSwatch hex={paint.hex} type={paint.type} />
+                  <span className="palette-detail__text">
+                    <span className="palette-detail__name">{paint.name}</span>
+                    <span className="palette-detail__brand">{brands.get(paint.brandId)}</span>
+                  </span>
+                </Link>
+                {groupsButton(paintId, paint.name)}
+                {removeButton(paintId, paint.name)}
               </li>
             );
-          }
-          return (
-            <li key={paintId} className="palette-detail__paint">
-              <Link
-                to="/paints/$paintId"
-                params={{ paintId }}
-                className="palette-detail__paint-link"
-              >
-                <PaintSwatch hex={paint.hex} type={paint.type} />
-                <span className="palette-detail__text">
-                  <span className="palette-detail__name">{paint.name}</span>
-                  <span className="palette-detail__brand">{brands.get(paint.brandId)}</span>
-                </span>
-              </Link>
-              {groupsButton(paintId, paint.name)}
-              {removeButton(paintId, paint.name)}
-            </li>
-          );
-        })}
-      </ul>
+          })}
+        </ul>
+      </SortableContext>
       <GroupMembershipSheet
         open={groupsOpen}
         onOpenChange={setGroupsOpen}
@@ -382,3 +438,5 @@ function PaintList({
     </>
   );
 }
+
+const sortableId = (paintId: string) => `main:${paintId}`;

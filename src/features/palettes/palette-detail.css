@@ -59,6 +59,16 @@
   }
 }
 
+/* Arrange mode drops the link, so the swatch and name sit in a plain box with the same spacing. */
+.palette-detail__paint-body {
+  display: flex;
+  flex: 1;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+  padding-block: var(--space-2);
+}
+
 /* A neutral chip with a dashed edge: no colour is better than a guessed one for a paint we can't find. */
 .palette-detail__unknown-swatch {
   flex-shrink: 0;
@@ -111,4 +121,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.palette-detail__section-heading {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
 }

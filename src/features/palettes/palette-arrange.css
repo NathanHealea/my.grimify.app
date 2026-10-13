@@ -1,0 +1,22 @@
+.palette-arrange__item {
+  transform: translate3d(var(--drag-x, 0), var(--drag-y, 0), 0);
+  transition: var(--drag-transition, none);
+
+  &[data-dragging] {
+    position: relative;
+    z-index: 1;
+    background: var(--color-surface);
+  }
+}
+
+.palette-arrange__handle {
+  flex-shrink: 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-arrange__item {
+    transition: none;
+  }
+}
