@@ -175,11 +175,11 @@ Fields:
 - `userId: Id<"users">`
 - `name: string` — 1–60 characters after trimming; duplicates allowed
 - `paintIds: string[]` — the main list, in the user's order; catalog paint IDs only, never copied names or hex
-- `groups: { id: string; name: string; paintIds: string[] }[]` — named sections, in order, referencing paints from the main list. Always `[]` until the groups story
+- `groups: { id: string; name: string; paintIds: string[] }[]` — named sections, in order, referencing paints from the main list. A paint is at most once per group and can be in any number of groups. `id` is 8 base-36 characters made by the server, unique within the palette (DECISIONS 052)
 - `updatedAt: number` — **server** time of the last change (orders the Palettes list)
 - `_creationTime`
 
-Limits: 50 palettes per user, names of 1–60 characters and 200 paints per palette, enforced in the mutations (`palettes.addPaints` throws `PALETTE_FULL`). 30 groups per palette is planned with the groups story (DECISIONS 048, 051).
+Limits: 50 palettes per user, names of 1–60 characters and 200 paints per palette, enforced in the mutations (`palettes.addPaints` throws `PALETTE_FULL`). 30 groups per palette (`palettes.createGroup` throws `GROUP_LIMIT`) and group names of 1–60 characters (`createGroup` and `renameGroup`). No cap per group (DECISIONS 048, 051, 052).
 
 ### Convex schema (reference)
 ```ts
@@ -256,7 +256,7 @@ Foreign Keys:
 ## 8. Data Validation
 
 - Catalog: Zod schema; `hex` matches `^#[0-9A-F]{6}$`; `brandId`/`lineId` must exist; IDs are unique; `hueOverride` must be a valid HueFamily
-- Convex: argument validators on every function; `paintId` (in `userPaints.set`, and every ID in `palettes.addPaints`) matches `^[a-z0-9-]{3,100}$`; palette names are trimmed and must be 1–60 characters
+- Convex: argument validators on every function; `paintId` (in `userPaints.set`, the palette paint and group paint mutations, and every ID in `palettes.addPaints`) matches `^[a-z0-9-]{3,100}$`; palette and group names are trimmed and must be 1–60 characters; a paint must be in the main list before it can join a group
 - Strings are trimmed; `notes` (if added) is capped at 500 characters
 
 ---

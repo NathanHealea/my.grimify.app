@@ -1026,7 +1026,7 @@ Palettes need a main list in a user-chosen order and named groups that reference
 Decision:
 - One `palettes` document per palette: `userId`, `name`, `paintIds` (main list, in order), `groups` (`{ id, name, paintIds }[]`, in order) and `updatedAt` (server time). Index `by_userId`.
 - Groups are in the stored shape from the first story, empty until the groups story, so no migration is needed later.
-- Caps, enforced server-side: 50 palettes per user and names of 1–60 characters after trimming, both enforced now (`PALETTE_LIMIT`, `PALETTE_NAME_INVALID`). 200 paints per palette and 30 groups per palette land with the stories that add paints and groups. (The 200-paint cap is enforced from the palette-paints story, `PALETTE_FULL`; DECISIONS 051.)
+- Caps, enforced server-side: 50 palettes per user and names of 1–60 characters after trimming, both enforced now (`PALETTE_LIMIT`, `PALETTE_NAME_INVALID`). 200 paints per palette and 30 groups per palette land with the stories that add paints and groups. (The 200-paint cap is enforced from the palette-paints story, `PALETTE_FULL`; DECISIONS 051. The 30-group cap is enforced from the palette-groups story, `GROUP_LIMIT`; DECISIONS 052.)
 - Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, and `rename` and `remove` throw `NOT_FOUND`. `palettes.get` takes a plain string and returns `null` for anything that isn't a palette ID, so a mangled URL shows "Palette not found" instead of failing argument validation.
 - `users.deleteAccount` deletes the caller's palettes in the same transaction as the `users` row. The 50-palette cap keeps that inside one transaction.
 
@@ -1107,3 +1107,35 @@ Alternatives:
 Consequences:
 Positive: rows keep their room for names; many paints go in with one write; a mis-add is undone in one tap.
 Trade-off: adding from the list takes Add to palette, tick, Add to palette, choose. The picker doesn't show which palettes already hold the paint, so the user learns that from the "Already in" toast. A mis-tapped Remove loses the paint's place in the list; re-adding puts it at the end.
+
+---
+
+## Decision 052 — Group paints through menus, with server-made group IDs
+
+Date: 2026-10-13
+Status: Accepted
+
+Context:
+Groups have been in the palette document since DECISIONS 048 but nothing created them. Painters want to sort a palette's paints into named groups such as "Armor" and "Highlights", with a paint in several groups at once. Every paint stays in the main list; a group only points at paints already there. Drag and drop comes in a later story (palette-drag-drop), and every action needs a menu path for keyboard and screen reader users anyway.
+
+Decision:
+- **Layout:** the palette screen shows the main list under an "All paints" heading, then each group as a section headed by its name, in creation order, then a "New group" button.
+- **Adding to groups:** when the palette has at least one group, each main-list row gets a "Groups for <paint>" button next to Remove. It opens a sheet with one checkbox per group; ticking or unticking saves at once, with no toast.
+- **Paints in a group:** each row has an "Actions for <paint> in <group>" button opening a sheet with "Move to group…", "Copy to group…" and "Remove from group". Move and Copy list the other groups; one that already holds the paint is disabled and marked "(already in it)". Group rows don't link to paint detail, so the actions button is the row's only control; the main list keeps the link.
+- **Group actions:** "Actions for group <name>" opens Rename and Delete group. Rename is inline: the heading becomes a field with Save and Cancel. Delete asks first and keeps the group's paints in the palette.
+- **Server:** six mutations (`createGroup`, `renameGroup`, `removeGroup`, `addPaintToGroup`, `removePaintFromGroup`, `movePaintToGroup`), each behind `requireUser` and the palette owner check. A paint must be in the main list to join a group (`PAINT_NOT_IN_PALETTE`); an unknown group is `GROUP_NOT_FOUND`; 30 groups per palette (`GROUP_LIMIT`).
+- **Group IDs are made on the server:** 8 base-36 characters from `Math.random`, which Convex seeds per function run, picked again on a clash within the palette. Clients never choose them.
+- **Duplicate group names are allowed.** Names follow the palette rules: 1–60 characters after trimming.
+- **No per-group paint cap.** The 200-paint main list and 30 groups bound the document.
+- **Reordering paints or groups** is left to the drag and drop story, which also adds its keyboard equivalent. Until then groups keep creation order and paints keep the order they were added.
+
+Alternatives:
+- Waiting for drag and drop: one gesture per change, but it needs a keyboard path anyway (WCAG 2.1.1), and groups would wait a story longer
+- An actions menu on main-list rows instead of a Groups button: one button per row, but putting a paint in several groups takes a trip through the menu per group
+- Client-made group IDs: the client knows the ID before the save lands, but the server would have to check each one's shape and uniqueness, and a client could pick IDs on purpose
+- Unique group names: avoids two "Armor" sections, but adds an error for something that does no harm
+- A per-group paint cap: tighter document size bound, but another limit to explain for a case the main-list cap already covers
+
+Consequences:
+Positive: every group action works by keyboard and screen reader, a paint can sit in any number of groups with one tap each, and group IDs can't collide or be guessed into another palette.
+Trade-off: main-list rows carry two 44px buttons (Groups and Remove), which leaves the paint name about 150px at 320px, down from about 200px; long names wrap. At the theoretical worst, 30 groups each holding 200 paint IDs of 100 characters, a palette is about 600 KB, under Convex's 1 MiB limit but not by much; with real IDs it's about 180 KB. Group edits follow last write wins (DECISIONS 049), so two devices editing groups at once can lose one change. Painters can't open a paint from its group row.

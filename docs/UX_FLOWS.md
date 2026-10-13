@@ -15,7 +15,8 @@ Paints tab (catalog) ──► Paint detail ──► Equivalents ──► anot
    ↓
 My Paints tab (Owned | Wishlist | Favorites), with the same Select mode
    ↓
-Palettes tab ──► Palette (main list) ──► Remove a paint / Rename / Delete
+Palettes tab ──► Palette (All paints + groups) ──► Remove a paint / Rename / Delete
+   │                    └─► New group / Groups for a paint / move, copy, remove in a group
    ↓
 Settings (account, install help, about)
 ```
@@ -221,9 +222,10 @@ Create:
 
 Palette (`/palettes/$paletteId`):
 1. The palette's name is the page title; the header has a back link to Palettes
-2. The main list in the user's order: swatch, paint name and brand; each known paint links to its page. A paint ID the catalog doesn't have shows a neutral dashed swatch and "Unknown paint". Each row ends with a Remove button (below)
+2. The main list, under the heading "All paints", in the user's order: swatch, paint name and brand; each known paint links to its page. A paint ID the catalog doesn't have shows a neutral dashed swatch and "Unknown paint". Each row ends with a Remove button (below), and with a Groups button before it once the palette has a group
 3. Empty: "No paints in this palette yet"
-4. Unknown, mangled or someone else's ID: title "Palette not found" and an "All palettes" link
+4. Below the main list, each group is a section headed by its name, in the order they were made, listing its paints (swatch, name, brand; no link). An empty group says "No paints in this group yet". Then a **New group** button
+5. Unknown, mangled or someone else's ID: title "Palette not found" and an "All palettes" link
 
 Add a paint (paint detail):
 1. On a paint's page, tap **Add to palette** (under the Own/Want/Favorite toggles) → sheet "Add to palette" listing the user's palettes, each with its name and "n paints", then a **New palette** button. With no palettes, only New palette shows
@@ -250,6 +252,27 @@ Remove a paint:
 2. The paint leaves the palette at once, with no confirmation, and a toast says "Removed Macragge Blue". The other paints keep their order, and focus moves to the next paint's Remove button (the previous one at the end, Palette actions once the list is empty). Re-adding it is one tap from the paint's page (DECISIONS 051)
 3. If it fails: the toast "Couldn't remove Macragge Blue. Check your connection and try again." and the paint stays, with focus still on its Remove button. A second tap while a remove is in flight does nothing
 
+Groups (DECISIONS 052):
+1. Tap **New group** → sheet "New group" with a "Group name" field, Cancel and Create. Create adds the group at the end, and focus moves to its heading. Errors as in Create, worded for groups: blank → "Give the group a name"; the 31st group → "A palette can have up to 30 groups"; anything else → "Couldn't save the group. Check your connection and try again." Two groups can share a name
+2. Tap **Actions for group Armor** (next to the group's heading) → a sheet with Rename and Delete group
+3. Rename → the heading becomes a "Group name" field holding the name, with Cancel and Save, and focus moves to the field. Enter or Save saves; Escape or Cancel keeps the old name. Focus returns to the group's actions button. Errors show under the field: blank → "Give the group a name"; over 60 characters → "Use 60 characters or fewer"; anything else → "Couldn't rename the group. Check your connection and try again."
+4. Delete group → sheet `Delete group "Armor"?`: "Its paints stay in the palette." with Cancel and Delete. Delete removes the group only and toasts "Deleted group Armor". Focus moves to the next group's actions button, or New group if it was the last. If it fails: "Couldn't delete the group. Check your connection and try again." in the sheet
+
+Put a paint in groups:
+1. On a main-list row, tap **Groups for Macragge Blue** → sheet "Groups for Macragge Blue" with one checkbox per group, ticked where the paint already is
+2. Tick a group → the paint goes to the end of that group. Untick → it leaves that group and stays in All paints. Each change saves at once, with no toast. A paint can be in any number of groups, once each
+3. If a change fails: "Couldn't update Armor. Check your connection and try again." in the sheet, and the box goes back
+4. **Done** closes the sheet; focus returns to the Groups button
+
+Move, copy or remove in a group:
+1. On a paint in a group, tap **Actions for Macragge Blue in Armor** → sheet "Macragge Blue in Armor" with Move to group…, Copy to group… and Remove from group. Move and Copy are disabled when there's no other group
+2. Move to group… → "Move Macragge Blue to", listing the other groups, plus Back. A group that already holds the paint reads "Trim (already in it)" and is disabled. Choose one → the paint leaves Armor and goes to the end of that group; toast "Moved to Highlights"
+3. Copy to group… → "Copy Macragge Blue to", the same list. Choose one → the paint stays in Armor and goes to the end of that group too; toast "Copied to Highlights"
+4. Remove from group → the paint leaves Armor and stays in All paints; toast "Removed from Armor"
+5. After a move or remove, focus goes to the next paint's actions button in the group (the previous one at the end, then the group's actions button). Otherwise it returns to the paint's actions button
+6. If it fails: "This paint is no longer in the palette." when it was removed elsewhere, or "Couldn't move Macragge Blue. Check your connection and try again." (copy, remove) in the sheet
+7. Removing a paint from the palette with ✕ also takes it out of every group
+
 Rename and delete:
 1. Tap the **Palette actions** button (next to the title) → a sheet with Rename and Delete palette
 2. Rename → sheet "Rename palette", field filled with the current name, Cancel and Save; same errors as Create
@@ -263,6 +286,7 @@ Loading State:
 "Loading your palettes…" (list) or "Loading palette…" (a palette) as a status message.
 
 Offline:
-- Loaded list or palette stays visible; New palette, Palette actions and each paint's Remove button are disabled, and a status line says "Connect to the internet to edit palettes."; back online re-enables them
+- Loaded list or palette stays visible, groups included; New palette, Palette actions, each paint's Remove and Groups buttons, New group and every group and group-paint actions button are disabled, and a status line says "Connect to the internet to edit palettes."; back online re-enables them
+- In group sheets already open, the checkboxes, Remove from group, the move and copy targets and Delete are disabled, with the same status line
 - Add to palette on paint detail, in the selection bar and in the picker is disabled, with the same status line. Select mode can still be turned on and paints ticked; only adding waits for the connection
 - Nothing loaded yet (for example after a reload offline): "Palettes need an internet connection."

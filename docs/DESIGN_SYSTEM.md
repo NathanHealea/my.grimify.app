@@ -214,6 +214,13 @@ Detected brand / hue / hex appear as removable pill chips under the search box (
 
 ### Palette paint row
 - Swatch · name · brand, linking to the paint, then a ghost icon button (✕, `size="icon"`, 44×44px) named "Remove <paint name> from palette". An unknown paint's name stretches so the button stays at the row's end
+- Once the palette has a group, a second ghost icon button (`Layers`, 44×44px) named "Groups for <paint name>" sits before Remove. With both, the name has about 150px at 320px and long names wrap
+
+### Palette group section
+- A `section` labelled by its `<h2>` group name, which wraps (`overflow-wrap: anywhere`), with a ghost icon button (`Ellipsis`) named "Actions for group <name>" at the heading's end. Groups sit `--space-6` apart
+- Rows: swatch · name (semibold) · brand (small, muted), no link, `--row-min-height` with a `--color-border` line under each, ending in a ghost icon button (`Ellipsis`) named "Actions for <paint> in <group>". An unknown paint gets the main list's dashed swatch
+- Empty: "No paints in this group yet" in `--color-muted-text`. "New group" (outline) follows the last group, aligned left
+- Inline rename replaces the heading with a "Group name" label (semibold), the field, an always-present `alert` error line and Cancel (outline) and Save (primary), right-aligned
 
 ---
 
@@ -261,6 +268,8 @@ Filters open in a bottom sheet: shadcn `Sheet` (`side="bottom"`) on Radix Dialog
 Sheet options (Show only, brand, line, type) are outline-button boxes: `--touch-target` tall, `--space-4` side padding, `--radius-md`, a `--color-input-border` edge, `--space-2` apart, the whole box is the hit area. The native checkbox or radio stays visible inside as the non-color checked cue; checked adds a Primary edge and Secondary fill, and the focus ring wraps the whole box. Hue dots keep their own style.
 
 The Add to palette sheet lists palettes as full-width plain buttons, `--row-min-height` tall with a `--color-border` line under each: the name (semibold) over "n paints" (small, muted). Hover adds a Secondary fill; disabled uses `--opacity-disabled`. "New palette" (outline, plus icon) follows the list. Errors sit at the top in an always-present `alert` region, in `--color-error`.
+
+The Groups sheet lists one native checkbox per group, `--touch-target` tall with the group name as its label, the box at `--icon-size` tinted `accent-color: var(--color-primary)`; "Done" (primary) closes it. Group actions and a group paint's actions sheets stack full-width buttons `--space-2` apart: outline for actions and target groups, destructive for Delete group, ghost for Back. Errors and the offline note sit under them in always-present `alert` and `status` regions.
 
 ---
 
