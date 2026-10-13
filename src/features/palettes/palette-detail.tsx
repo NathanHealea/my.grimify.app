@@ -27,7 +27,7 @@ import { useOnlineStatus } from "@/features/pwa/use-online-status";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { GroupMembershipSheet } from "./group-membership-sheet";
-import { PaletteArrange, SortableItem } from "./palette-arrange";
+import { PaletteArrange, sortableIdOf,SortableItem } from "./palette-arrange";
 import { PaletteGroups } from "./palette-groups";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
@@ -143,7 +143,7 @@ function PaletteContent({
             <section className="palette-detail__section" aria-labelledby={allPaintsId}>
               <div className="palette-detail__section-heading">
                 <h2 id={allPaintsId}>All paints</h2>
-                {palette.paintIds.length > 0 && (
+                {(palette.paintIds.length > 0 || palette.groups.length > 1) && (
                   <Button
                     ref={arrangeButton}
                     variant="outline"
@@ -173,6 +173,7 @@ function PaletteContent({
               groups={palette.groups}
               catalog={catalog}
               online={online}
+              arranging={arranging}
             />
           </PaletteArrange>
         )}
@@ -363,7 +364,6 @@ function PaintList({
     return (
       <SortableItem
         key={paintId}
-        id={sortableId(paintId)}
         data={{ type: "paint", groupId: null, paintId }}
         label={`Drag ${paint?.name ?? "unknown paint"}`}
         disabled={!online}
@@ -386,7 +386,10 @@ function PaintList({
 
   return (
     <>
-      <SortableContext items={paintIds.map(sortableId)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={paintIds.map((paintId) => sortableIdOf({ type: "paint", groupId: null, paintId }))}
+        strategy={verticalListSortingStrategy}
+      >
         <ul className="palette-detail__paints" aria-label="Paints in this palette">
           {paintIds.map((paintId) => {
             if (arranging) return sortableRow(paintId);
@@ -434,5 +437,3 @@ function PaintList({
     </>
   );
 }
-
-const sortableId = (paintId: string) => `main:${paintId}`;

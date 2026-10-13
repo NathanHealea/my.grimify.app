@@ -18,7 +18,7 @@ const PALETTE_ID = "palette-1";
 const NO_ROWS: never[] = [];
 const ME = { _id: "user-1" };
 
-function palette(paintIds: string[]) {
+function palette(paintIds: string[], trimPaintIds: string[] = []) {
   return {
     _id: PALETTE_ID,
     _creationTime: 1,
@@ -26,7 +26,7 @@ function palette(paintIds: string[]) {
     name: "Ultramarines",
     paintIds,
     // A group makes each All paints row render its Groups button.
-    groups: [{ id: "group-trim", name: "Trim", paintIds: [] }],
+    groups: [{ id: "group-trim", name: "Trim", paintIds: trimPaintIds }],
     updatedAt: 1,
   };
 }
@@ -81,13 +81,19 @@ afterEach(() => {
 describe("Arrange mode", () => {
   it("arrange mode swaps row controls for handles", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
-    signedInWith(palette([red.id, "retired-paint-id", vallejo.id]));
+    signedInWith(palette([red.id, "retired-paint-id", vallejo.id], [red.id]));
     renderRoute(`/palettes/${PALETTE_ID}`);
 
     const list = await screen.findByRole("list", { name: "Paints in this palette" });
     await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
     expect(within(list).getAllByRole("link")).toHaveLength(2);
     expect(within(list).queryAllByRole("button", { name: /^Drag / })).toHaveLength(0);
+    // Arrange mode renders the groups afresh, so the region is looked up each time.
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    await within(trim()).findByRole("button", { name: "Actions for Mephiston Red in Trim" });
+    expect(within(trim()).getByRole("button", { name: "Actions for group Trim" })).toBeVisible();
+    expect(within(trim()).queryAllByRole("button", { name: /^Drag / })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "New group" })).toBeVisible();
 
     const arrange = screen.getByRole("button", { name: "Arrange" });
     fireEvent.click(arrange);
@@ -105,6 +111,19 @@ describe("Arrange mode", () => {
     expect(within(list).queryAllByRole("button", { name: /^Groups for / })).toHaveLength(0);
     expect(within(list).queryAllByRole("button", { name: /^Remove / })).toHaveLength(0);
 
+    const groupHandles = [
+      within(trim()).getByRole("button", { name: "Drag group Trim" }),
+      within(trim()).getByRole("button", { name: "Drag Mephiston Red" }),
+    ];
+    for (const handle of groupHandles) {
+      expect(handle).toHaveAccessibleDescription(expect.stringContaining("Space"));
+    }
+    expect(within(trim()).queryByRole("button", { name: "Actions for group Trim" })).toBeNull();
+    expect(
+      within(trim()).queryByRole("button", { name: "Actions for Mephiston Red in Trim" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "New group" })).toBeNull();
+
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
     expect(within(list).queryAllByRole("button", { name: /^Drag / })).toHaveLength(0);
@@ -121,12 +140,18 @@ describe("Arrange mode", () => {
     expect(
       within(list).getByRole("button", { name: "Remove Blood Red from palette" }),
     ).toBeVisible();
+    expect(within(trim()).queryAllByRole("button", { name: /^Drag / })).toHaveLength(0);
+    expect(within(trim()).getByRole("button", { name: "Actions for group Trim" })).toBeVisible();
+    expect(
+      within(trim()).getByRole("button", { name: "Actions for Mephiston Red in Trim" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "New group" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Arrange" })).toHaveFocus();
   });
 
   it("arrange is disabled offline", async () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
-    signedInWith(palette([red.id, vallejo.id]));
+    signedInWith(palette([red.id, vallejo.id], [red.id]));
     renderRoute(`/palettes/${PALETTE_ID}`);
 
     const main = await screen.findByRole("main");
@@ -145,11 +170,19 @@ describe("Arrange mode", () => {
       within(list).getByRole("button", { name: "Drag Blood Red" }),
     ];
     expect(handles.filter(isDisabled)).toHaveLength(0);
+    const trim = within(main).getByRole("region", { name: "Trim" });
+    const groupHandles = [
+      within(trim).getByRole("button", { name: "Drag group Trim" }),
+      within(trim).getByRole("button", { name: "Drag Mephiston Red" }),
+    ];
+    expect(groupHandles.filter(isDisabled)).toHaveLength(0);
 
     onLine.mockReturnValue(false);
     act(() => void window.dispatchEvent(new Event("offline")));
     expect(isDisabled(within(list).getByRole("button", { name: "Drag Mephiston Red" }))).toBe(true);
     expect(isDisabled(within(list).getByRole("button", { name: "Drag Blood Red" }))).toBe(true);
+    expect(isDisabled(within(trim).getByRole("button", { name: "Drag group Trim" }))).toBe(true);
+    expect(isDisabled(within(trim).getByRole("button", { name: "Drag Mephiston Red" }))).toBe(true);
     expect(within(main).getByText(OFFLINE_EDIT_NOTE)).toHaveAttribute("role", "status");
   });
 });
