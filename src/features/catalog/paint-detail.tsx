@@ -1,17 +1,23 @@
 import "./paint-detail.css";
 
+import { useUser } from "@clerk/react";
 import { Link } from "@tanstack/react-router";
-import { Copy } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Copy, SwatchBook } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 
 import { PageTitle } from "@/components/page-title";
 import { PaintRow } from "@/components/paint-row";
 import { PaintSwatch } from "@/components/paint-swatch";
+import { Button } from "@/components/ui/button";
+import { useSignIn } from "@/features/auth/sign-in-provider";
 import { usePaintFlags } from "@/features/collection/collection-provider";
 import { PaintToggles } from "@/features/collection/paint-toggles";
 import type { MatchLabel } from "@/features/matching/delta-e";
 import { findEquivalents } from "@/features/matching/find-equivalents";
 import { type TypeFamily, typeFamily } from "@/features/matching/type-families";
+import { AddToPaletteSheet } from "@/features/palettes/add-to-palette-sheet";
+import { OFFLINE_EDIT_NOTE } from "@/features/palettes/palette-name-sheet";
+import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
 import { CatalogGate } from "./catalog-gate";
 import type { Catalog, CatalogPaint } from "./schema";
@@ -129,6 +135,7 @@ function PaintFacts({
           <Copy aria-hidden="true" />
         </button>
         <PaintToggles paintId={paint.id} paintName={paint.name} />
+        <AddToPalette paintId={paint.id} />
         <p className="paint-detail__copied" role="status">
           {copyStatus}
         </p>
@@ -173,6 +180,38 @@ function PaintFacts({
         ))}
       </section>
     </article>
+  );
+}
+
+/** Palettes need an account, so signed out this opens sign-in; it doesn't add afterwards. */
+function AddToPalette({ paintId }: { paintId: string }) {
+  const { isSignedIn } = useUser();
+  const openSignIn = useSignIn();
+  const online = useOnlineStatus();
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <Button
+        ref={button}
+        variant="outline"
+        disabled={!online}
+        onClick={() => (isSignedIn ? setOpen(true) : openSignIn())}
+      >
+        <SwatchBook aria-hidden="true" />
+        Add to palette
+      </Button>
+      <p className="paint-detail__note" role="status">
+        {!online && OFFLINE_EDIT_NOTE}
+      </p>
+      <AddToPaletteSheet
+        open={open}
+        onOpenChange={setOpen}
+        paintIds={[paintId]}
+        returnFocus={button}
+      />
+    </>
   );
 }
 

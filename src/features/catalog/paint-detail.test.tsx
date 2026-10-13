@@ -1,5 +1,6 @@
-import { fireEvent, screen, within } from "@testing-library/react";
-import { useQuery } from "convex/react";
+import { useUser } from "@clerk/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -35,6 +36,23 @@ const catalog = catalogOf([
     finish: "metallic",
   }),
 ]);
+
+const nameOf = (ref: unknown) => getFunctionName(ref as FunctionReference<"query" | "mutation">);
+
+const defaultUseMutation = vi.mocked(useMutation).getMockImplementation();
+
+function signIn() {
+  vi.mocked(useUser).mockReturnValue({
+    isLoaded: true,
+    isSignedIn: true,
+    user: { id: "user_test" },
+  } as unknown as ReturnType<typeof useUser>);
+  vi.mocked(useConvexAuth).mockReturnValue({
+    isLoading: false,
+    isRefreshing: false,
+    isAuthenticated: true,
+  });
+}
 
 function serve() {
   vi.stubGlobal(
@@ -139,5 +157,81 @@ describe("PaintDetail", () => {
       within(section).getByRole("button", { name: "Mark Blood Red as owned" }),
     ).toHaveAttribute("aria-pressed", "true");
     vi.mocked(useQuery).mockImplementation((() => undefined) as typeof useQuery);
+  });
+
+  describe("paint detail offers Add to palette", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.mocked(useMutation).mockImplementation(defaultUseMutation!);
+      vi.mocked(useQuery).mockImplementation((() => undefined) as typeof useQuery);
+      vi.mocked(useUser).mockReturnValue({
+        isLoaded: true,
+        isSignedIn: false,
+        user: null,
+      } as unknown as ReturnType<typeof useUser>);
+      vi.mocked(useConvexAuth).mockReturnValue({
+        isLoading: false,
+        isRefreshing: false,
+        isAuthenticated: false,
+      });
+    });
+
+    it("opens the picker for this paint when signed in", async () => {
+      serve();
+      signIn();
+      vi.mocked(useQuery).mockImplementation(((query: unknown) =>
+        nameOf(query) === nameOf(api.palettes.listMine)
+          ? [
+              {
+                _id: "palette-a",
+                name: "Ultramarines",
+                paintCount: 0,
+                previewPaintIds: [],
+                updatedAt: 1,
+              },
+            ]
+          : undefined) as typeof useQuery);
+      const addPaints = vi.fn<
+        (args: { paletteId: string; paintIds: string[] }) => Promise<{ added: number }>
+      >(() => Promise.resolve({ added: 1 }));
+      const other = vi.fn(() => Promise.resolve(null));
+      vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+        const fn = nameOf(ref) === nameOf(api.palettes.addPaints) ? addPaints : other;
+        return Object.assign(fn, { withOptimisticUpdate: () => fn });
+      }) as unknown as typeof useMutation);
+      renderRoute(`/paints/${red.id}`);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Add to palette" }));
+
+      const picker = screen.getByRole("dialog", { name: "Add to palette" });
+      fireEvent.click(within(picker).getByRole("button", { name: /^Ultramarines/ }));
+      await waitFor(() =>
+        expect(addPaints).toHaveBeenCalledExactlyOnceWith({
+          paletteId: "palette-a",
+          paintIds: [red.id],
+        }),
+      );
+    });
+
+    it("opens sign-in instead of the picker when signed out", async () => {
+      serve();
+      renderRoute(`/paints/${red.id}`);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Add to palette" }));
+
+      expect(screen.getByRole("dialog", { name: "Sign in" })).toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "Add to palette" })).not.toBeInTheDocument();
+    });
+
+    it("is disabled with a note when offline", async () => {
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+      serve();
+      signIn();
+      renderRoute(`/paints/${red.id}`);
+
+      expect(await screen.findByRole("button", { name: "Add to palette" })).toBeDisabled();
+      const note = screen.getByText("Connect to the internet to edit palettes.");
+      expect(note.closest('[role="status"]')).not.toBeNull();
+    });
   });
 });
