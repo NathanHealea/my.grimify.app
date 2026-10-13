@@ -156,6 +156,34 @@ describe("group paint actions move, copy and remove", () => {
     expect(search).toHaveFocus();
   });
 
+  it("doesn't carry an error that lands after closing into the next opening", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id, vallejo.id]), trim()]));
+    let fail: () => void = () => {};
+    const removePaintFromGroup = vi.fn(
+      () =>
+        new Promise<null>((_, reject) => {
+          fail = () => reject(new Error("network down"));
+        }),
+    );
+    mockMutations({ [nameOf(api.palettes.removePaintFromGroup)]: removePaintFromGroup });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const { sheet } = await openActions("Mephiston Red", "Armor");
+    fireEvent.click(within(sheet).getByRole("button", { name: "Remove from group" }));
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    fireEvent.keyDown(sheet, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await act(() => Promise.resolve(fail()));
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+
+    const { sheet: next } = await openActions("Blood Red", "Armor");
+    expect(within(next).getByRole("alert")).toBeEmptyDOMElement();
+  });
+
   it("reopens on the first view after a copy", async () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     const store = signedInWith(palette([armor([red.id]), trim()]));

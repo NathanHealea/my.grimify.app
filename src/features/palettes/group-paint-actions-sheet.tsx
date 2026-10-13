@@ -113,11 +113,12 @@ export function GroupPaintActionsSheet({
       }}
     >
       <SheetContent
-        // Reset on close, not open: by the time onOpenAutoFocus runs, Radix has picked a button from the old view.
+        // An offline save can fail after the sheet closed; its error mustn't show on the next opening.
+        onOpenAutoFocus={() => setError(null)}
+        // The view resets on close, not open: by onOpenAutoFocus Radix has picked a button from the old view.
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           setView("actions");
-          setError(null);
           onClosed();
         }}
       >
