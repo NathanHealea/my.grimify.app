@@ -185,7 +185,7 @@ function PaintFacts({
 
 /** Palettes need an account, so signed out this opens sign-in; it doesn't add afterwards. */
 function AddToPalette({ paintId }: { paintId: string }) {
-  const { isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
   const openSignIn = useSignIn();
   const online = useOnlineStatus();
   const [open, setOpen] = useState(false);
@@ -196,7 +196,8 @@ function AddToPalette({ paintId }: { paintId: string }) {
       <Button
         ref={button}
         variant="outline"
-        disabled={!online}
+        // Before Clerk loads, isSignedIn is undefined; a tap then would open sign-in for a signed-in user.
+        disabled={!online || !isLoaded}
         onClick={() => (isSignedIn ? setOpen(true) : openSignIn())}
       >
         <SwatchBook aria-hidden="true" />

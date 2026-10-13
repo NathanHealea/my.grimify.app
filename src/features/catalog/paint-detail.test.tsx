@@ -233,5 +233,17 @@ describe("PaintDetail", () => {
       const note = screen.getByText("Connect to the internet to edit palettes.");
       expect(note.closest('[role="status"]')).not.toBeNull();
     });
+
+    it("is disabled until Clerk knows whether the user is signed in", async () => {
+      vi.mocked(useUser).mockReturnValue({
+        isLoaded: false,
+        isSignedIn: undefined,
+        user: undefined,
+      } as unknown as ReturnType<typeof useUser>);
+      serve();
+      renderRoute(`/paints/${red.id}`);
+
+      expect(await screen.findByRole("button", { name: "Add to palette" })).toBeDisabled();
+    });
   });
 });
