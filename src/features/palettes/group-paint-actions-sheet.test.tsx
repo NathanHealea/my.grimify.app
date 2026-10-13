@@ -123,6 +123,39 @@ afterEach(() => {
 });
 
 describe("group paint actions move, copy and remove", () => {
+  it("doesn't pull focus back when a held remove lands after the user moved on", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    const store = signedInWith(palette([armor([red.id, vallejo.id]), trim()]));
+    let land: () => void = () => {};
+    const removePaintFromGroup = vi.fn(
+      () =>
+        new Promise<null>((resolve) => {
+          land = () => {
+            store.current = palette([armor([vallejo.id]), trim()]);
+            resolve(null);
+          };
+        }),
+    );
+    mockMutations({ [nameOf(api.palettes.removePaintFromGroup)]: removePaintFromGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const { sheet } = await openActions("Mephiston Red", "Armor");
+    fireEvent.click(within(sheet).getByRole("button", { name: "Remove from group" }));
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    fireEvent.keyDown(sheet, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const search = screen.getByRole("link", { name: "Back to Palettes" });
+    search.focus();
+
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+    await act(() => Promise.resolve(land()));
+    await serverPushes(onLine);
+
+    expect(search).toHaveFocus();
+  });
+
   it("reopens on the first view after a copy", async () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     const store = signedInWith(palette([armor([red.id]), trim()]));

@@ -131,7 +131,11 @@ export function PaletteGroups({
   // The row may leave before or after the sheet finishes closing; until then the sheet's focus trap wins.
   const sheetClosed = useRef(true);
   useEffect(() => {
-    if (sheetClosed.current && leaving.current !== null) focusAfterRow();
+    if (!sheetClosed.current || leaving.current === null) return;
+    // Only rescue focus that was lost; a user who has moved on since keeps their place.
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (lost) focusAfterRow();
+    else leaving.current = null;
     // focusAfterRow reads `latest`, so it only needs to run again when the groups or the connection change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, online]);
