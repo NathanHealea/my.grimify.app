@@ -9,7 +9,7 @@ created: 2026-10-12
 approved: 2026-10-13
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
 version: 0.17.0
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-13
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
 ---
@@ -141,3 +141,4 @@ Already in place:
 - 2026-10-13 — Verified: Convex seeds Math.random() per mutation (docs.convex.dev/functions/runtimes); group IDs use it, no counter fallback needed.
 - 2026-10-13 — Steps 1-3 done. Focusing a new group no longer assumes Convex renders it before createGroup resolves; the docs don't promise that order.
 - 2026-10-13 — Staged: verification passed; version 0.16.0 → 0.17.0; no changelog file.
+- 2026-10-13 — Review approved.
