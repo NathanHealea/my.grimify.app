@@ -190,6 +190,7 @@ export function PaletteGroups({
   };
 
   const confirmDelete = (group: Group) => {
+    if (deleting) return;
     const index = groups.findIndex((g) => g.id === group.id);
     const next = groups[index + 1]?.id;
     setDeleting(true);
@@ -409,7 +410,9 @@ export function PaletteGroups({
             </SheetClose>
             <Button
               variant="destructive"
-              disabled={deleting || !online}
+              disabled={!online}
+              // aria-disabled, not disabled: a disabled button drops focus, which a failed delete would strand.
+              aria-disabled={deleting || undefined}
               onClick={() => sheetGroup && confirmDelete(sheetGroup)}
             >
               Delete

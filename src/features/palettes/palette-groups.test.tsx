@@ -245,6 +245,30 @@ describe("shows groups and creates, renames and deletes them", () => {
     expect(renameGroup).toHaveBeenCalledOnce();
   });
 
+  it("keeps focus on Delete while the group delete saves", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor(), trim()]));
+    const removeGroup = vi.fn(() => new Promise(() => {}));
+    mockMutations({ [nameOf(api.palettes.removeGroup)]: removeGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Delete group",
+      }),
+    );
+    const confirm = await screen.findByRole("dialog", { name: 'Delete group "Armor"?' });
+    const remove = within(confirm).getByRole("button", { name: "Delete" });
+    remove.focus();
+    fireEvent.click(remove);
+    fireEvent.click(remove);
+
+    expect(remove).toHaveFocus();
+    expect(remove).toHaveAttribute("aria-disabled", "true");
+    expect(removeGroup).toHaveBeenCalledOnce();
+  });
+
   it("cancels an inline rename with Escape or Cancel", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     signedInWith(palette([armor(), trim()]));
