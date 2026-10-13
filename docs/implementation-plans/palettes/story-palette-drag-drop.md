@@ -162,14 +162,14 @@ All of these go in the stage summary.
 
 ## Implementation plan
 
-1. [ ] Add `movePaint`, `moveGroupPaint`, `moveGroup` and the optional `toIndex` on `addPaintToGroup` and `movePaintToGroup`, with owner and index checks — touches `convex/palettes.ts`, `convex/palettes.test.ts` — tests T1, T2, T3, T4
-2. [ ] **Spike, then stop for an iPhone check:** install the two pinned packages. Add arrange mode with handles and drag reordering of All paints only, plus `drop-plan.ts` for reorders and the optimistic update for `movePaint`. The user runs it on an iPhone (Safari and the installed PWA) and confirms hold-to-drag, scroll outside the handle and auto-scroll before step 3 starts. If touch can't be made to work, stop and re-plan. — touches `package.json`, `package-lock.json`, `src/features/palettes/palette-detail.tsx`, `palette-detail.css`, `drop-plan.ts` — tests T5 (reorder rows), T7, T8, T9 (`movePaint`)
-3. [ ] Add the glass drag preview and reduced-motion handling — touches `src/features/palettes/drag-preview.tsx`, `drag-preview.css`, `drag-preview.test.tsx`, `palette-detail.tsx` — tests T11, T12
-4. [ ] Make groups and their paints draggable: reorder groups and paints within a group, and cross-list drops (add and move at a position), with filtered collision detection, drop highlights and focus after a cross-list drop — touches `src/features/palettes/palette-groups.tsx`, `palette-groups.css`, `drop-plan.ts`, `drop-plan.test.ts`, `palette-detail.tsx` — tests T5 (all rows), T9 (all mutations)
-5. [ ] Add named announcements and handle instructions for every drag — touches `src/features/palettes/drop-plan.ts`, `drop-plan.test.ts`, `palette-detail.tsx` — tests T6
-6. [ ] Add the Move sheet to paint rows and group headings in arrange mode — touches `src/features/palettes/move-sheet.tsx`, `move-sheet.css`, `move-sheet.test.tsx`, `palette-detail.tsx`, `palette-groups.tsx` — tests T10
-7. [ ] Extend the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T13
-8. [ ] Update docs — touches `docs/API.md`, `docs/UX_FLOWS.md`, `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/palettes.md`, `docs/PRD.md`, `docs/ROADMAP.md` — tests none (docs only)
+1. [x] Add `movePaint`, `moveGroupPaint`, `moveGroup` and the optional `toIndex` on `addPaintToGroup` and `movePaintToGroup`, with owner and index checks — touches `convex/palettes.ts`, `convex/palettes.test.ts` — tests T1, T2, T3, T4
+2. [x] **Spike, then stop for an iPhone check:** install the two pinned packages. Add arrange mode with handles and drag reordering of All paints only, plus `drop-plan.ts` for reorders and the optimistic update for `movePaint`. The user runs it on an iPhone (Safari and the installed PWA) and confirms hold-to-drag, scroll outside the handle and auto-scroll before step 3 starts. If touch can't be made to work, stop and re-plan. — touches `package.json`, `package-lock.json`, `src/features/palettes/palette-detail.tsx`, `palette-detail.css`, `drop-plan.ts` — tests T5 (reorder rows), T7, T8, T9 (`movePaint`)
+3. [x] Add the glass drag preview and reduced-motion handling — touches `src/features/palettes/drag-preview.tsx`, `drag-preview.css`, `drag-preview.test.tsx`, `palette-detail.tsx` — tests T11, T12
+4. [x] Make groups and their paints draggable: reorder groups and paints within a group, and cross-list drops (add and move at a position), with filtered collision detection, drop highlights and focus after a cross-list drop — touches `src/features/palettes/palette-groups.tsx`, `palette-groups.css`, `drop-plan.ts`, `drop-plan.test.ts`, `palette-detail.tsx` — tests T5 (all rows), T9 (all mutations)
+5. [x] Add named announcements and handle instructions for every drag — touches `src/features/palettes/drop-plan.ts`, `drop-plan.test.ts`, `palette-detail.tsx` — tests T6
+6. [x] Add the Move sheet to paint rows and group headings in arrange mode — touches `src/features/palettes/move-sheet.tsx`, `move-sheet.css`, `move-sheet.test.tsx`, `palette-detail.tsx`, `palette-groups.tsx` — tests T10
+7. [x] Extend the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T13
+8. [x] Update docs — touches `docs/API.md`, `docs/UX_FLOWS.md`, `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/palettes.md`, `docs/PRD.md`, `docs/ROADMAP.md` — tests none (docs only)
 
 `palette-arrange.test.tsx` (T7–T9) is written in step 2 and extended in step 4.
 
@@ -204,3 +204,5 @@ All of these go in the stage summary.
 - 2026-10-13 — Planned.
 - 2026-10-13 — Plan approved.
 - 2026-10-13 — Started on branch story/palette-drag-drop from origin/dev.
+- 2026-10-13 — Step 2 built without the planned iPhone stop: the user approved completing the item; the iPhone check moves to the stage summary as a must-do before accept. A drag that ends offline is ignored rather than cancelled mid-drag (dnd-kit has no public cancel). Drag instructions set in step 2 because the T7 test needs them; the drag component lives in palette-arrange.tsx.
+- 2026-10-13 — Build complete: steps 1-8 done. E2E T13 written, not run (needs functions on the personal Convex dev deployment). iPhone touch check still outstanding.
