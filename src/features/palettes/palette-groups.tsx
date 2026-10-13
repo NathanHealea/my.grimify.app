@@ -31,6 +31,7 @@ import { useToast } from "@/features/feedback/toast-provider";
 
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { GroupPaintActionsSheet } from "./group-paint-actions-sheet";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 
 type Group = Doc<"palettes">["groups"][number];
@@ -66,6 +67,14 @@ export function PaletteGroups({
   const headings = useRef(new Map<string, HTMLHeadingElement>());
   const newGroupButton = useRef<HTMLButtonElement>(null);
   const renameField = useRef<HTMLInputElement>(null);
+  const rowButtons = useRef(new Map<string, HTMLButtonElement>());
+  // Kept after closing so the sheet keeps its title while it animates out and focus knows where to return.
+  const [rowSheet, setRowSheet] = useState({ groupId: "", paintId: "", name: "" });
+  const [rowSheetOpen, setRowSheetOpen] = useState(false);
+  // A moved or removed paint takes its focused row with it, so focus goes to a neighbour (WCAG 2.4.3).
+  const leaving = useRef<{ groupId: string; paintId: string; next: string | undefined } | null>(
+    null,
+  );
   // These sheets open from state, so each close decides where focus goes; Radix only refocuses a trigger.
   const focusOnClose = useRef<() => HTMLElement | null>(() => null);
   const focusAfterRename = useRef<string | null>(null);
@@ -94,12 +103,60 @@ export function PaletteGroups({
     heading.focus();
   }, [groups, sheet]);
 
+  const rowKey = (groupId: string, paintId: string) => `${groupId}:${paintId}`;
+
+  // The sheet calls focusAfterRow from its last render, which can be older than the palette, so read the latest.
+  const latest = useRef({ groups, online });
+  useEffect(() => {
+    latest.current = { groups, online };
+  }, [groups, online]);
+
+  const focusAfterRow = () => {
+    const { groups, online } = latest.current;
+    const plan = leaving.current;
+    if (plan === null) {
+      rowButtons.current.get(rowKey(rowSheet.groupId, rowSheet.paintId))?.focus();
+      return;
+    }
+    const group = groups.find((g) => g.id === plan.groupId);
+    // Offline every row button is disabled and can't take focus, so wait for the connection.
+    if (group?.paintIds.includes(plan.paintId) || !online) return;
+    leaving.current = null;
+    const next =
+      plan.next === undefined ? undefined : rowButtons.current.get(rowKey(plan.groupId, plan.next));
+    (next ?? actionButtons.current.get(plan.groupId) ?? newGroupButton.current)?.focus();
+  };
+
+  // The row may leave before or after the sheet finishes closing; until then the sheet's focus trap wins.
+  const sheetClosed = useRef(true);
+  useEffect(() => {
+    if (sheetClosed.current && leaving.current !== null) focusAfterRow();
+    // focusAfterRow reads `latest`, so it only needs to run again when the groups or the connection change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, online]);
+
+  const startLeaving = (isLeaving: boolean) => {
+    if (!isLeaving) {
+      leaving.current = null;
+      return;
+    }
+    const group = groups.find((g) => g.id === rowSheet.groupId);
+    const ids = group?.paintIds ?? [];
+    const index = ids.indexOf(rowSheet.paintId);
+    leaving.current = {
+      groupId: rowSheet.groupId,
+      paintId: rowSheet.paintId,
+      next: ids[index + 1] ?? ids[index - 1],
+    };
+  };
+
   useEffect(() => {
     if (renaming !== null || focusAfterRename.current === null) return;
     actionButtons.current.get(focusAfterRename.current)?.focus();
     focusAfterRename.current = null;
   }, [renaming]);
 
+  const rowGroup = groups.find((g) => g.id === rowSheet.groupId);
   const sheetGroup =
     sheet && sheet.kind !== "new" ? groups.find((g) => g.id === sheet.groupId) : undefined;
 
@@ -196,6 +253,7 @@ export function PaletteGroups({
               <ul className="palette-groups__paints">
                 {group.paintIds.map((paintId) => {
                   const paint = paints.get(paintId);
+                  const name = paint?.name ?? "unknown paint";
                   return (
                     <li key={paintId} className="palette-groups__paint">
                       {paint ? (
@@ -211,6 +269,23 @@ export function PaletteGroups({
                           <span className="palette-groups__brand">{brands.get(paint.brandId)}</span>
                         )}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        ref={(element) => {
+                          if (element) rowButtons.current.set(rowKey(group.id, paintId), element);
+                          else rowButtons.current.delete(rowKey(group.id, paintId));
+                        }}
+                        aria-label={`Actions for ${name} in ${group.name}`}
+                        disabled={!online}
+                        onClick={() => {
+                          setRowSheet({ groupId: group.id, paintId, name });
+                          setRowSheetOpen(true);
+                          sheetClosed.current = false;
+                        }}
+                      >
+                        <Ellipsis aria-hidden="true" />
+                      </Button>
                     </li>
                   );
                 })}
@@ -232,6 +307,24 @@ export function PaletteGroups({
       >
         New group
       </Button>
+
+      {rowGroup && (
+        <GroupPaintActionsSheet
+          open={rowSheetOpen}
+          onOpenChange={setRowSheetOpen}
+          paletteId={paletteId}
+          paintId={rowSheet.paintId}
+          paintName={rowSheet.name}
+          group={rowGroup}
+          groups={groups}
+          online={online}
+          onLeaving={startLeaving}
+          onClosed={() => {
+            sheetClosed.current = true;
+            focusAfterRow();
+          }}
+        />
+      )}
 
       <PaletteNameSheet
         kind="group"

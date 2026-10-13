@@ -1,0 +1,15 @@
+.group-paint-actions-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group-paint-actions-sheet__error {
+  color: var(--color-error);
+}
+
+.group-paint-actions-sheet__note {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  color: var(--color-muted-text);
+}
