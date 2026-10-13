@@ -114,14 +114,14 @@ Decided while planning (2026-10-12):
 
 ## Implementation plan
 
-1. [ ] Add `palettes.addPaints` and `palettes.removePaint` with paint ID validation, the 200-paint cap and owner checks — touches `convex/palettes.ts`, `convex/palettes.test.ts`, `convex/userPaints.ts` (export `PAINT_ID`) — tests T1, T2, T3, T4, T5
-2. [ ] Add Remove to the palette screen's paint list — touches `src/features/palettes/palette-detail.tsx`, `palette-detail.css`, `palette-detail.test.tsx` — tests T6
-3. [ ] Build the Add to palette picker sheet, with New palette — touches `src/features/palettes/add-to-palette-sheet.tsx`, `.css`, `.test.tsx` — tests T7, T8
-4. [ ] Add "Add to palette" to paint detail — touches `src/features/catalog/paint-detail.tsx`, `paint-detail.css`, `paint-detail.test.tsx` — tests T9
-5. [ ] Add the selection variant to `PaintRow` — touches `src/components/paint-row.tsx`, `paint-row.css`, `paint-row.test.tsx` — tests T12
-6. [ ] Add Select mode and the selection bar to the paints list — touches `src/features/catalog/paints-screen.tsx`, `paints-screen.css`, `paints-screen.test.tsx`, `src/features/catalog/selection-bar.tsx`, `selection-bar.css` — tests T10, T11
-7. [ ] Extend the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T13
-8. [ ] Update docs — touches `docs/API.md`, `docs/UX_FLOWS.md`, `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/palettes.md`, `docs/features/catalog/search-and-filters.md` — tests none (docs only)
+1. [x] Add `palettes.addPaints` and `palettes.removePaint` with paint ID validation, the 200-paint cap and owner checks — touches `convex/palettes.ts`, `convex/palettes.test.ts`, `convex/userPaints.ts` (export `PAINT_ID`) — tests T1, T2, T3, T4, T5
+2. [x] Add Remove to the palette screen's paint list — touches `src/features/palettes/palette-detail.tsx`, `palette-detail.css`, `palette-detail.test.tsx` — tests T6
+3. [x] Build the Add to palette picker sheet, with New palette — touches `src/features/palettes/add-to-palette-sheet.tsx`, `.css`, `.test.tsx` — tests T7, T8
+4. [x] Add "Add to palette" to paint detail — touches `src/features/catalog/paint-detail.tsx`, `paint-detail.css`, `paint-detail.test.tsx` — tests T9
+5. [x] Add the selection variant to `PaintRow` — touches `src/components/paint-row.tsx`, `paint-row.css`, `paint-row.test.tsx` — tests T12
+6. [x] Add Select mode and the selection bar to the paints list — touches `src/features/catalog/paints-screen.tsx`, `paints-screen.css`, `paints-screen.test.tsx`, `src/features/catalog/selection-bar.tsx`, `selection-bar.css` — tests T10, T11
+7. [x] Extend the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T13
+8. [x] Update docs — touches `docs/API.md`, `docs/UX_FLOWS.md`, `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/palettes.md`, `docs/features/catalog/search-and-filters.md` — tests none (docs only)
 
 **Must not change:** the `palettes` schema and the existing palettes, `users` and `userPaints` function signatures; `PaintToggles` behavior and the outbox; `PaintRow`'s existing props and its default (link) rendering; search and filter URLs.
 
@@ -142,3 +142,5 @@ Decided while planning (2026-10-12):
 - 2026-10-12 — Plan approved.
 - 2026-10-12 — Plan approved.
 - 2026-10-12 — Started on branch story/palette-paints from origin/dev.
+- 2026-10-12 — Steps 1-3 done. Step 3's tests were written while the implementation was in progress, so they passed on first run instead of failing first; four mutation checks (PALETTE_FULL message, add after create, single-add toast, close on success) each failed the tests as expected.
+- 2026-10-12 — Build complete: all 8 steps done, wi verify green. T13 (E2E) written but not yet passing: dev deployment lacks addPaints/removePaint until functions are pushed. Fixed during build: Add to palette before Clerk loads opened sign-in (72d48be); removing an absent paint bumped updatedAt (1f674dc).
