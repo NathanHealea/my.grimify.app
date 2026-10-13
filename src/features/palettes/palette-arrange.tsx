@@ -45,6 +45,7 @@ import {
   announcePickUp,
   type DragData,
   type DropPlan,
+  dropRefusal,
   optimisticMove,
   planDrop,
   positionOf,
@@ -207,13 +208,14 @@ export function PaletteArrange({
   const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
   const nameOf = (paintId: string) => paints.get(paintId)?.name ?? "unknown paint";
   const [dragging, setDragging] = useState<DragData | null>(null);
-  // Touch waits for a short hold so a swipe that starts on a handle still scrolls; mouse needs a little travel.
+  // The handle takes every touch (touch-action: none); the hold keeps a tap on it from starting a drag.
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const move = usePaletteMoves(palette, nameOf);
+  const toast = useToast();
   // dnd-kit's own restore focuses the handle the drag started from, which a move between lists removes.
   // Kept after closing so the sheet keeps its title while it animates out and focus knows where to return.
   const [moving, setMoving] = useState<DragData>({ type: "group", groupId: "" });
@@ -255,7 +257,13 @@ export function PaletteArrange({
     const plan: DropPlan = online
       ? planDrop(data, dataOf(over), palette)
       : { kind: "none", reason: "no-target" };
-    if (byKeyboard.current) focusAfterDrop.current = sortableIdOf(landingOf(plan, data));
+    if (byKeyboard.current) {
+      focusAfterDrop.current = sortableIdOf(landingOf(plan, data));
+    } else if (online) {
+      // Keyboard users hear why in the drop announcement; pointer users only see that nothing moved.
+      const refusal = dropRefusal(data, dataOf(over), palette);
+      if (refusal) toast(refusal);
+    }
     move(plan);
   };
 

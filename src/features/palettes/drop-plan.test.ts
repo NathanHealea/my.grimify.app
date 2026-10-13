@@ -9,6 +9,7 @@ import {
   announcePickUp,
   applyPlan,
   type DragData,
+  dropRefusal,
   optimisticMove,
   planDrop,
 } from "./drop-plan";
@@ -570,5 +571,27 @@ describe("screen reader announcements", () => {
     expect(announceOver(mainPaint("paint-a"), null, lists, noNames)).toBe(
       "Unknown paint is not over a list.",
     );
+  });
+});
+
+describe("dropRefusal", () => {
+  it("says why a pointer drop changed nothing", () => {
+    const lists = {
+      paintIds: ["paint-a", "paint-b"],
+      groups: [
+        { id: "trim", name: "Trim", paintIds: ["paint-a"] },
+        { id: "armor", name: "Armor", paintIds: [] },
+      ],
+    };
+    const mainA = { type: "paint", groupId: null, paintId: "paint-a" } as const;
+    const trimA = { type: "paint", groupId: "trim", paintId: "paint-a" } as const;
+
+    expect(dropRefusal(mainA, { type: "zone", groupId: "trim" }, lists)).toBe("Already in Trim");
+    expect(dropRefusal(trimA, { type: "paint", groupId: null, paintId: "paint-b" }, lists)).toBe(
+      "Already in All paints",
+    );
+    expect(dropRefusal(mainA, { type: "zone", groupId: "armor" }, lists)).toBeNull();
+    expect(dropRefusal(mainA, mainA, lists)).toBeNull();
+    expect(dropRefusal(mainA, null, lists)).toBeNull();
   });
 });

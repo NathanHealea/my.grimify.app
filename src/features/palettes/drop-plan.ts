@@ -267,3 +267,18 @@ export function positionOf(
   const { ids, index } = placeOf(data, palette, () => undefined);
   return { index, count: ids.length };
 }
+
+/** The visible reason a drop changed nothing, when there's one worth telling; null otherwise. */
+export function dropRefusal(
+  active: DragData,
+  over: DragData | null | undefined,
+  palette: PaletteLists,
+): string | null {
+  const plan = planDrop(active, over, palette);
+  if (plan.kind !== "none") return null;
+  if (plan.reason === "already-in-main") return "Already in All paints";
+  if (plan.reason === "already-in-group" && over) {
+    return `Already in ${groupName(palette, over.groupId ?? "")}`;
+  }
+  return null;
+}
