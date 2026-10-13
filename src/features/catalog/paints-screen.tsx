@@ -85,7 +85,7 @@ function PaintsSearch({
     if (wasSelecting.current === selecting) return;
     wasSelecting.current = selecting;
     if (selecting) listRef.current?.querySelector("input")?.focus();
-    else selectButton.current?.focus();
+    else (selectButton.current ?? inputRef.current)?.focus();
   }, [selecting]);
   const canShow = useCanSavePaints() && !hideShow;
   const inputRef = useRef<HTMLInputElement>(null);

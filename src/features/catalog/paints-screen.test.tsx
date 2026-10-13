@@ -287,6 +287,20 @@ describe("PaintsScreen", () => {
       expect(last).toBeEnabled();
     });
 
+    it("returns focus to the search box when select mode ends with no results", async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzzqq" } });
+      await screen.findByText("No paints match");
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
+
+      expect(screen.getByRole("searchbox", { name: "Search paints" })).toHaveFocus();
+    });
+
     it("selection bar adds the selection", async () => {
       const [mephiston, macragge, darkBlue] = NAMED;
       serve(catalogOf(NAMED));
