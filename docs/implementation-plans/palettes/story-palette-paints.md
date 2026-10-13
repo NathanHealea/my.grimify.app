@@ -2,7 +2,7 @@
 type: story
 epic: palettes    # removed by `wi new` when there is no parent epic
 slug: palette-paints
-status: staged
+status: released
 branch: story/palette-paints
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/story-palette-paints
 created: 2026-10-12
@@ -11,7 +11,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.16.0
 review_approved: 2026-10-12
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.16.0
 ---
 
 # Add and remove palette paints
@@ -147,3 +147,4 @@ Decided while planning (2026-10-12):
 - 2026-10-12 — Review: 2 cycles (code, security, a11y) + mutation audit. Fixed: picker auth gating, selection bar DOM order/sticky/wrap, Remove focus + pending lock, removePaint PAINT_ID check, checkbox description, 200-cap note, two focus regressions from the fixes; 9 tests added for audit gaps.
 - 2026-10-12 — Staged: verification passed; version 0.15.0 → 0.16.0 (bumped by hand: wi read the base version from origin/dev, which lacks palettes-core 0.15.0); no changelog file.
 - 2026-10-12 — Review approved.
+- 2026-10-12 — Released 0.16.0 as v0.16.0.
