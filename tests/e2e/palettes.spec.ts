@@ -101,3 +101,74 @@ test("adds paints to a palette and removes one", async ({ page }, info) => {
     .click();
   await expect(page).toHaveURL(/\/palettes$/);
 });
+
+test("groups a palette's paints", async ({ page }, info) => {
+  const name = `E2E groups ${info.project.name} ${Date.now()}`;
+  const main = page.getByRole("main");
+  const picker = page.getByRole("dialog", { name: "Add to palette" });
+
+  await page.goto("/palettes");
+  await clerk.signIn({ page, emailAddress: E2E_EMAIL });
+  await page.goto("/palettes");
+  await main.getByRole("button", { name: "New palette" }).click();
+  const createSheet = page.getByRole("dialog", { name: "New palette" });
+  await createSheet.getByLabel("Palette name").fill(name);
+  await createSheet.getByRole("button", { name: "Create" }).click();
+  await expect(page).toHaveURL(/\/palettes\/[^/]+$/);
+  const paletteUrl = page.url();
+
+  await page.goto("/paints/citadel-base-mephiston-red");
+  await main.getByRole("button", { name: "Add to palette" }).click();
+  await picker.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  await expect(page.getByText(`Added to ${name}`)).toBeVisible();
+  await page.goto(paletteUrl);
+
+  for (const group of ["Armor", "Trim"]) {
+    await main.getByRole("button", { name: "New group" }).click();
+    const sheet = page.getByRole("dialog", { name: "New group" });
+    await sheet.getByLabel("Group name").fill(group);
+    await sheet.getByRole("button", { name: "Create" }).click();
+    await expect(main.getByRole("heading", { level: 2, name: group })).toBeFocused();
+  }
+
+  await main.getByRole("button", { name: "Groups for Mephiston Red" }).click();
+  const membership = page.getByRole("dialog", { name: "Groups for Mephiston Red" });
+  await membership.getByRole("checkbox", { name: "Armor" }).check();
+  await expect(membership.getByRole("checkbox", { name: "Armor" })).toBeChecked();
+  await membership.getByRole("button", { name: "Done" }).click();
+
+  const armor = main.getByRole("region", { name: "Armor" });
+  const trim = main.getByRole("region", { name: "Trim" });
+  await expect(armor).toContainText("Mephiston Red");
+  await armor.getByRole("button", { name: "Actions for Mephiston Red in Armor" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Move to group…" }).click();
+  await page
+    .getByRole("dialog", { name: "Move Mephiston Red to" })
+    .getByRole("button", { name: "Trim" })
+    .click();
+  await expect(page.getByText("Moved to Trim")).toBeVisible();
+  await expect(armor).toContainText("No paints in this group yet");
+  await expect(trim).toContainText("Mephiston Red");
+
+  await trim.getByRole("button", { name: "Actions for group Trim" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete group" }).click();
+  await page
+    .getByRole("dialog", { name: 'Delete group "Trim"?' })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(page.getByText("Deleted group Trim")).toBeVisible();
+  await expect(trim).toHaveCount(0);
+  await page.reload();
+  await expect(
+    main.getByRole("list", { name: "Paints in this palette" }).getByRole("listitem"),
+  ).toContainText("Mephiston Red");
+  await expect(main.getByRole("heading", { level: 2, name: "Armor" })).toBeVisible();
+
+  await main.getByRole("button", { name: "Palette actions" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete palette" }).click();
+  await page
+    .getByRole("dialog", { name: `Delete "${name}"?` })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/palettes$/);
+});
