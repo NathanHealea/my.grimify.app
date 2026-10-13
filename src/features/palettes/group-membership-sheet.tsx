@@ -46,13 +46,18 @@ export function GroupMembershipSheet({
   const addPaintToGroup = useMutation(api.palettes.addPaintToGroup);
   const removePaintFromGroup = useMutation(api.palettes.removePaintFromGroup);
   // The box shows what was asked for until the save settles; afterwards the palette is the truth.
+  // Keyed by paint and group: the sheet is reused for every paint, and an offline save can outlive it.
   const [pending, setPending] = useState<ReadonlyMap<string, boolean>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const keyOf = (group: Group) => `${paintId}:${group.id}`;
+  // Convex holds a mutation until the connection returns, so offline a pending save mustn't trap the user.
+  const locked = online && [...pending.keys()].some((key) => key.startsWith(`${paintId}:`));
 
   const toggle = (group: Group, checked: boolean) => {
-    if (pending.has(group.id)) return;
+    const key = keyOf(group);
+    if (pending.has(key)) return;
     setError(null);
-    setPending((current) => new Map(current).set(group.id, checked));
+    setPending((current) => new Map(current).set(key, checked));
     const save = checked ? addPaintToGroup : removePaintFromGroup;
     save({ paletteId, groupId: group.id, paintId })
       .catch((cause: unknown) => {
@@ -62,14 +67,21 @@ export function GroupMembershipSheet({
       .finally(() =>
         setPending((current) => {
           const next = new Map(current);
-          next.delete(group.id);
+          next.delete(key);
           return next;
         }),
       );
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        // Closing mid-save would hide an error that arrives afterwards.
+        if (locked) return;
+        onOpenChange(next);
+      }}
+    >
       <SheetContent
         onOpenAutoFocus={() => setError(null)}
         onCloseAutoFocus={(event) => {
@@ -88,10 +100,10 @@ export function GroupMembershipSheet({
                   <input
                     type="checkbox"
                     className="group-membership-sheet__checkbox"
-                    checked={pending.get(group.id) ?? group.paintIds.includes(paintId)}
+                    checked={pending.get(keyOf(group)) ?? group.paintIds.includes(paintId)}
                     disabled={!online}
                     // aria-disabled, not disabled: a disabled box drops focus mid-save.
-                    aria-disabled={pending.has(group.id) || undefined}
+                    aria-disabled={pending.has(keyOf(group)) || undefined}
                     onChange={(event) => toggle(group, event.target.checked)}
                   />
                   <span className="group-membership-sheet__name">{group.name}</span>
@@ -108,7 +120,7 @@ export function GroupMembershipSheet({
         </SheetBody>
         <SheetFooter>
           <SheetClose asChild>
-            <Button>Done</Button>
+            <Button disabled={locked}>Done</Button>
           </SheetClose>
         </SheetFooter>
       </SheetContent>

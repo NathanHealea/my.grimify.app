@@ -155,6 +155,22 @@ describe("Groups sheet adds and removes a paint from groups", () => {
     expect(within(sheet).getByRole("button", { name: "Done" })).toBeVisible();
   });
 
+  it("stays open while a change is saving", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor([red.id]), trim()]));
+    mockMutations({ [nameOf(api.palettes.addPaintToGroup)]: vi.fn(() => new Promise(() => {})) });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const section = await allPaints();
+    fireEvent.click(within(section).getByRole("button", { name: "Groups for Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Groups for Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Trim" }));
+    fireEvent.keyDown(sheet, { key: "Escape" });
+
+    expect(screen.getByRole("dialog", { name: "Groups for Mephiston Red" })).toBeVisible();
+    expect(within(sheet).getByRole("button", { name: "Done" })).toBeDisabled();
+  });
+
   it("ticking a group adds the paint to it straight away", async () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     const store = signedInWith(palette([armor([red.id]), trim()]));
