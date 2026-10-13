@@ -1,7 +1,7 @@
 import "./paint-row.css";
 
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 import type { CatalogPaint } from "@/features/catalog/schema";
 import type { MatchLabel } from "@/features/matching/delta-e";
@@ -23,13 +23,14 @@ type Props = {
 
 export function PaintRow({ paint, brandName, lineName, match, note, actions, selection }: Props) {
   const type = paint.type.charAt(0).toUpperCase() + paint.type.slice(1);
+  const metaId = useId();
 
   const content = (
     <>
       <PaintSwatch hex={paint.hex} type={paint.type} />
       <div className="paint-row__text">
         <p className="paint-row__name">{paint.name}</p>
-        <p className="paint-row__meta">
+        <p id={metaId} className="paint-row__meta">
           {brandName} · {lineName} · {type}
         </p>
         {note && <p className="paint-row__note">{note}</p>}
@@ -51,6 +52,8 @@ export function PaintRow({ paint, brandName, lineName, match, note, actions, sel
             type="checkbox"
             className="paint-row__checkbox"
             aria-label={`Select ${paint.name}`}
+            // Many names repeat across brands; brand, line and type tell the ticks apart (WCAG 2.4.6).
+            aria-describedby={metaId}
             checked={selection.selected}
             disabled={selection.disabled}
             // jsdom still fires change on a disabled box, so this doesn't rely on the browser to block it.

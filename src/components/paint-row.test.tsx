@@ -86,7 +86,10 @@ describe("PaintRow", () => {
     it("shows a checkbox labelled with the paint name instead of a link and toggles", async () => {
       await renderSelecting({ selected: false });
 
-      expect(screen.getByRole("checkbox", { name: "Select Mephiston Red" })).not.toBeChecked();
+      const checkbox = screen.getByRole("checkbox", { name: "Select Mephiston Red" });
+      expect(checkbox).not.toBeChecked();
+      // The brand tells apart paints that share a name.
+      expect(checkbox).toHaveAccessibleDescription(/Citadel/);
       expect(screen.queryByRole("link")).toBeNull();
       expect(screen.queryByRole("button", { name: "Own" })).toBeNull();
     });
