@@ -158,6 +158,7 @@ Returns: `{ added: number }` — how many paints were new (0 when all were alrea
 Authentication: Required
 Args: `{ paletteId: Id<"palettes">, paintId: string }`
 Behavior:
+- A `paintId` that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`
 - A missing palette or someone else's → `NOT_FOUND`
 - Removes the paint from the main list and from every group's `paintIds`; the other paints keep their order
 - Sets `updatedAt = now`; a paint that isn't in the palette changes nothing, `updatedAt` included
@@ -190,7 +191,7 @@ The client reads the code from `error.data` (`src/features/collection/outbox.ts`
 | code | Thrown by | Meaning |
 |---|---|---|
 | `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`) | No signed-in user, or no `users` row yet |
-| `INVALID_PAINT_ID` | `userPaints.set`, `palettes.addPaints` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
+| `INVALID_PAINT_ID` | `userPaints.set`, `palettes.addPaints`, `palettes.removePaint` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
 | `NO_FLAGS` | `userPaints.set` | None of `owned` / `wishlisted` / `favorite` given |
 | `CLOCK_IN_FUTURE` | `userPaints.set` | `clientUpdatedAt` more than 5 minutes ahead |
 

@@ -162,6 +162,7 @@ export const removePaint = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
+    if (!PAINT_ID.test(args.paintId)) throw new ConvexError("INVALID_PAINT_ID");
     const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
     const inPalette =
       palette.paintIds.includes(args.paintId) ||

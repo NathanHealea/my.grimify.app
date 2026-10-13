@@ -256,6 +256,9 @@ describe("palettes", () => {
       await expect(
         as.mutation(api.palettes.addPaints, { paletteId: id, paintIds: ["p-1", bad] }),
       ).rejects.toThrow("INVALID_PAINT_ID");
+      await expect(
+        as.mutation(api.palettes.removePaint, { paletteId: id, paintId: bad }),
+      ).rejects.toThrow("INVALID_PAINT_ID");
     }
     expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
       paintIds: [],
