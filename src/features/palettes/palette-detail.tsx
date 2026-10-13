@@ -248,13 +248,14 @@ function PaintList({
   }
 
   const remove = (paintId: string, name: string) => {
+    if (pending.has(paintId)) return;
     const index = paintIds.indexOf(paintId);
     focusAfter.current = { removed: paintId, next: paintIds[index + 1] ?? paintIds[index - 1] };
     setPending((current) => new Set(current).add(paintId));
     removePaint({ paletteId, paintId })
       .then(() => toast(`Removed ${name}`))
       .catch((cause: unknown) => {
-        focusAfter.current = null;
+        if (focusAfter.current?.removed === paintId) focusAfter.current = null;
         console.error("Removing the paint failed", cause);
         toast(`Couldn't remove ${name}. Check your connection and try again.`);
       })
@@ -276,7 +277,9 @@ function PaintList({
         else buttons.current.delete(paintId);
       }}
       aria-label={`Remove ${name} from palette`}
-      disabled={!online || pending.has(paintId)}
+      disabled={!online}
+      // aria-disabled, not disabled: a disabled button drops focus, which a failed remove would strand.
+      aria-disabled={pending.has(paintId) || undefined}
       onClick={() => remove(paintId, name)}
     >
       <X aria-hidden="true" />

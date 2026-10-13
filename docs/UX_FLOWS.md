@@ -247,8 +247,8 @@ Picker errors:
 
 Remove a paint:
 1. On the palette, tap the **Remove** button (an ✕ icon) at the end of a paint's row. It's named "Remove Macragge Blue from palette", or "Remove unknown paint from palette" for a paint the catalog doesn't have
-2. The paint leaves the palette at once, with no confirmation, and a toast says "Removed Macragge Blue". The other paints keep their order. Re-adding it is one tap from the paint's page (DECISIONS 051)
-3. If it fails: the toast "Couldn't remove Macragge Blue. Check your connection and try again." and the paint stays
+2. The paint leaves the palette at once, with no confirmation, and a toast says "Removed Macragge Blue". The other paints keep their order, and focus moves to the next paint's Remove button (the previous one at the end, Palette actions once the list is empty). Re-adding it is one tap from the paint's page (DECISIONS 051)
+3. If it fails: the toast "Couldn't remove Macragge Blue. Check your connection and try again." and the paint stays, with focus still on its Remove button. A second tap while a remove is in flight does nothing
 
 Rename and delete:
 1. Tap the **Palette actions** button (next to the title) → a sheet with Rename and Delete palette

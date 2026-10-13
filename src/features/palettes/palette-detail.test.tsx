@@ -190,7 +190,8 @@ describe("PaletteDetail", () => {
     });
     removeRed.focus();
     fireEvent.click(removeRed);
-    expect(removeRed).toBeDisabled();
+    expect(removeRed).toHaveAttribute("aria-disabled", "true");
+    expect(removeRed).toHaveFocus();
     fireEvent.click(removeRed);
     expect(removePaint).toHaveBeenCalledTimes(1);
 
