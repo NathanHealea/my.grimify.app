@@ -9,13 +9,44 @@ const MAX_PALETTES = 50;
 const MAX_NAME_LENGTH = 60;
 const PREVIEW_COUNT = 5;
 const MAX_PAINTS = 200;
+const MAX_GROUPS = 30;
 
-function cleanName(name: string): string {
+function cleanName(name: string, error = "PALETTE_NAME_INVALID"): string {
   const trimmed = name.trim();
   if (trimmed.length === 0 || trimmed.length > MAX_NAME_LENGTH) {
-    throw new ConvexError("PALETTE_NAME_INVALID");
+    throw new ConvexError(error);
   }
   return trimmed;
+}
+
+function requirePaintId(paintId: string): void {
+  if (!PAINT_ID.test(paintId)) throw new ConvexError("INVALID_PAINT_ID");
+}
+
+function requireGroup(
+  palette: Doc<"palettes">,
+  groupId: string,
+): Doc<"palettes">["groups"][number] {
+  const group = palette.groups.find((g) => g.id === groupId);
+  if (!group) throw new ConvexError("GROUP_NOT_FOUND");
+  return group;
+}
+
+// Convex seeds Math.random per mutation, so this stays deterministic on replay.
+function newGroupId(palette: Doc<"palettes">): string {
+  let id: string;
+  do {
+    id = Math.random().toString(36).slice(2, 10);
+  } while (palette.groups.some((g) => g.id === id));
+  return id;
+}
+
+async function patchGroups(
+  ctx: MutationCtx,
+  palette: Doc<"palettes">,
+  groups: Doc<"palettes">["groups"],
+): Promise<void> {
+  await ctx.db.patch("palettes", palette._id, { groups, updatedAt: Date.now() });
 }
 
 // Someone else's palette throws the same error as a missing one, so a guessed ID reveals nothing.
@@ -174,6 +205,133 @@ export const removePaint = mutation({
       groups: palette.groups.map((g) => ({ ...g, paintIds: without(g.paintIds) })),
       updatedAt: Date.now(),
     });
+    return null;
+  },
+});
+
+/** Appends an empty group to the palette and returns its ID. */
+export const createGroup = mutation({
+  args: { paletteId: v.id("palettes"), name: v.string() },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const name = cleanName(args.name, "GROUP_NAME_INVALID");
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    if (palette.groups.length >= MAX_GROUPS) throw new ConvexError("GROUP_LIMIT");
+    const id = newGroupId(palette);
+    await patchGroups(ctx, palette, [...palette.groups, { id, name, paintIds: [] }]);
+    return id;
+  },
+});
+
+export const renameGroup = mutation({
+  args: { paletteId: v.id("palettes"), groupId: v.string(), name: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const name = cleanName(args.name, "GROUP_NAME_INVALID");
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    requireGroup(palette, args.groupId);
+    await patchGroups(
+      ctx,
+      palette,
+      palette.groups.map((g) => (g.id === args.groupId ? { ...g, name } : g)),
+    );
+    return null;
+  },
+});
+
+/** Deletes a group; its paints stay in the palette's main list. */
+export const removeGroup = mutation({
+  args: { paletteId: v.id("palettes"), groupId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    requireGroup(palette, args.groupId);
+    await patchGroups(
+      ctx,
+      palette,
+      palette.groups.filter((g) => g.id !== args.groupId),
+    );
+    return null;
+  },
+});
+
+/** Appends a main-list paint to a group; a paint already in the group is a no-op. */
+export const addPaintToGroup = mutation({
+  args: { paletteId: v.id("palettes"), groupId: v.string(), paintId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    requirePaintId(args.paintId);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const group = requireGroup(palette, args.groupId);
+    if (!palette.paintIds.includes(args.paintId)) throw new ConvexError("PAINT_NOT_IN_PALETTE");
+    if (group.paintIds.includes(args.paintId)) return null;
+    await patchGroups(
+      ctx,
+      palette,
+      palette.groups.map((g) =>
+        g.id === args.groupId ? { ...g, paintIds: [...g.paintIds, args.paintId] } : g,
+      ),
+    );
+    return null;
+  },
+});
+
+/** Takes a paint out of one group; it stays in the palette. A paint not in the group is a no-op. */
+export const removePaintFromGroup = mutation({
+  args: { paletteId: v.id("palettes"), groupId: v.string(), paintId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    requirePaintId(args.paintId);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const group = requireGroup(palette, args.groupId);
+    if (!group.paintIds.includes(args.paintId)) return null;
+    await patchGroups(
+      ctx,
+      palette,
+      palette.groups.map((g) =>
+        g.id === args.groupId
+          ? { ...g, paintIds: g.paintIds.filter((id) => id !== args.paintId) }
+          : g,
+      ),
+    );
+    return null;
+  },
+});
+
+/** Moves a paint between groups in one write; a paint not in the source group is a no-op. */
+export const movePaintToGroup = mutation({
+  args: {
+    paletteId: v.id("palettes"),
+    paintId: v.string(),
+    fromGroupId: v.string(),
+    toGroupId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    requirePaintId(args.paintId);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const from = requireGroup(palette, args.fromGroupId);
+    requireGroup(palette, args.toGroupId);
+    if (args.fromGroupId === args.toGroupId || !from.paintIds.includes(args.paintId)) return null;
+    await patchGroups(
+      ctx,
+      palette,
+      palette.groups.map((g) => {
+        if (g.id === args.fromGroupId) {
+          return { ...g, paintIds: g.paintIds.filter((id) => id !== args.paintId) };
+        }
+        if (g.id === args.toGroupId && !g.paintIds.includes(args.paintId)) {
+          return { ...g, paintIds: [...g.paintIds, args.paintId] };
+        }
+        return g;
+      }),
+    );
     return null;
   },
 });
