@@ -152,7 +152,9 @@ export function PaletteGroups({
 
   useEffect(() => {
     if (renaming !== null || focusAfterRename.current === null) return;
-    actionButtons.current.get(focusAfterRename.current)?.focus();
+    const actions = actionButtons.current.get(focusAfterRename.current);
+    // Offline the actions button is disabled and can't take focus, so the heading does.
+    (actions?.disabled ? headings.current.get(focusAfterRename.current) : actions)?.focus();
     focusAfterRename.current = null;
   }, [renaming]);
 
@@ -176,9 +178,10 @@ export function PaletteGroups({
     setSheet(null);
   };
 
+  // A save that lands after the user moved on to another group's rename mustn't close that form.
   const finishRename = (groupId: string) => {
     focusAfterRename.current = groupId;
-    setRenaming(null);
+    setRenaming((current) => (current === groupId ? null : current));
   };
 
   const confirmDelete = (group: Group) => {
@@ -434,11 +437,14 @@ function GroupRenameForm({
   const [name, setName] = useState(group.name);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Cancelling mid-save would let the new name land after the old one came back, or lose its error.
+  const locked = saving && online;
   const fieldId = useId();
   const errorId = useId();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (saving) return;
     const trimmed = name.trim();
     if (trimmed.length === 0) return setError("Give the group a name");
     if (trimmed.length > MAX_NAME_LENGTH) return setError("Use 60 characters or fewer");
@@ -461,7 +467,7 @@ function GroupRenameForm({
   const cancelOnEscape = (event: KeyboardEvent) => {
     if (event.key !== "Escape") return;
     event.preventDefault();
-    onDone();
+    if (!locked) onDone();
   };
 
   return (
@@ -483,10 +489,11 @@ function GroupRenameForm({
         {error}
       </p>
       <div className="palette-groups__rename-buttons">
-        <Button type="button" variant="outline" onClick={onDone}>
+        <Button type="button" variant="outline" disabled={locked} onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={saving || !online}>
+        {/* aria-disabled, not disabled: a disabled button drops focus, which a failed save would strand. */}
+        <Button type="submit" disabled={!online} aria-disabled={saving || undefined}>
           Save
         </Button>
       </div>

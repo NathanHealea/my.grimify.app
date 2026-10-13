@@ -221,6 +221,30 @@ describe("shows groups and creates, renames and deletes them", () => {
     );
   });
 
+  it("keeps an inline rename open while its save is in flight", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([armor(), trim()]));
+    const renameGroup = vi.fn(() => new Promise<null>(() => {}));
+    mockMutations({ [nameOf(api.palettes.renameGroup)]: renameGroup });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Actions for group Armor" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Armor" })).getByRole("button", {
+        name: "Rename",
+      }),
+    );
+    const field = await screen.findByRole("textbox", { name: "Group name" });
+    fireEvent.change(field, { target: { value: "Armour" } });
+    fireEvent.submit(field);
+    fireEvent.submit(field);
+    fireEvent.keyDown(field, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByRole("textbox", { name: "Group name" })).toBeInTheDocument();
+    expect(renameGroup).toHaveBeenCalledOnce();
+  });
+
   it("cancels an inline rename with Escape or Cancel", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     signedInWith(palette([armor(), trim()]));
