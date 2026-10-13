@@ -1106,4 +1106,4 @@ Alternatives:
 
 Consequences:
 Positive: rows keep their room for names; many paints go in with one write; a mis-add is undone in one tap.
-Trade-off: adding from the list takes Select, tick, Add, choose. The picker doesn't show which palettes already hold the paint, so the user learns that from the "Already in" toast. A mis-tapped Remove loses the paint's place in the list; re-adding puts it at the end.
+Trade-off: adding from the list takes Add to palette, tick, Add to palette, choose. The picker doesn't show which palettes already hold the paint, so the user learns that from the "Already in" toast. A mis-tapped Remove loses the paint's place in the list; re-adding puts it at the end.

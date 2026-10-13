@@ -68,7 +68,7 @@ test("adds paints to a palette and removes one", async ({ page }, info) => {
   await expect(page.getByText(`Added to ${name}`)).toBeVisible();
 
   await page.goto("/paints?q=evil sunz scarlet");
-  await main.getByRole("button", { name: "Select", exact: true }).click();
+  await main.getByRole("button", { name: "Add to palette" }).click();
   await main.getByRole("checkbox", { name: "Select Evil Sunz Scarlet" }).first().check();
   await main.getByRole("searchbox", { name: "Search paints" }).fill("abaddon black");
   await main.getByRole("checkbox", { name: "Select Abaddon Black" }).first().check();

@@ -77,7 +77,7 @@ The sheet edits a **draft**. **"Show N paints" commits it**, and the count is li
 
 ## Select mode
 
-- **Select** sits beside the result count, **only when signed in** (`useUser().isSignedIn`). Palettes need an account.
+- **Add to palette** (the button that starts Select mode) sits beside the result count, **only when signed in** (`useUser().isSignedIn`). Palettes need an account.
 - Ticked IDs live in component state (`selected: string[] | null`, `null` = off), **not in the URL**. Search and filter changes keep them; leaving the screen drops them.
 - While selecting, `<PaintRow>` gets `selection` instead of the link and toggles: the row is a `<label>` for a checkbox named **"Select <name>"**, so a tap anywhere on it ticks.
 - Order is **tick order**; that's the order paints are added. At **200** ticks (`MAX_SELECTED`, the palette cap) the unticked boxes are disabled.

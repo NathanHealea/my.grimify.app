@@ -1,6 +1,7 @@
 import "./paints-screen.css";
 
 import { useUser } from "@clerk/react";
+import { SwatchBook } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { HueDots } from "@/components/hue-dots";
@@ -255,7 +256,8 @@ function PaintsSearch({
             </p>
             {isSignedIn && selected === null && (
               <Button ref={selectButton} variant="outline" onClick={() => setSelected([])}>
-                Select
+                <SwatchBook aria-hidden="true" />
+                Add to palette
               </Button>
             )}
           </div>

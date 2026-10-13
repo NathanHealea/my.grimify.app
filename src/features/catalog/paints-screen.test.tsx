@@ -194,9 +194,12 @@ describe("PaintsScreen", () => {
       expect(screen.getByRole("button", { name: "Mark Blood Red as owned" })).toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "Selection" })).toBeNull();
 
-      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
 
-      expect(screen.queryByRole("button", { name: "Select" })).toBeNull();
+      // The button that started select mode is gone; the only "Add to palette" left is the bar's.
+      expect(screen.getAllByRole("button", { name: "Add to palette" })).toEqual([
+        within(selectionBar()).getByRole("button", { name: "Add to palette" }),
+      ]);
       expect(screen.getAllByRole("checkbox", { name: /^Select / })).toHaveLength(4);
       expect(screen.queryAllByRole("button", { name: /^Mark / })).toHaveLength(0);
       expect(rowLinks()).toHaveLength(0);
@@ -238,7 +241,7 @@ describe("PaintsScreen", () => {
       ).toBeInTheDocument();
       expect(rowLinks()).toHaveLength(4);
 
-      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       expect(within(selectionBar()).getByText("0 selected")).toBeInTheDocument();
       expect(
         screen
@@ -259,7 +262,7 @@ describe("PaintsScreen", () => {
       renderRoute("/paints");
 
       await screen.findByText("Grey 000");
-      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       for (let page = 0; page < 3; page++) act(() => triggerIntersection());
       await vi.waitFor(() => expect(rows()).toHaveLength(201));
 
@@ -308,7 +311,7 @@ describe("PaintsScreen", () => {
       renderRoute("/paints");
 
       await screen.findByText("Blood Red");
-      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
@@ -328,14 +331,14 @@ describe("PaintsScreen", () => {
       await waitFor(() => expect(screen.queryByRole("region", { name: "Selection" })).toBeNull());
       expect(screen.queryAllByRole("checkbox", { name: /^Select / })).toHaveLength(0);
       expect(screen.getByRole("button", { name: "Mark Dark Blue as owned" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Select" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add to palette" })).toBeInTheDocument();
 
       cleanup();
       const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
       renderRoute("/paints");
 
       await screen.findByText("Blood Red");
-      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Blood Red" }));
       expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeEnabled();
 
@@ -364,7 +367,7 @@ describe("PaintsScreen", () => {
       renderRoute("/paints");
 
       await screen.findByText("Blood Red");
-      expect(screen.queryByRole("button", { name: "Select" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add to palette" })).toBeNull();
       expect(screen.queryAllByRole("checkbox", { name: /^Select / })).toHaveLength(0);
     });
   });

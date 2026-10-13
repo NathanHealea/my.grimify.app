@@ -233,13 +233,13 @@ Add a paint (paint detail):
 5. Signed out: Add to palette opens the sign-in sheet. After signing in, nothing is added; the user taps Add to palette again (unlike Own/Want, Flow 4; DECISIONS 051)
 
 Add many paints (Select mode, Paints and My Paints):
-1. Signed in, tap **Select** beside the result count. Signed out there's no Select button
+1. Signed in, tap **Add to palette** beside the result count. Signed out the button isn't shown
 2. Each row's Own/Want/Favorite toggles are replaced by a checkbox named "Select <paint name>", and tapping anywhere on the row ticks it instead of opening the paint. Focus moves to the first checkbox
 3. A bar fixed above the nav (at the bottom edge from 640px) shows "n selected", **Add to palette** and **Done**. Add to palette is disabled until a paint is ticked
 4. Ticks survive changes to the search and filters, so a user can search "blue", tick some, search "black" and tick more
 5. At most 200 paints can be ticked; at 200 the unticked checkboxes are disabled
 6. Add to palette → the same picker. Paints are added in the order they were ticked; new ones go to the end and ones already there are skipped. Toast: "Added 3 paints to Ultramarines", "Added to Ultramarines" for one new paint, or "Already in Ultramarines" when none were new
-7. A successful add, Done, or leaving the screen ends Select mode and clears the ticks. Focus returns to Select
+7. A successful add, Done, or leaving the screen ends Select mode and clears the ticks. Focus returns to the Add to palette button beside the count
 
 Picker errors:
 - The palette would go over 200 paints → nothing is added and "This palette is full (200 paints)" shows in the sheet, which stays open so another palette can be chosen
