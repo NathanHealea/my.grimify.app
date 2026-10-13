@@ -4,7 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { findUser, requireUser } from "./lib/auth";
 
 // Same shape as catalog paint IDs (DATABASE §8); paints themselves aren't checked against the catalog.
-const PAINT_ID = /^[a-z0-9-]{3,100}$/;
+export const PAINT_ID = /^[a-z0-9-]{3,100}$/;
 // Queued offline changes carry their original time; this caps how far ahead a wrong clock can win.
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 // Above the catalog's 2,837 paints: a user has at most one row per paint.

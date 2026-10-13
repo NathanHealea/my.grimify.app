@@ -3,10 +3,12 @@ import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, type MutationCtx, query } from "./_generated/server";
 import { requireUser } from "./lib/auth";
+import { PAINT_ID } from "./userPaints";
 
 const MAX_PALETTES = 50;
 const MAX_NAME_LENGTH = 60;
 const PREVIEW_COUNT = 5;
+const MAX_PAINTS = 200;
 
 function cleanName(name: string): string {
   const trimmed = name.trim();
@@ -129,6 +131,44 @@ export const remove = mutation({
     const user = await requireUser(ctx);
     await requireOwnPalette(ctx, user._id, args.paletteId);
     await ctx.db.delete("palettes", args.paletteId);
+    return null;
+  },
+});
+
+/** Appends the paints not already in the palette, in the order given; returns how many were added. */
+export const addPaints = mutation({
+  args: { paletteId: v.id("palettes"), paintIds: v.array(v.string()) },
+  returns: v.object({ added: v.number() }),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    if (args.paintIds.length > MAX_PAINTS) throw new ConvexError("PALETTE_FULL");
+    if (!args.paintIds.every((id) => PAINT_ID.test(id))) {
+      throw new ConvexError("INVALID_PAINT_ID");
+    }
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const paintIds = [...new Set([...palette.paintIds, ...args.paintIds])];
+    if (paintIds.length > MAX_PAINTS) throw new ConvexError("PALETTE_FULL");
+    const added = paintIds.length - palette.paintIds.length;
+    if (added > 0) {
+      await ctx.db.patch("palettes", args.paletteId, { paintIds, updatedAt: Date.now() });
+    }
+    return { added };
+  },
+});
+
+/** Removes a paint from the palette and all of its groups; a paint not in it is a no-op. */
+export const removePaint = mutation({
+  args: { paletteId: v.id("palettes"), paintId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const without = (ids: string[]) => ids.filter((id) => id !== args.paintId);
+    await ctx.db.patch("palettes", args.paletteId, {
+      paintIds: without(palette.paintIds),
+      groups: palette.groups.map((g) => ({ ...g, paintIds: without(g.paintIds) })),
+      updatedAt: Date.now(),
+    });
     return null;
   },
 });

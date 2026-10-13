@@ -192,4 +192,142 @@ describe("palettes", () => {
       { _id: oldest, name: "Oldest", paintCount: 0, previewPaintIds: [], updatedAt: 1_000 },
     ]);
   });
+
+  it("adds paints to the end without duplicates", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    await t.run((ctx) => ctx.db.patch(id, { paintIds: ["p-1", "p-2"] }));
+
+    vi.setSystemTime(2_000);
+    const result = await as.mutation(api.palettes.addPaints, {
+      paletteId: id,
+      paintIds: ["p-4", "p-2", "p-3", "p-4", "p-1"],
+    });
+
+    expect(result).toEqual({ added: 2 });
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      paintIds: ["p-1", "p-2", "p-4", "p-3"],
+      updatedAt: 2_000,
+    });
+  });
+
+  it("rejects an add past 200 paints", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    const full = Array.from({ length: 199 }, (_, i) => `p-${i}`);
+    await t.run((ctx) => ctx.db.patch(id, { paintIds: full }));
+
+    vi.setSystemTime(2_000);
+    await expect(
+      as.mutation(api.palettes.addPaints, { paletteId: id, paintIds: ["new-1", "new-2"] }),
+    ).rejects.toThrow("PALETTE_FULL");
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      paintIds: full,
+      updatedAt: 1_000,
+    });
+
+    expect(
+      await as.mutation(api.palettes.addPaints, { paletteId: id, paintIds: ["new-1"] }),
+    ).toEqual({ added: 1 });
+    expect((await t.run((ctx) => ctx.db.get(id)))?.paintIds).toEqual([...full, "new-1"]);
+
+    const other = await as.mutation(api.palettes.create, { name: "Blood Angels" });
+    await expect(
+      as.mutation(api.palettes.addPaints, {
+        paletteId: other,
+        paintIds: Array.from({ length: 201 }, () => "p-1"),
+      }),
+    ).rejects.toThrow("PALETTE_FULL");
+    expect((await t.run((ctx) => ctx.db.get(other)))?.paintIds).toEqual([]);
+  });
+
+  it("rejects malformed paint IDs", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+
+    vi.setSystemTime(2_000);
+    for (const bad of ["Bad ID!", ""]) {
+      await expect(
+        as.mutation(api.palettes.addPaints, { paletteId: id, paintIds: ["p-1", bad] }),
+      ).rejects.toThrow("INVALID_PAINT_ID");
+    }
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      paintIds: [],
+      updatedAt: 1_000,
+    });
+  });
+
+  it("removes a paint from the main list and every group", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    await t.run((ctx) =>
+      ctx.db.patch(id, {
+        paintIds: ["p-1", "p-2", "p-3", "p-4"],
+        groups: [
+          { id: "g-1", name: "Armour", paintIds: ["p-3", "p-2", "p-1"] },
+          { id: "g-2", name: "Trim", paintIds: ["p-4", "p-2"] },
+          { id: "g-3", name: "Base", paintIds: ["p-4"] },
+        ],
+      }),
+    );
+
+    vi.setSystemTime(2_000);
+    expect(
+      await as.mutation(api.palettes.removePaint, { paletteId: id, paintId: "p-2" }),
+    ).toBeNull();
+
+    const expected = {
+      paintIds: ["p-1", "p-3", "p-4"],
+      groups: [
+        { id: "g-1", name: "Armour", paintIds: ["p-3", "p-1"] },
+        { id: "g-2", name: "Trim", paintIds: ["p-4"] },
+        { id: "g-3", name: "Base", paintIds: ["p-4"] },
+      ],
+    };
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({ ...expected, updatedAt: 2_000 });
+
+    vi.setSystemTime(3_000);
+    expect(
+      await as.mutation(api.palettes.removePaint, { paletteId: id, paintId: "p-9" }),
+    ).toBeNull();
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject(expected);
+  });
+
+  it("keeps add and remove to the owner", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as: asA, userId: a } = await signedIn("a");
+    const asB = t.withIdentity({ subject: "b", issuer: ISSUER });
+    await asB.mutation(api.users.store, {});
+    const aId = await asA.mutation(api.palettes.create, { name: "A's palette" });
+    await t.run((ctx) => ctx.db.patch(aId, { paintIds: ["p-1", "p-2"] }));
+
+    vi.setSystemTime(2_000);
+    await expect(
+      asB.mutation(api.palettes.addPaints, { paletteId: aId, paintIds: ["p-3"] }),
+    ).rejects.toThrow("NOT_FOUND");
+    await expect(
+      asB.mutation(api.palettes.removePaint, { paletteId: aId, paintId: "p-1" }),
+    ).rejects.toThrow("NOT_FOUND");
+    await expect(
+      t.mutation(api.palettes.addPaints, { paletteId: aId, paintIds: ["p-3"] }),
+    ).rejects.toThrow("UNAUTHENTICATED");
+    await expect(
+      t.mutation(api.palettes.removePaint, { paletteId: aId, paintId: "p-1" }),
+    ).rejects.toThrow("UNAUTHENTICATED");
+
+    expect(await t.run((ctx) => ctx.db.get(aId))).toMatchObject({
+      userId: a,
+      paintIds: ["p-1", "p-2"],
+      updatedAt: 1_000,
+    });
+  });
 });
