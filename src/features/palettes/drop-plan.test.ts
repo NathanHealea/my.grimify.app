@@ -2,7 +2,16 @@ import { type FunctionReference, getFunctionName } from "convex/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../convex/_generated/api";
-import { applyPlan, type DragData, optimisticMove, planDrop } from "./drop-plan";
+import {
+  announceCancel,
+  announceDrop,
+  announceOver,
+  announcePickUp,
+  applyPlan,
+  type DragData,
+  optimisticMove,
+  planDrop,
+} from "./drop-plan";
 
 const PALETTE_ID = "palette-1";
 
@@ -416,5 +425,150 @@ describe("a move shows at once and reverts on failure", () => {
 
       expect(localStore.setQuery).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe("screen reader announcements", () => {
+  it("announces drags with names and positions", () => {
+    const lists = palette();
+    const names: Record<string, string> = {
+      "paint-a": "Macragge Blue",
+      "paint-b": "Retributor Armour",
+      "paint-c": "Abaddon Black",
+      "paint-d": "Leadbelcher",
+    };
+    const paintName = (paintId: string) => names[paintId];
+
+    expect(announcePickUp(mainPaint("paint-b"), lists, paintName)).toBe(
+      "Picked up Retributor Armour, position 2 of 4 in All paints.",
+    );
+    expect(announcePickUp(groupPaint("group-armor", "paint-c"), lists, paintName)).toBe(
+      "Picked up Abaddon Black, position 2 of 3 in Armor.",
+    );
+    expect(announcePickUp(heading("group-highlights"), lists, paintName)).toBe(
+      "Picked up group Highlights, position 3 of 3.",
+    );
+
+    expect(announceOver(mainPaint("paint-a"), null, lists, paintName)).toBe(
+      "Macragge Blue is not over a list.",
+    );
+    expect(announceOver(heading("group-trim"), undefined, lists, paintName)).toBe(
+      "Group Trim is not over another group.",
+    );
+    expect(announceOver(mainPaint("paint-b"), mainPaint("paint-d"), lists, paintName)).toBe(
+      "Retributor Armour is over position 4 of 4 in All paints.",
+    );
+    expect(announceOver(mainPaint("paint-b"), mainPaint("paint-b"), lists, paintName)).toBe(
+      "Retributor Armour is over position 2 of 4 in All paints.",
+    );
+    expect(
+      announceOver(
+        groupPaint("group-armor", "paint-a"),
+        groupPaint("group-armor", "paint-d"),
+        lists,
+        paintName,
+      ),
+    ).toBe("Macragge Blue is over position 3 of 3 in Armor.");
+    expect(announceOver(heading("group-trim"), heading("group-highlights"), lists, paintName)).toBe(
+      "Group Trim is over position 3 of 3.",
+    );
+    expect(
+      announceOver(
+        mainPaint("paint-a"),
+        groupPaint("group-highlights", "paint-d"),
+        lists,
+        paintName,
+      ),
+    ).toBe("Macragge Blue is over Highlights, position 2 of 3. Dropping adds it to Highlights.");
+    expect(
+      announceOver(
+        groupPaint("group-armor", "paint-c"),
+        groupPaint("group-trim", "paint-b"),
+        lists,
+        paintName,
+      ),
+    ).toBe("Abaddon Black is over Trim, position 1 of 2. Dropping moves it to Trim.");
+    expect(announceOver(mainPaint("paint-c"), zone("group-trim"), lists, paintName)).toBe(
+      "Abaddon Black is over Trim, position 2 of 2. Dropping adds it to Trim.",
+    );
+    expect(
+      announceOver(
+        groupPaint("group-armor", "paint-a"),
+        heading("group-highlights"),
+        lists,
+        paintName,
+      ),
+    ).toBe("Macragge Blue is over Highlights, position 3 of 3. Dropping moves it to Highlights.");
+    expect(
+      announceOver(groupPaint("group-armor", "paint-c"), zone("group-armor"), lists, paintName),
+    ).toBe("Abaddon Black is over position 2 of 3 in Armor.");
+    expect(
+      announceOver(groupPaint("group-armor", "paint-c"), heading("group-armor"), lists, paintName),
+    ).toBe("Abaddon Black is over position 2 of 3 in Armor.");
+    expect(announceOver(mainPaint("paint-b"), zone("group-trim"), lists, paintName)).toBe(
+      "Retributor Armour is already in Trim.",
+    );
+    expect(
+      announceOver(groupPaint("group-armor", "paint-a"), mainPaint("paint-b"), lists, paintName),
+    ).toBe("Macragge Blue is already in All paints.");
+
+    expect(announceDrop(mainPaint("paint-a"), mainPaint("paint-c"), lists, paintName)).toBe(
+      "Dropped Macragge Blue at position 3 of 4 in All paints.",
+    );
+    expect(
+      announceDrop(
+        groupPaint("group-armor", "paint-d"),
+        groupPaint("group-armor", "paint-a"),
+        lists,
+        paintName,
+      ),
+    ).toBe("Dropped Leadbelcher at position 1 of 3 in Armor.");
+    expect(announceDrop(heading("group-highlights"), heading("group-trim"), lists, paintName)).toBe(
+      "Dropped group Highlights at position 1 of 3.",
+    );
+    expect(
+      announceDrop(
+        mainPaint("paint-c"),
+        groupPaint("group-highlights", "paint-b"),
+        lists,
+        paintName,
+      ),
+    ).toBe("Added Abaddon Black to Highlights.");
+    expect(
+      announceDrop(groupPaint("group-armor", "paint-c"), zone("group-trim"), lists, paintName),
+    ).toBe("Moved Abaddon Black to Trim.");
+    expect(announceDrop(mainPaint("paint-b"), zone("group-highlights"), lists, paintName)).toBe(
+      "Retributor Armour is already in Highlights; nothing changed.",
+    );
+    expect(
+      announceDrop(groupPaint("group-trim", "paint-b"), mainPaint("paint-a"), lists, paintName),
+    ).toBe("Retributor Armour is already in All paints; nothing changed.");
+    expect(announceDrop(mainPaint("paint-b"), mainPaint("paint-b"), lists, paintName)).toBe(
+      "Retributor Armour is back at position 2 of 4 in All paints.",
+    );
+    expect(announceDrop(groupPaint("group-armor", "paint-c"), null, lists, paintName)).toBe(
+      "Abaddon Black is back at position 2 of 3 in Armor.",
+    );
+    expect(announceDrop(heading("group-armor"), heading("group-armor"), lists, paintName)).toBe(
+      "Group Armor is back at position 2 of 3.",
+    );
+    expect(announceDrop(heading("group-armor"), mainPaint("paint-a"), lists, paintName)).toBe(
+      "Group Armor is back at position 2 of 3.",
+    );
+
+    expect(announceCancel(mainPaint("paint-d"), lists, paintName)).toBe(
+      "Cancelled; Leadbelcher is back at position 4 of 4 in All paints.",
+    );
+    expect(announceCancel(heading("group-trim"), lists, paintName)).toBe(
+      "Cancelled; group Trim is back at position 1 of 3.",
+    );
+
+    const noNames = () => undefined;
+    expect(announcePickUp(mainPaint("paint-a"), lists, noNames)).toBe(
+      "Picked up Unknown paint, position 1 of 4 in All paints.",
+    );
+    expect(announceOver(mainPaint("paint-a"), null, lists, noNames)).toBe(
+      "Unknown paint is not over a list.",
+    );
   });
 });

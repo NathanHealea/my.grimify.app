@@ -142,3 +142,119 @@ export function optimisticMove(
   if (!palette) return;
   localStore.setQuery(api.palettes.get, { paletteId }, applyPlan(palette, plan));
 }
+
+type PaintName = (paintId: string) => string | undefined;
+
+/** The list a paint or group sits in, its 1-based position there, and the words for both. */
+function placeOf(data: DragData, palette: PaletteLists, paintName: PaintName) {
+  if (data.type === "paint") {
+    const ids = data.groupId === null ? palette.paintIds : groupPaints(palette, data.groupId);
+    const list =
+      data.groupId === null
+        ? "All paints"
+        : (palette.groups.find((g) => g.id === data.groupId)?.name ?? "");
+    return {
+      name: paintName(data.paintId) ?? "Unknown paint",
+      list,
+      ids,
+      index: ids.indexOf(data.paintId),
+    };
+  }
+  const index = palette.groups.findIndex((g) => g.id === data.groupId);
+  return {
+    name: `group ${palette.groups[index]?.name ?? ""}`,
+    list: "",
+    ids: palette.groups.map((g) => g.id),
+    index,
+  };
+}
+
+const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const groupName = (palette: PaletteLists, groupId: string) =>
+  palette.groups.find((g) => g.id === groupId)?.name ?? "";
+
+function position(index: number, count: number, list: string): string {
+  return `position ${index + 1} of ${count}${list ? ` in ${list}` : ""}`;
+}
+
+export function announcePickUp(active: DragData, palette: PaletteLists, paintName: PaintName) {
+  const { name, list, ids, index } = placeOf(active, palette, paintName);
+  return `Picked up ${name}, ${position(index, ids.length, list)}.`;
+}
+
+export function announceOver(
+  active: DragData,
+  over: DragData | null | undefined,
+  palette: PaletteLists,
+  paintName: PaintName,
+) {
+  const place = placeOf(active, palette, paintName);
+  const name = capitalise(place.name);
+  if (!over) {
+    return active.type === "paint"
+      ? `${name} is not over a list.`
+      : `${name} is not over another group.`;
+  }
+  const plan = planDrop(active, over, palette);
+  switch (plan.kind) {
+    case "movePaint":
+    case "moveGroupPaint":
+    case "moveGroup":
+      return `${name} is over ${position(plan.toIndex, place.ids.length, place.list)}.`;
+    case "addPaintToGroup":
+    case "movePaintToGroup": {
+      const groupId = plan.kind === "addPaintToGroup" ? plan.groupId : plan.toGroupId;
+      const count = groupPaints(palette, groupId).length + 1;
+      const target = groupName(palette, groupId);
+      const verb = plan.kind === "addPaintToGroup" ? "adds" : "moves";
+      return `${name} is over ${target}, ${position(plan.toIndex ?? count - 1, count, "")}. Dropping ${verb} it to ${target}.`;
+    }
+    case "none":
+      switch (plan.reason) {
+        case "already-in-group":
+          return `${name} is already in ${groupName(palette, over.groupId ?? "")}.`;
+        case "already-in-main":
+          return `${name} is already in All paints.`;
+        case "wrong-target":
+          return `${name} can't go there.`;
+        default:
+          return `${name} is over ${position(place.index, place.ids.length, place.list)}.`;
+      }
+  }
+}
+
+export function announceDrop(
+  active: DragData,
+  over: DragData | null | undefined,
+  palette: PaletteLists,
+  paintName: PaintName,
+) {
+  const place = placeOf(active, palette, paintName);
+  const plan = planDrop(active, over, palette);
+  switch (plan.kind) {
+    case "movePaint":
+    case "moveGroupPaint":
+    case "moveGroup": {
+      const at = Math.min(plan.toIndex, place.ids.length - 1);
+      return `Dropped ${place.name} at ${position(at, place.ids.length, place.list)}.`;
+    }
+    case "addPaintToGroup":
+      return `Added ${place.name} to ${groupName(palette, plan.groupId)}.`;
+    case "movePaintToGroup":
+      return `Moved ${place.name} to ${groupName(palette, plan.toGroupId)}.`;
+    case "none": {
+      const name = capitalise(place.name);
+      if (plan.reason === "already-in-group") {
+        return `${name} is already in ${groupName(palette, over?.groupId ?? "")}; nothing changed.`;
+      }
+      if (plan.reason === "already-in-main")
+        return `${name} is already in All paints; nothing changed.`;
+      return `${name} is back at ${position(place.index, place.ids.length, place.list)}.`;
+    }
+  }
+}
+
+export function announceCancel(active: DragData, palette: PaletteLists, paintName: PaintName) {
+  const { name, list, ids, index } = placeOf(active, palette, paintName);
+  return `Cancelled; ${name} is back at ${position(index, ids.length, list)}.`;
+}

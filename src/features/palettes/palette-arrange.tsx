@@ -1,6 +1,8 @@
 import "./palette-arrange.css";
 
 import {
+  type Active,
+  type Announcements,
   closestCenter,
   type CollisionDetection,
   DndContext,
@@ -9,6 +11,7 @@ import {
   type DragStartEvent,
   KeyboardSensor,
   MouseSensor,
+  type Over,
   pointerWithin,
   TouchSensor,
   useSensor,
@@ -26,7 +29,16 @@ import { useToast } from "@/features/feedback/toast-provider";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { DragPreview } from "./drag-preview";
-import { type DragData, type DropPlan, optimisticMove, planDrop } from "./drop-plan";
+import {
+  announceCancel,
+  announceDrop,
+  announceOver,
+  announcePickUp,
+  type DragData,
+  type DropPlan,
+  optimisticMove,
+  planDrop,
+} from "./drop-plan";
 
 const DRAG_INSTRUCTIONS =
   "Press Space to pick up. Use the arrow keys to move, Space to drop, Escape to cancel.";
@@ -215,6 +227,23 @@ export function PaletteArrange({
     setDragging(null);
   };
 
+  const paintName = (paintId: string) => paints.get(paintId)?.name;
+  const announce =
+    (say: (active: DragData, over: DragData | undefined) => string) =>
+    ({ active, over }: { active: Active; over?: Over | null }) => {
+      const data = dataOf(active);
+      return data && say(data, dataOf(over));
+    };
+  const announcements: Announcements = {
+    onDragStart: announce((active) => announcePickUp(active, palette, paintName)),
+    onDragOver: announce((active, over) => announceOver(active, over, palette, paintName)),
+    // An offline drop changes nothing, so it's announced as a drop on no target.
+    onDragEnd: announce((active, over) =>
+      announceDrop(active, online ? over : undefined, palette, paintName),
+    ),
+    onDragCancel: announce((active) => announceCancel(active, palette, paintName)),
+  };
+
   const preview = (data: DragData) => {
     if (data.type === "paint") {
       const paint = paints.get(data.paintId);
@@ -235,6 +264,7 @@ export function PaletteArrange({
         container: document.body,
         restoreFocus: false,
         screenReaderInstructions: { draggable: DRAG_INSTRUCTIONS },
+        announcements,
       }}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
