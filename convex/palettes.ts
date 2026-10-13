@@ -41,6 +41,25 @@ function newGroupId(palette: Doc<"palettes">): string {
   return id;
 }
 
+function requireIndex(toIndex: number): void {
+  if (!Number.isInteger(toIndex) || toIndex < 0) throw new ConvexError("INVALID_INDEX");
+}
+
+/** `items` with the one at `from` moved to `toIndex` (clamped to the end), or null if it wouldn't move. */
+function moveItem<T>(items: T[], from: number, toIndex: number): T[] | null {
+  const to = Math.min(toIndex, items.length - 1);
+  if (from === -1 || from === to) return null;
+  const next = items.filter((_, i) => i !== from);
+  next.splice(to, 0, items[from]);
+  return next;
+}
+
+function insertAt(ids: string[], id: string, toIndex?: number): string[] {
+  const next = [...ids];
+  next.splice(toIndex ?? ids.length, 0, id);
+  return next;
+}
+
 async function patchGroups(
   ctx: MutationCtx,
   palette: Doc<"palettes">,
@@ -258,13 +277,19 @@ export const removeGroup = mutation({
   },
 });
 
-/** Appends a main-list paint to a group; a paint already in the group is a no-op. */
+/** Adds a main-list paint to a group at `toIndex`, or the end; a paint already in the group is a no-op. */
 export const addPaintToGroup = mutation({
-  args: { paletteId: v.id("palettes"), groupId: v.string(), paintId: v.string() },
+  args: {
+    paletteId: v.id("palettes"),
+    groupId: v.string(),
+    paintId: v.string(),
+    toIndex: v.optional(v.number()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     requirePaintId(args.paintId);
+    if (args.toIndex !== undefined) requireIndex(args.toIndex);
     const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
     const group = requireGroup(palette, args.groupId);
     if (!palette.paintIds.includes(args.paintId)) throw new ConvexError("PAINT_NOT_IN_PALETTE");
@@ -273,7 +298,9 @@ export const addPaintToGroup = mutation({
       ctx,
       palette,
       palette.groups.map((g) =>
-        g.id === args.groupId ? { ...g, paintIds: [...g.paintIds, args.paintId] } : g,
+        g.id === args.groupId
+          ? { ...g, paintIds: insertAt(g.paintIds, args.paintId, args.toIndex) }
+          : g,
       ),
     );
     return null;
@@ -303,18 +330,20 @@ export const removePaintFromGroup = mutation({
   },
 });
 
-/** Moves a paint between groups in one write; a paint not in the source group is a no-op. */
+/** Moves a paint between groups in one write, to `toIndex` or the end; a paint not in the source group is a no-op. */
 export const movePaintToGroup = mutation({
   args: {
     paletteId: v.id("palettes"),
     paintId: v.string(),
     fromGroupId: v.string(),
     toGroupId: v.string(),
+    toIndex: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     requirePaintId(args.paintId);
+    if (args.toIndex !== undefined) requireIndex(args.toIndex);
     const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
     const from = requireGroup(palette, args.fromGroupId);
     requireGroup(palette, args.toGroupId);
@@ -327,11 +356,77 @@ export const movePaintToGroup = mutation({
           return { ...g, paintIds: g.paintIds.filter((id) => id !== args.paintId) };
         }
         if (g.id === args.toGroupId && !g.paintIds.includes(args.paintId)) {
-          return { ...g, paintIds: [...g.paintIds, args.paintId] };
+          return { ...g, paintIds: insertAt(g.paintIds, args.paintId, args.toIndex) };
         }
         return g;
       }),
     );
+    return null;
+  },
+});
+
+/** Moves a paint within the main list to `toIndex` (clamped); a paint not in it is a no-op. */
+export const movePaint = mutation({
+  args: { paletteId: v.id("palettes"), paintId: v.string(), toIndex: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    requirePaintId(args.paintId);
+    requireIndex(args.toIndex);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const paintIds = moveItem(
+      palette.paintIds,
+      palette.paintIds.indexOf(args.paintId),
+      args.toIndex,
+    );
+    if (!paintIds) return null;
+    await ctx.db.patch("palettes", args.paletteId, { paintIds, updatedAt: Date.now() });
+    return null;
+  },
+});
+
+/** Moves a paint within one group to `toIndex` (clamped); a paint not in the group is a no-op. */
+export const moveGroupPaint = mutation({
+  args: {
+    paletteId: v.id("palettes"),
+    groupId: v.string(),
+    paintId: v.string(),
+    toIndex: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    requirePaintId(args.paintId);
+    requireIndex(args.toIndex);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    const group = requireGroup(palette, args.groupId);
+    const paintIds = moveItem(group.paintIds, group.paintIds.indexOf(args.paintId), args.toIndex);
+    if (!paintIds) return null;
+    await patchGroups(
+      ctx,
+      palette,
+      palette.groups.map((g) => (g.id === args.groupId ? { ...g, paintIds } : g)),
+    );
+    return null;
+  },
+});
+
+/** Moves a group, with its paints, to `toIndex` (clamped) among the palette's groups. */
+export const moveGroup = mutation({
+  args: { paletteId: v.id("palettes"), groupId: v.string(), toIndex: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    requireIndex(args.toIndex);
+    const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
+    requireGroup(palette, args.groupId);
+    const groups = moveItem(
+      palette.groups,
+      palette.groups.findIndex((g) => g.id === args.groupId),
+      args.toIndex,
+    );
+    if (!groups) return null;
+    await patchGroups(ctx, palette, groups);
     return null;
   },
 });
