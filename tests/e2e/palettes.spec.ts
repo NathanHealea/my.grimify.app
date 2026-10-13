@@ -176,3 +176,138 @@ test("groups a palette's paints", async ({ page }, info) => {
     .click();
   await expect(page).toHaveURL(/\/palettes$/);
 });
+
+test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
+  const name = `E2E arrange ${info.project.name} ${Date.now()}`;
+  const main = page.getByRole("main");
+  const picker = page.getByRole("dialog", { name: "Add to palette" });
+  const choose = () => picker.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  // dnd-kit's MouseSensor only starts after 5px of travel, and needs intermediate moves to track the pointer.
+  const mouseDrag = async (
+    handle: ReturnType<typeof page.locator>,
+    target: ReturnType<typeof page.locator>,
+  ) => {
+    const from = await handle.boundingBox();
+    const to = await target.boundingBox();
+    if (!from || !to) throw new Error("Drag handle or target is not visible");
+    const startX = from.x + from.width / 2;
+    const startY = from.y + from.height / 2;
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, startY + 10, { steps: 2 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 });
+    await page.mouse.up();
+  };
+
+  await page.goto("/palettes");
+  await clerk.signIn({ page, emailAddress: E2E_EMAIL });
+  await page.goto("/palettes");
+  await main.getByRole("button", { name: "New palette" }).click();
+  const createSheet = page.getByRole("dialog", { name: "New palette" });
+  await createSheet.getByLabel("Palette name").fill(name);
+  await createSheet.getByRole("button", { name: "Create" }).click();
+  await expect(page).toHaveURL(/\/palettes\/[^/]+$/);
+  const paletteUrl = page.url();
+
+  await page.goto("/paints/citadel-base-mephiston-red");
+  await main.getByRole("button", { name: "Add to palette" }).click();
+  await choose();
+  await expect(page.getByText(`Added to ${name}`)).toBeVisible();
+
+  await page.goto("/paints?q=evil sunz scarlet");
+  await main.getByRole("button", { name: "Add to palette" }).click();
+  await main.getByRole("checkbox", { name: "Select Evil Sunz Scarlet" }).first().check();
+  await main.getByRole("searchbox", { name: "Search paints" }).fill("abaddon black");
+  await main.getByRole("checkbox", { name: "Select Abaddon Black" }).first().check();
+  const bar = main.getByRole("region", { name: "Selection" });
+  await expect(bar.getByRole("status").first()).toHaveText("2 selected");
+  await bar.getByRole("button", { name: "Add to palette" }).click();
+  await choose();
+  await expect(page.getByText(`Added 2 paints to ${name}`)).toBeVisible();
+
+  await page.goto(paletteUrl);
+  for (const group of ["Armor", "Trim"]) {
+    await main.getByRole("button", { name: "New group" }).click();
+    const sheet = page.getByRole("dialog", { name: "New group" });
+    await sheet.getByLabel("Group name").fill(group);
+    await sheet.getByRole("button", { name: "Create" }).click();
+    await expect(main.getByRole("heading", { level: 2, name: group })).toBeFocused();
+  }
+
+  await main.getByRole("button", { name: "Groups for Mephiston Red" }).click();
+  const membership = page.getByRole("dialog", { name: "Groups for Mephiston Red" });
+  await membership.getByRole("checkbox", { name: "Armor" }).check();
+  await expect(membership.getByRole("checkbox", { name: "Armor" })).toBeChecked();
+  await membership.getByRole("button", { name: "Done" }).click();
+
+  const allPaints = main.getByRole("list", { name: "Paints in this palette" });
+  const paints = allPaints.getByRole("listitem");
+  const armor = main.getByRole("region", { name: "Armor" });
+  const trim = main.getByRole("region", { name: "Trim" });
+  const groupHeadings = main.getByRole("heading", { level: 2 });
+  await expect(paints).toHaveCount(3);
+  await expect(paints.nth(0)).toContainText("Mephiston Red");
+  await expect(paints.nth(1)).toContainText("Evil Sunz Scarlet");
+  await expect(paints.nth(2)).toContainText("Abaddon Black");
+  await expect(armor).toContainText("Mephiston Red");
+
+  await main.getByRole("button", { name: "Arrange" }).click();
+  await expect(main.getByRole("button", { name: "Done" })).toBeVisible();
+
+  await allPaints.getByRole("button", { name: "Drag Mephiston Red" }).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Space");
+  await expect(page.locator('[id^="DndLiveRegion"]')).toHaveText(
+    /Dropped .* at position \d+ of \d+ in All paints\./,
+  );
+  await expect(paints.nth(0)).toContainText("Evil Sunz Scarlet");
+  await expect(paints.nth(1)).toContainText("Mephiston Red");
+  await expect(paints.nth(2)).toContainText("Abaddon Black");
+
+  await mouseDrag(
+    allPaints.getByRole("button", { name: "Drag Evil Sunz Scarlet" }),
+    trim.getByText("No paints in this group yet"),
+  );
+  await expect(trim.getByRole("listitem")).toHaveCount(1);
+  await expect(trim.getByRole("listitem").nth(0)).toContainText("Evil Sunz Scarlet");
+  await expect(paints).toHaveCount(3);
+  await expect(allPaints).toContainText("Evil Sunz Scarlet");
+
+  await mouseDrag(
+    armor.getByRole("button", { name: "Drag Mephiston Red" }),
+    trim.getByRole("listitem").filter({ hasText: "Evil Sunz Scarlet" }),
+  );
+  await expect(armor).toContainText("No paints in this group yet");
+  await expect(trim.getByRole("listitem")).toHaveCount(2);
+  await expect(trim.getByRole("listitem").nth(0)).toContainText("Mephiston Red");
+  await expect(trim.getByRole("listitem").nth(1)).toContainText("Evil Sunz Scarlet");
+
+  await trim.getByRole("button", { name: "Move group Trim" }).click();
+  await page
+    .getByRole("dialog", { name: "Move group Trim" })
+    .getByRole("button", { name: "Move up" })
+    .click();
+  await expect(groupHeadings).toHaveText(["All paints", "Trim", "Armor"]);
+
+  await main.getByRole("button", { name: "Done" }).click();
+  await expect(main.getByRole("button", { name: "Arrange" })).toBeVisible();
+  await page.reload();
+  await expect(paints).toHaveCount(3);
+  await expect(paints.nth(0)).toContainText("Evil Sunz Scarlet");
+  await expect(paints.nth(1)).toContainText("Mephiston Red");
+  await expect(paints.nth(2)).toContainText("Abaddon Black");
+  await expect(groupHeadings).toHaveText(["All paints", "Trim", "Armor"]);
+  await expect(trim.getByRole("listitem")).toHaveCount(2);
+  await expect(trim.getByRole("listitem").nth(0)).toContainText("Mephiston Red");
+  await expect(trim.getByRole("listitem").nth(1)).toContainText("Evil Sunz Scarlet");
+  await expect(armor).toContainText("No paints in this group yet");
+
+  await main.getByRole("button", { name: "Palette actions" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete palette" }).click();
+  await page
+    .getByRole("dialog", { name: `Delete "${name}"?` })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/palettes$/);
+});
