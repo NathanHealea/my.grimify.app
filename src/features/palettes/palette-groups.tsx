@@ -1,0 +1,402 @@
+import "./palette-groups.css";
+
+import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
+import { Ellipsis } from "lucide-react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type RefObject,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import { PaintSwatch } from "@/components/paint-swatch";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetBody,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import type { Catalog } from "@/features/catalog/schema";
+import { useToast } from "@/features/feedback/toast-provider";
+
+import { api } from "../../../convex/_generated/api";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
+
+type Group = Doc<"palettes">["groups"][number];
+
+// Matches the server's cap in convex/palettes.ts.
+const MAX_NAME_LENGTH = 60;
+
+type OpenSheet = { kind: "actions" | "delete"; groupId: string } | { kind: "new" } | null;
+
+/** The palette's groups, each a section of paints, with New group, inline rename and delete. */
+export function PaletteGroups({
+  paletteId,
+  groups,
+  catalog,
+  online,
+}: {
+  paletteId: Id<"palettes">;
+  groups: Group[];
+  catalog: Catalog;
+  online: boolean;
+}) {
+  const createGroup = useMutation(api.palettes.createGroup);
+  const removeGroup = useMutation(api.palettes.removeGroup);
+  const toast = useToast();
+  const baseId = useId();
+  const paints = useMemo(() => new Map(catalog.paints.map((p) => [p.id, p])), [catalog]);
+  const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
+  const [sheet, setSheet] = useState<OpenSheet>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const actionButtons = useRef(new Map<string, HTMLButtonElement>());
+  const headings = useRef(new Map<string, HTMLHeadingElement>());
+  const newGroupButton = useRef<HTMLButtonElement>(null);
+  const renameField = useRef<HTMLInputElement>(null);
+  // These sheets open from state, so each close decides where focus goes; Radix only refocuses a trigger.
+  const focusOnClose = useRef<() => HTMLElement | null>(() => null);
+  const focusAfterRename = useRef<string | null>(null);
+  // Convex holds a mutation until the connection returns, so offline a pending delete mustn't trap the user.
+  const locked = deleting && online;
+
+  const actionsFor = (groupId: string) => () => actionButtons.current.get(groupId) ?? null;
+  // A ref whose target is worked out when the name sheet closes, by which time a new group has rendered.
+  const newGroupReturn = useMemo<RefObject<HTMLElement | null>>(
+    () => ({
+      get current() {
+        return focusOnClose.current() ?? newGroupButton.current;
+      },
+    }),
+    [],
+  );
+
+  // Convex doesn't promise the new group renders before createGroup resolves, so focus it once it does.
+  const createdGroup = useRef<string | null>(null);
+  useEffect(() => {
+    const groupId = createdGroup.current;
+    if (groupId === null || sheet?.kind === "new") return;
+    const heading = headings.current.get(groupId);
+    if (!heading) return;
+    createdGroup.current = null;
+    heading.focus();
+  }, [groups, sheet]);
+
+  useEffect(() => {
+    if (renaming !== null || focusAfterRename.current === null) return;
+    actionButtons.current.get(focusAfterRename.current)?.focus();
+    focusAfterRename.current = null;
+  }, [renaming]);
+
+  const sheetGroup =
+    sheet && sheet.kind !== "new" ? groups.find((g) => g.id === sheet.groupId) : undefined;
+
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    focusOnClose.current()?.focus();
+  };
+
+  const openActions = (groupId: string) => {
+    focusOnClose.current = actionsFor(groupId);
+    setSheet({ kind: "actions", groupId });
+  };
+
+  const startRename = (groupId: string) => {
+    focusOnClose.current = () => renameField.current;
+    setRenaming(groupId);
+    setSheet(null);
+  };
+
+  const finishRename = (groupId: string) => {
+    focusAfterRename.current = groupId;
+    setRenaming(null);
+  };
+
+  const confirmDelete = (group: Group) => {
+    const index = groups.findIndex((g) => g.id === group.id);
+    const next = groups[index + 1]?.id;
+    setDeleting(true);
+    setDeleteError(null);
+    removeGroup({ paletteId, groupId: group.id })
+      .then(() => {
+        focusOnClose.current = () =>
+          (next === undefined ? null : actionButtons.current.get(next)) ?? newGroupButton.current;
+        setSheet(null);
+        toast(`Deleted group ${group.name}`);
+      })
+      .catch((cause: unknown) => {
+        console.error("Deleting the group failed", cause);
+        setDeleteError("Couldn't delete the group. Check your connection and try again.");
+      })
+      .finally(() => setDeleting(false));
+  };
+
+  return (
+    <div className="palette-groups">
+      {groups.map((group) => {
+        const headingId = `${baseId}-${group.id}`;
+        const isRenaming = renaming === group.id;
+        return (
+          <section
+            key={group.id}
+            className="palette-groups__group"
+            aria-labelledby={isRenaming ? undefined : headingId}
+            aria-label={isRenaming ? group.name : undefined}
+          >
+            {isRenaming ? (
+              <GroupRenameForm
+                paletteId={paletteId}
+                group={group}
+                fieldRef={renameField}
+                online={online}
+                onDone={() => finishRename(group.id)}
+              />
+            ) : (
+              <div className="palette-groups__heading">
+                <h2
+                  id={headingId}
+                  tabIndex={-1}
+                  ref={(element) => {
+                    if (element) headings.current.set(group.id, element);
+                    else headings.current.delete(group.id);
+                  }}
+                >
+                  {group.name}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  ref={(element) => {
+                    if (element) actionButtons.current.set(group.id, element);
+                    else actionButtons.current.delete(group.id);
+                  }}
+                  aria-label={`Actions for group ${group.name}`}
+                  disabled={!online}
+                  onClick={() => openActions(group.id)}
+                >
+                  <Ellipsis aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+            {group.paintIds.length === 0 ? (
+              <p className="palette-groups__empty">No paints in this group yet</p>
+            ) : (
+              <ul className="palette-groups__paints">
+                {group.paintIds.map((paintId) => {
+                  const paint = paints.get(paintId);
+                  return (
+                    <li key={paintId} className="palette-groups__paint">
+                      {paint ? (
+                        <PaintSwatch hex={paint.hex} type={paint.type} />
+                      ) : (
+                        <span className="palette-groups__unknown-swatch" aria-hidden="true" />
+                      )}
+                      <span className="palette-groups__text">
+                        <span className="palette-groups__name">
+                          {paint?.name ?? "Unknown paint"}
+                        </span>
+                        {paint && (
+                          <span className="palette-groups__brand">{brands.get(paint.brandId)}</span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+
+      <Button
+        ref={newGroupButton}
+        variant="outline"
+        className="palette-groups__new"
+        disabled={!online}
+        onClick={() => {
+          focusOnClose.current = () => null;
+          setSheet({ kind: "new" });
+        }}
+      >
+        New group
+      </Button>
+
+      <PaletteNameSheet
+        kind="group"
+        open={sheet?.kind === "new"}
+        onOpenChange={(open) => setSheet(open ? { kind: "new" } : null)}
+        title="New group"
+        submitLabel="Create"
+        returnFocus={newGroupReturn}
+        onSave={(name) =>
+          createGroup({ paletteId, name }).then((groupId) => {
+            createdGroup.current = groupId;
+            focusOnClose.current = () => headings.current.get(groupId) ?? null;
+          })
+        }
+      />
+
+      <Sheet
+        open={sheet?.kind === "actions" && sheetGroup !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setSheet(null);
+        }}
+      >
+        <SheetContent
+          // Moving on to Delete hands focus to that sheet, so only a close or Rename moves it here.
+          onCloseAutoFocus={(event) => {
+            if (sheet === null) restoreFocus(event);
+            else event.preventDefault();
+          }}
+        >
+          <SheetHeader>
+            <SheetTitle>{sheetGroup?.name}</SheetTitle>
+          </SheetHeader>
+          <SheetBody className="palette-groups__actions">
+            <Button variant="outline" onClick={() => sheetGroup && startRename(sheetGroup.id)}>
+              Rename
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => sheetGroup && setSheet({ kind: "delete", groupId: sheetGroup.id })}
+            >
+              Delete group
+            </Button>
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={sheet?.kind === "delete" && sheetGroup !== undefined}
+        onOpenChange={(open) => {
+          // Closing mid-deletion would hide a failure that arrives afterwards.
+          if (locked || open) return;
+          setSheet(null);
+          setDeleteError(null);
+        }}
+      >
+        <SheetContent onCloseAutoFocus={restoreFocus}>
+          <SheetHeader>
+            <SheetTitle>{`Delete group "${sheetGroup?.name}"?`}</SheetTitle>
+          </SheetHeader>
+          <SheetBody>
+            <p>Its paints stay in the palette.</p>
+            <p className="palette-groups__error" role="alert">
+              {deleteError}
+            </p>
+            <p className="palette-groups__note" role="status">
+              {!online && OFFLINE_EDIT_NOTE}
+            </p>
+          </SheetBody>
+          <SheetFooter>
+            <SheetClose asChild>
+              <Button variant="outline" disabled={locked}>
+                Cancel
+              </Button>
+            </SheetClose>
+            <Button
+              variant="destructive"
+              disabled={deleting || !online}
+              onClick={() => sheetGroup && confirmDelete(sheetGroup)}
+            >
+              Delete
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+const RENAME_MESSAGES: Record<string, string> = {
+  GROUP_NAME_INVALID: "Give the group a name",
+};
+
+function GroupRenameForm({
+  paletteId,
+  group,
+  fieldRef,
+  online,
+  onDone,
+}: {
+  paletteId: Id<"palettes">;
+  group: Group;
+  fieldRef: RefObject<HTMLInputElement | null>;
+  online: boolean;
+  onDone: () => void;
+}) {
+  const renameGroup = useMutation(api.palettes.renameGroup);
+  const [name, setName] = useState(group.name);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const fieldId = useId();
+  const errorId = useId();
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return setError("Give the group a name");
+    if (trimmed.length > MAX_NAME_LENGTH) return setError("Use 60 characters or fewer");
+    setSaving(true);
+    setError(null);
+    renameGroup({ paletteId, groupId: group.id, name: trimmed })
+      .then(onDone)
+      .catch((cause: unknown) => {
+        const code =
+          cause instanceof ConvexError && typeof cause.data === "string" ? cause.data : "";
+        if (!RENAME_MESSAGES[code]) console.error("Renaming the group failed", cause);
+        setError(
+          RENAME_MESSAGES[code] ??
+            "Couldn't rename the group. Check your connection and try again.",
+        );
+        setSaving(false);
+      });
+  };
+
+  const cancelOnEscape = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    onDone();
+  };
+
+  return (
+    <form className="palette-groups__rename" onSubmit={submit} noValidate>
+      <label className="palette-groups__rename-label" htmlFor={fieldId}>
+        Group name
+      </label>
+      <Input
+        id={fieldId}
+        ref={fieldRef}
+        autoComplete="off"
+        value={name}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={cancelOnEscape}
+      />
+      <p id={errorId} className="palette-groups__error" role="alert">
+        {error}
+      </p>
+      <div className="palette-groups__rename-buttons">
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={saving || !online}>
+          Save
+        </Button>
+      </div>
+    </form>
+  );
+}

@@ -4,7 +4,7 @@ import { useUser } from "@clerk/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { Ellipsis, X } from "lucide-react";
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PageTitle } from "@/components/page-title";
 import { PaintSwatch } from "@/components/paint-swatch";
@@ -25,6 +25,7 @@ import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { PaletteGroups } from "./palette-groups";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
 
@@ -84,6 +85,7 @@ function PaletteContent({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const actionsButton = useRef<HTMLButtonElement>(null);
+  const allPaintsId = useId();
   // Convex holds a mutation until the connection returns, so offline a pending delete mustn't trap the user.
   const locked = deleting && online;
 
@@ -132,13 +134,24 @@ function PaletteContent({
 
       <CatalogGate>
         {(catalog) => (
-          <PaintList
-            paletteId={palette._id}
-            paintIds={palette.paintIds}
-            catalog={catalog}
-            online={online}
-            lastFocus={actionsButton}
-          />
+          <>
+            <section className="palette-detail__section" aria-labelledby={allPaintsId}>
+              <h2 id={allPaintsId}>All paints</h2>
+              <PaintList
+                paletteId={palette._id}
+                paintIds={palette.paintIds}
+                catalog={catalog}
+                online={online}
+                lastFocus={actionsButton}
+              />
+            </section>
+            <PaletteGroups
+              paletteId={palette._id}
+              groups={palette.groups}
+              catalog={catalog}
+              online={online}
+            />
+          </>
         )}
       </CatalogGate>
 

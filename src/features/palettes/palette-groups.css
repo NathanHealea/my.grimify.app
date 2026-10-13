@@ -1,0 +1,107 @@
+.palette-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.palette-groups__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.palette-groups__heading {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+
+  & > h2 {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.palette-groups__empty {
+  padding-block: var(--space-4);
+  color: var(--color-muted-text);
+}
+
+.palette-groups__paints {
+  padding: 0;
+  list-style: none;
+}
+
+.palette-groups__paint {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--row-min-height);
+  padding-block: var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+/* Same neutral dashed chip as the main list: no colour beats a guessed one. */
+.palette-groups__unknown-swatch {
+  flex-shrink: 0;
+  width: var(--swatch-size);
+  height: var(--swatch-size);
+  background: var(--color-secondary);
+  border: var(--border-width) dashed var(--color-input-border);
+  border-radius: var(--radius-md);
+}
+
+.palette-groups__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.palette-groups__name {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.palette-groups__brand {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  color: var(--color-muted-text);
+}
+
+.palette-groups__new {
+  align-self: flex-start;
+}
+
+.palette-groups__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.palette-groups__rename {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.palette-groups__rename-label {
+  font-weight: var(--weight-semibold);
+}
+
+.palette-groups__rename-buttons {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.palette-groups__error {
+  color: var(--color-error);
+}
+
+.palette-groups__note {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  color: var(--color-muted-text);
+}
