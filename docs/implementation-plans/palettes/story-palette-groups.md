@@ -112,13 +112,13 @@ Already in place:
 
 ## Implementation plan
 
-1. [ ] Add the six group mutations with owner checks, group and name validation, the 30-group cap and server-made group IDs — touches `convex/palettes.ts`, `convex/palettes.test.ts` — tests T1, T2, T3, T4, T5
-2. [ ] Let the name sheet name groups as well as palettes — touches `src/features/palettes/palette-name-sheet.tsx`, `palette-name-sheet.test.tsx` — tests T6
-3. [ ] Show groups on the palette screen with New group, inline rename and delete — touches `src/features/palettes/palette-groups.tsx`, `palette-groups.css`, `palette-groups.test.tsx`, `palette-detail.tsx`, `palette-detail.css` — tests T7, T10
-4. [ ] Add the Groups sheet to main-list rows — touches `src/features/palettes/group-membership-sheet.tsx`, `.css`, `.test.tsx`, `palette-detail.tsx` — tests T8
-5. [ ] Add the actions sheet to paints in a group (move, copy, remove from group) — touches `src/features/palettes/group-paint-actions-sheet.tsx`, `.css`, `.test.tsx`, `palette-groups.tsx` — tests T9
-6. [ ] Extend the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T11
-7. [ ] Update docs — touches `docs/API.md`, `docs/UX_FLOWS.md`, `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/palettes.md`, `docs/PRD.md` — tests none (docs only)
+1. [x] Add the six group mutations with owner checks, group and name validation, the 30-group cap and server-made group IDs — touches `convex/palettes.ts`, `convex/palettes.test.ts` — tests T1, T2, T3, T4, T5
+2. [x] Let the name sheet name groups as well as palettes — touches `src/features/palettes/palette-name-sheet.tsx`, `palette-name-sheet.test.tsx` — tests T6
+3. [x] Show groups on the palette screen with New group, inline rename and delete — touches `src/features/palettes/palette-groups.tsx`, `palette-groups.css`, `palette-groups.test.tsx`, `palette-detail.tsx`, `palette-detail.css` — tests T7, T10
+4. [x] Add the Groups sheet to main-list rows — touches `src/features/palettes/group-membership-sheet.tsx`, `.css`, `.test.tsx`, `palette-detail.tsx` — tests T8
+5. [x] Add the actions sheet to paints in a group (move, copy, remove from group) — touches `src/features/palettes/group-paint-actions-sheet.tsx`, `.css`, `.test.tsx`, `palette-groups.tsx` — tests T9
+6. [x] Extend the E2E journey — touches `tests/e2e/palettes.spec.ts` — tests T11
+7. [x] Update docs — touches `docs/API.md`, `docs/UX_FLOWS.md`, `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/palettes.md`, `docs/PRD.md` — tests none (docs only)
 
 **Must not change:** the `palettes` schema (groups already fit it); the signatures and behaviour of the existing palette functions; `removePaint` still clears a paint from every group; the main list's Remove button, its label and focus handling; `PaintRow` and the paints list.
 
@@ -138,3 +138,5 @@ Already in place:
 - 2026-10-12 — Planned.
 - 2026-10-13 — Plan approved.
 - 2026-10-13 — Started on branch story/palette-groups from origin/dev.
+- 2026-10-13 — Verified: Convex seeds Math.random() per mutation (docs.convex.dev/functions/runtimes); group IDs use it, no counter fallback needed.
+- 2026-10-13 — Steps 1-3 done. Focusing a new group no longer assumes Convex renders it before createGroup resolves; the docs don't promise that order.
