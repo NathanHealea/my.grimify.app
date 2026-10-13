@@ -260,7 +260,7 @@ export function PaletteArrange({
     if (byKeyboard.current) {
       focusAfterDrop.current = sortableIdOf(landingOf(plan, data));
     } else if (online) {
-      // Keyboard users hear why in the drop announcement; pointer users only see that nothing moved.
+      // The drop announcement only reaches screen readers; the toast tells sighted pointer users why nothing moved.
       const refusal = dropRefusal(data, dataOf(over), palette);
       if (refusal) toast(refusal);
     }
