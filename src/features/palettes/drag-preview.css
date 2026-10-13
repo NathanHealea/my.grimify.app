@@ -16,7 +16,9 @@
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+/* The glass needs both features; without either the preview is solid, like the nav (DECISIONS 039). */
+@supports not (((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and
+  (color: color-mix(in srgb, currentcolor 50%, transparent))) {
   .drag-preview {
     background: var(--color-surface);
   }
