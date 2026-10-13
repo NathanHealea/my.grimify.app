@@ -384,6 +384,22 @@ describe("palettes", () => {
     });
   });
 
+  it("leaves the palette untouched when a group is renamed to its own name", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    const armor = await as.mutation(api.palettes.createGroup, { paletteId: id, name: "Armor" });
+
+    vi.setSystemTime(2_000);
+    await as.mutation(api.palettes.renameGroup, { paletteId: id, groupId: armor, name: " Armor " });
+
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      groups: [{ id: armor, name: "Armor" }],
+      updatedAt: 1_000,
+    });
+  });
+
   it("creates, renames and removes groups", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);

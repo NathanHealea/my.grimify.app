@@ -231,7 +231,7 @@ export const renameGroup = mutation({
     const user = await requireUser(ctx);
     const name = cleanName(args.name, "GROUP_NAME_INVALID");
     const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
-    requireGroup(palette, args.groupId);
+    if (requireGroup(palette, args.groupId).name === name) return null;
     await patchGroups(
       ctx,
       palette,
