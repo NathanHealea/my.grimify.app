@@ -19,8 +19,17 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { useMutation } from "convex/react";
-import { GripVertical } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpDown, GripVertical } from "lucide-react";
+import {
+  createContext,
+  type ReactNode,
+  type RefObject,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Catalog } from "@/features/catalog/schema";
@@ -38,7 +47,9 @@ import {
   type DropPlan,
   optimisticMove,
   planDrop,
+  positionOf,
 } from "./drop-plan";
+import { MoveSheet } from "./move-sheet";
 
 const DRAG_INSTRUCTIONS =
   "Press Space to pick up. Use the arrow keys to move, Space to drop, Escape to cancel.";
@@ -166,6 +177,17 @@ export function usePaletteMoves(palette: Doc<"palettes">, nameOf: (paintId: stri
   };
 }
 
+const OpenMoveSheet = createContext<(data: DragData) => void>(() => undefined);
+
+/** The plan that puts `data` at `toIndex` within its own list. */
+function reorderPlan(data: DragData, toIndex: number): DropPlan {
+  if (data.type === "group") return { kind: "moveGroup", groupId: data.groupId, toIndex };
+  if (data.type === "zone") return { kind: "none", reason: "wrong-target" };
+  return data.groupId === null
+    ? { kind: "movePaint", paintId: data.paintId, toIndex }
+    : { kind: "moveGroupPaint", groupId: data.groupId, paintId: data.paintId, toIndex };
+}
+
 // jsdom has no matchMedia.
 const prefersReducedMotion = () =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -193,6 +215,21 @@ export function PaletteArrange({
   );
   const move = usePaletteMoves(palette, nameOf);
   // dnd-kit's own restore focuses the handle the drag started from, which a move between lists removes.
+  // Kept after closing so the sheet keeps its title while it animates out and focus knows where to return.
+  const [moving, setMoving] = useState<DragData>({ type: "group", groupId: "" });
+  const [moveOpen, setMoveOpen] = useState(false);
+  const moveReturn = useMemo<RefObject<HTMLElement | null>>(
+    () => ({
+      get current() {
+        return document.querySelector<HTMLElement>(`[data-move-button="${sortableIdOf(moving)}"]`);
+      },
+    }),
+    [moving],
+  );
+  const openMove = (data: DragData) => {
+    setMoving(data);
+    setMoveOpen(true);
+  };
   const byKeyboard = useRef(false);
   const focusAfterDrop = useRef<string | null>(null);
 
@@ -255,6 +292,12 @@ export function PaletteArrange({
     return <DragPreview kind="group" name={group?.name ?? ""} />;
   };
 
+  const movingPosition = positionOf(moving, palette);
+  const movingTitle =
+    moving.type === "paint"
+      ? `Move ${paintName(moving.paintId) ?? "unknown paint"}`
+      : `Move group ${palette.groups.find((g) => g.id === moving.groupId)?.name ?? ""}`;
+
   return (
     // dnd-kit renders its live region in place unless given a container; the body keeps it out of the page's own status regions.
     <DndContext
@@ -270,7 +313,17 @@ export function PaletteArrange({
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
-      {children}
+      <OpenMoveSheet.Provider value={openMove}>{children}</OpenMoveSheet.Provider>
+      <MoveSheet
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        title={movingTitle}
+        index={movingPosition.index}
+        count={movingPosition.count}
+        online={online}
+        returnFocus={moveReturn}
+        onMove={(toIndex) => move(reorderPlan(moving, toIndex))}
+      />
       <DragOverlay dropAnimation={prefersReducedMotion() ? null : undefined}>
         {dragging && preview(dragging)}
       </DragOverlay>
@@ -279,6 +332,31 @@ export function PaletteArrange({
 }
 
 type Sortable = ReturnType<typeof useSortable>;
+
+/** Opens the Move sheet, the non-drag way to reorder this paint or group. */
+export function MoveButton({
+  data,
+  label,
+  disabled,
+}: {
+  data: DragData;
+  label: string;
+  disabled: boolean;
+}) {
+  const openMove = useContext(OpenMoveSheet);
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      data-move-button={sortableIdOf(data)}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => openMove(data)}
+    >
+      <ArrowUpDown aria-hidden="true" />
+    </Button>
+  );
+}
 
 /** The only part of a row that takes a drag, so a touch anywhere else still scrolls the page. */
 export function DragHandle({
@@ -316,13 +394,14 @@ export function DragHandle({
 /** A paint row that drags by its handle. */
 export function SortableItem({
   data,
-  label,
+  name,
   disabled,
   className,
   children,
 }: {
   data: DragData;
-  label: string;
+  /** The paint's name, for the handle and Move button labels. */
+  name: string;
   disabled: boolean;
   className: string;
   children: ReactNode;
@@ -357,12 +436,13 @@ export function SortableItem({
       }}
     >
       {children}
+      <MoveButton data={data} label={`Move ${name}`} disabled={disabled} />
       <DragHandle
         activatorRef={setActivatorNodeRef}
         attributes={attributes}
         listeners={listeners}
         id={id}
-        label={label}
+        label={`Drag ${name}`}
         disabled={disabled}
       />
     </li>

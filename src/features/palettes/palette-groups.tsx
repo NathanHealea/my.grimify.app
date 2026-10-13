@@ -35,7 +35,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { DragData } from "./drop-plan";
 import { GroupPaintActionsSheet } from "./group-paint-actions-sheet";
-import { DragHandle, sortableIdOf,SortableItem } from "./palette-arrange";
+import { DragHandle, MoveButton, sortableIdOf, SortableItem } from "./palette-arrange";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 
 type Group = Doc<"palettes">["groups"][number];
@@ -597,6 +597,7 @@ function ArrangeGroup({
       <div ref={setZoneRef} className="palette-groups__zone">
         <div className="palette-groups__heading">
           <h2 id={headingId}>{group.name}</h2>
+          <MoveButton data={data} label={`Move group ${group.name}`} disabled={!online} />
           <DragHandle
             activatorRef={setActivatorNodeRef}
             attributes={attributes}
@@ -622,7 +623,7 @@ function ArrangeGroup({
                   <SortableItem
                     key={paintId}
                     data={{ type: "paint", groupId: group.id, paintId }}
-                    label={`Drag ${paint?.name ?? "unknown paint"}`}
+                    name={paint?.name ?? "unknown paint"}
                     disabled={!online}
                     className="palette-groups__paint"
                   >

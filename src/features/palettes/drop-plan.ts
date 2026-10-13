@@ -258,3 +258,12 @@ export function announceCancel(active: DragData, palette: PaletteLists, paintNam
   const { name, list, ids, index } = placeOf(active, palette, paintName);
   return `Cancelled; ${name} is back at ${position(index, ids.length, list)}.`;
 }
+
+/** Where a paint or group sits in its list: 0-based index and the list's length. */
+export function positionOf(
+  data: DragData,
+  palette: PaletteLists,
+): { index: number; count: number } {
+  const { ids, index } = placeOf(data, palette, () => undefined);
+  return { index, count: ids.length };
+}

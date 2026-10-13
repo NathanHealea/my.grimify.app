@@ -1,5 +1,5 @@
 import { useUser } from "@clerk/react";
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -57,6 +57,23 @@ function signedInWith(stored: ReturnType<typeof palette>) {
     "fetch",
     vi.fn(() => Promise.resolve(Response.json(catalog))),
   );
+}
+
+function twoGroups() {
+  return {
+    ...palette([red.id, vallejo.id]),
+    groups: [
+      { id: "group-trim", name: "Trim", paintIds: [red.id, vallejo.id] },
+      { id: "group-highlights", name: "Highlights", paintIds: [] },
+    ],
+  };
+}
+
+function mockMutations(handlers: Record<string, (...args: never[]) => Promise<unknown>>) {
+  vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+    const fn = handlers[nameOf(ref)] ?? vi.fn(() => Promise.resolve(null));
+    return Object.assign(fn, { withOptimisticUpdate: () => fn });
+  }) as unknown as typeof useMutation);
 }
 
 const isDisabled = (element: HTMLElement) =>
@@ -184,5 +201,100 @@ describe("Arrange mode", () => {
     expect(isDisabled(within(trim).getByRole("button", { name: "Drag group Trim" }))).toBe(true);
     expect(isDisabled(within(trim).getByRole("button", { name: "Drag Mephiston Red" }))).toBe(true);
     expect(within(main).getByText(OFFLINE_EDIT_NOTE)).toHaveAttribute("role", "status");
+  });
+
+  it("Move sheet moves a paint or group by one or to an end", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    const movePaint = vi.fn(() => Promise.resolve(null));
+    const moveGroup = vi.fn(() => Promise.resolve(null));
+    const moveGroupPaint = vi.fn(() => Promise.resolve(null));
+    mockMutations({
+      [nameOf(api.palettes.movePaint)]: movePaint,
+      [nameOf(api.palettes.moveGroup)]: moveGroup,
+      [nameOf(api.palettes.moveGroupPaint)]: moveGroupPaint,
+    });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    expect(screen.queryAllByRole("button", { name: /^Move / })).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    expect(within(list).getByRole("button", { name: "Move Mephiston Red" })).toBeVisible();
+    expect(within(list).getByRole("button", { name: "Move Blood Red" })).toBeVisible();
+    expect(within(trim()).getByRole("button", { name: "Move group Trim" })).toBeVisible();
+    expect(within(trim()).getByRole("button", { name: "Move Mephiston Red" })).toBeVisible();
+    expect(within(trim()).getByRole("button", { name: "Move Blood Red" })).toBeVisible();
+    expect(
+      within(highlights()).getByRole("button", { name: "Move group Highlights" }),
+    ).toBeVisible();
+
+    fireEvent.click(within(list).getByRole("button", { name: "Move Mephiston Red" }));
+    let sheet = await screen.findByRole("dialog", { name: "Move Mephiston Red" });
+    expect(within(sheet).getByRole("button", { name: "Move to top" })).toBeDisabled();
+    expect(within(sheet).getByRole("button", { name: "Move up" })).toBeDisabled();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Move to bottom" }));
+    expect(movePaint).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      paintId: red.id,
+      toIndex: 1,
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(within(list).getByRole("button", { name: "Move Mephiston Red" })).toHaveFocus(),
+    );
+
+    fireEvent.click(within(highlights()).getByRole("button", { name: "Move group Highlights" }));
+    sheet = await screen.findByRole("dialog");
+    fireEvent.click(within(sheet).getByRole("button", { name: "Move up" }));
+    expect(moveGroup).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      groupId: "group-highlights",
+      toIndex: 0,
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        within(highlights()).getByRole("button", { name: "Move group Highlights" }),
+      ).toHaveFocus(),
+    );
+
+    fireEvent.click(within(trim()).getByRole("button", { name: "Move Mephiston Red" }));
+    sheet = await screen.findByRole("dialog");
+    fireEvent.click(within(sheet).getByRole("button", { name: "Move down" }));
+    expect(moveGroupPaint).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      groupId: "group-trim",
+      paintId: red.id,
+      toIndex: 1,
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(within(trim()).getByRole("button", { name: "Move Mephiston Red" })).toHaveFocus(),
+    );
+  });
+
+  it("a move shows at once and reverts on failure", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    signedInWith(twoGroups());
+    const movePaint = vi.fn(() => Promise.reject(new Error("network down")));
+    mockMutations({ [nameOf(api.palettes.movePaint)]: movePaint });
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    fireEvent.click(within(list).getByRole("button", { name: "Move Mephiston Red" }));
+    const sheet = await screen.findByRole("dialog", { name: "Move Mephiston Red" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Move down" }));
+
+    expect(movePaint).toHaveBeenCalledOnce();
+    expect(
+      await screen.findByText("Couldn't move Mephiston Red. Check your connection and try again."),
+    ).toBeVisible();
   });
 });

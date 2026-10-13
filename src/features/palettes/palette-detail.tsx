@@ -27,7 +27,7 @@ import { useOnlineStatus } from "@/features/pwa/use-online-status";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { GroupMembershipSheet } from "./group-membership-sheet";
-import { PaletteArrange, sortableIdOf,SortableItem } from "./palette-arrange";
+import { PaletteArrange, sortableIdOf, SortableItem } from "./palette-arrange";
 import { PaletteGroups } from "./palette-groups";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
@@ -365,7 +365,7 @@ function PaintList({
       <SortableItem
         key={paintId}
         data={{ type: "paint", groupId: null, paintId }}
-        label={`Drag ${paint?.name ?? "unknown paint"}`}
+        name={paint?.name ?? "unknown paint"}
         disabled={!online}
         className="palette-detail__paint"
       >
