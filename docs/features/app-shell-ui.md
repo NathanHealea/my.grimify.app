@@ -50,7 +50,7 @@
 | Component | File | Notes |
 |---|---|---|
 | `<PageTitle>` | `components/page-title.tsx` | The screen's **one `<h1>`**. Sets `document.title` to "{title} · Grimify" (WCAG 2.4.2). `documentTitle` overrides the tab text |
-| `<PaintRow>` | `components/paint-row.tsx` | Swatch, name, "brand · line · type", optional `note`, match label, **Discontinued** badge. **`actions` sit outside the link**, so a toggle tap never opens the paint |
+| `<PaintRow>` | `components/paint-row.tsx` | Swatch, name, "brand · line · type", optional `note`, match label, **Discontinued** badge. **`actions` sit outside the link**, so a toggle tap never opens the paint. With `selection` (Select mode) the row is a label for a "Select <name>" checkbox instead, with no link or actions |
 | `<PaintSwatch>` | `components/paint-swatch.tsx` | **Decorative** (`aria-hidden`). Sizes `md`, `lg`, `hero`. A type icon marks metallic, wash, shade, ink, contrast and speedpaint. `data-tone` picks the ink color at luminance **0.18** |
 | `<HueDots>` | `components/hue-dots.tsx` | 13 hue buttons. Layout `scroll` (Paints tab) or `wrap` (sheet). Pass `pressed` to make them toggles with `aria-pressed` |
 | `<SearchChip>` | `components/search-chip.tsx` | `variant="remove"` (✕, "Remove {label}") or `"suggest"` |

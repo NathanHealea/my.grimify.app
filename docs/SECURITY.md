@@ -31,7 +31,7 @@ Permissions:
 ### User
 - Read the public catalog
 - Read, create, update and delete **their own** `userPaints`
-- Read, create, rename and delete **their own** `palettes`. Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, mutations throw `NOT_FOUND` (DECISIONS 048)
+- Read, create, rename and delete **their own** `palettes`, and add paints to and remove paints from them. Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, mutations throw `NOT_FOUND` (DECISIONS 048)
 - Read and delete **their own** `users` row
 
 ### Anonymous

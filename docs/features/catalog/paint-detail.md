@@ -5,7 +5,7 @@
 
 ## TL;DR
 
-- Shows **one paint**: swatch, name, brand · line · type · finish, aliases, **tap-to-copy hex**, and the Own/Want/Favorite toggles.
+- Shows **one paint**: swatch, name, brand · line · type · finish, aliases, **tap-to-copy hex**, the Own/Want/Favorite toggles and **Add to palette**.
 - **Equivalents** come from `findEquivalents()` in the [matching feature](../matching.md). They're grouped **by brand** and limited to the **same type family** by default.
 - **"Show all types"** is stored in the URL as **`?types=all`**, written with `replace`, so Back still returns to the list.
 - Equivalents the user **owns** show **"You own this"**.
@@ -31,9 +31,11 @@
    - **Special** paints (technical, other) hide the "Show all types" toggle. With no curated matches, they show **"No automatic equivalents for technical and special paints."**
    - Each brand group shows its matches with labels. A group with `noCloseMatch` shows **"No close match in [Brand]"** and mutes the list (`data-muted`).
 6. **Metallic, wash and tint families get a warning note**, because hex can't carry sheen or transparency (DECISIONS 008).
+7. **Add to palette** sits under the toggles. Signed in it opens the palette picker for this paint; signed out it opens sign-in and doesn't add afterwards. It's disabled offline (with "Connect to the internet to edit palettes.") and until Clerk has loaded. See [palettes.md](../palettes.md).
 
 ## Relations to other features
 
 - **Matching** ([matching.md](../matching.md)): does all the equivalence work.
 - **Collection** ([collection](../collection/)): `usePaintFlags()` drives "You own this". `<PaintToggles>` sits on the paint and on every equivalent row.
+- **Palettes** ([palettes.md](../palettes.md)): `<AddToPaletteSheet>` adds this paint to a palette.
 - **App shell** ([app-shell-ui.md](../app-shell-ui.md)): `staticData.back` gives the header's back link. `<PageTitle>` sets the large title and document title.

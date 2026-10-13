@@ -210,6 +210,10 @@ Detected brand / hue / hex appear as removable pill chips under the search box (
 ### Paint row (`<PaintRow>`)
 - Swatch · name (semibold) · "Brand · Line · Type" (muted) · match label or "Discontinued" on the right
 - Own/Want toggles sit to the right of the row's link (`actions` slot); owned equivalents add "You own this" under the meta line
+- Selection variant (`selection` prop, Select mode): the row is a `<label>` for a native checkbox named "Select <paint name>" in place of the link, with no `actions`. The checkbox sits before the swatch at `--icon-size`, tinted with `accent-color: var(--color-primary)`; the whole ≥ 56px row is the tap target and keeps the inset focus ring. Disabled rows (`data-disabled`) use `--opacity-disabled` and a not-allowed cursor
+
+### Palette paint row
+- Swatch · name · brand, linking to the paint, then a ghost icon button (✕, `size="icon"`, 44×44px) named "Remove <paint name> from palette". An unknown paint's name stretches so the button stays at the row's end
 
 ---
 
@@ -256,6 +260,8 @@ Filters open in a bottom sheet: shadcn `Sheet` (`side="bottom"`) on Radix Dialog
 
 Sheet options (Show only, brand, line, type) are outline-button boxes: `--touch-target` tall, `--space-4` side padding, `--radius-md`, a `--color-input-border` edge, `--space-2` apart, the whole box is the hit area. The native checkbox or radio stays visible inside as the non-color checked cue; checked adds a Primary edge and Secondary fill, and the focus ring wraps the whole box. Hue dots keep their own style.
 
+The Add to palette sheet lists palettes as full-width plain buttons, `--row-min-height` tall with a `--color-border` line under each: the name (semibold) over "n paints" (small, muted). Hover adds a Secondary fill; disabled uses `--opacity-disabled`. "New palette" (outline, plus icon) follows the list. Errors sit at the top in an always-present `alert` region, in `--color-error`.
+
 ---
 
 ## 12. States
@@ -292,6 +298,9 @@ Settings:
 
 Update available:
 A bar fixed above the nav bar on phones (bottom edge from 640px), `--z-toast`. It reads "Update available" with "Later" (ghost) and "Reload" (primary) buttons at full 44px height. "Later" hides it for the session.
+
+Selection bar:
+Select mode's bar in Paints and My Paints, a `section` named "Selection". Fixed where toasts and the update prompt sit: `--space-3` from the sides plus the safe-area insets, just above the floating nav on phones, at the bottom edge from 640px, no wider than `--content-max-width`. `--z-tab-bar`, so toasts and sheets stay above it. Surface background, `--color-border` edge, `--radius-lg`, `--shadow-md` (no shadow in dark mode). It holds "n selected" (semibold, a `status` region), "Add to palette" (primary) and "Done" (outline) at 44px; offline a small muted note under the count says "Connect to the internet to edit palettes." While it shows, the screen gets extra bottom padding (two touch targets plus `--space-4`) so it never covers the last row.
 
 Install hint:
 A bordered card at the top of the page content, region "Install Grimify", with "Not now" (ghost) and, on Chrome, "Install app" (primary). On iOS it reads "Tap Share [share icon], then Add to Home Screen." It never covers the nav.

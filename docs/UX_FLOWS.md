@@ -8,12 +8,14 @@
 Open app (installed PWA or browser)
    ↓
 Paints tab (catalog) ──► Paint detail ──► Equivalents ──► another paint
-   │                          │
-   │                          └─► Own / Want / Favorite ──(signed out)──► Sign in sheet
+   │      │                   │
+   │      │                   ├─► Own / Want / Favorite ──(signed out)──► Sign in sheet
+   │      │                   └─► Add to palette ──► Palette picker
+   │      └─► Select ──► tick paints ──► Add to palette ──► Palette picker
    ↓
-My Paints tab (Owned | Wishlist | Favorites)
+My Paints tab (Owned | Wishlist | Favorites), with the same Select mode
    ↓
-Palettes tab ──► Palette (main list) ──► Rename / Delete
+Palettes tab ──► Palette (main list) ──► Remove a paint / Rename / Delete
    ↓
 Settings (account, install help, about)
 ```
@@ -86,7 +88,7 @@ N/A (local data).
 ## Flow 3 — View Paint & Find Equivalents
 
 1. User taps a paint in the list
-2. Detail screen: large swatch, name, brand, line, type, finish, hex (tap to copy), Own/Want toggles
+2. Detail screen: large swatch, name, brand, line, type, finish, hex (tap to copy), Own/Want toggles, and an "Add to palette" button (Flow 10)
 3. "Equivalents" section lists the closest paints from **other** brands **in the same type family** (e.g., contrast ↔ speedpaint), grouped by brand, ranked by Delta-E, with labels (Very close / Close / Similar). A "Show all types" toggle widens the comparison.
 4. Owned equivalents show a "You own this" badge
 5. Tap an equivalent → navigates to its detail (back returns)
@@ -219,9 +221,34 @@ Create:
 
 Palette (`/palettes/$paletteId`):
 1. The palette's name is the page title; the header has a back link to Palettes
-2. The main list in the user's order: swatch, paint name and brand; each known paint links to its page. A paint ID the catalog doesn't have shows a neutral dashed swatch and "Unknown paint"
-3. Empty: "No paints in this palette yet" (adding paints is the next story)
+2. The main list in the user's order: swatch, paint name and brand; each known paint links to its page. A paint ID the catalog doesn't have shows a neutral dashed swatch and "Unknown paint". Each row ends with a Remove button (below)
+3. Empty: "No paints in this palette yet"
 4. Unknown, mangled or someone else's ID: title "Palette not found" and an "All palettes" link
+
+Add a paint (paint detail):
+1. On a paint's page, tap **Add to palette** (under the Own/Want/Favorite toggles) → sheet "Add to palette" listing the user's palettes, each with its name and "n paints", then a **New palette** button. With no palettes, only New palette shows
+2. Tap a palette → the paint goes to the end of its main list, the sheet closes and a toast says "Added to Ultramarines", or "Already in Ultramarines" when it was there already. A palette never holds the same paint twice
+3. Tap New palette → the "New palette" name sheet (same field and errors as Create) → Create makes the palette and adds the paint to it, with the same toast. The user stays on the paint
+4. Focus returns to Add to palette when the sheets close
+5. Signed out: Add to palette opens the sign-in sheet. After signing in, nothing is added; the user taps Add to palette again (unlike Own/Want, Flow 4; DECISIONS 051)
+
+Add many paints (Select mode, Paints and My Paints):
+1. Signed in, tap **Select** beside the result count. Signed out there's no Select button
+2. Each row's Own/Want/Favorite toggles are replaced by a checkbox named "Select <paint name>", and tapping anywhere on the row ticks it instead of opening the paint. Focus moves to the first checkbox
+3. A bar fixed above the nav (at the bottom edge from 640px) shows "n selected", **Add to palette** and **Done**. Add to palette is disabled until a paint is ticked
+4. Ticks survive changes to the search and filters, so a user can search "blue", tick some, search "black" and tick more
+5. At most 200 paints can be ticked; at 200 the unticked checkboxes are disabled
+6. Add to palette → the same picker. Paints are added in the order they were ticked; new ones go to the end and ones already there are skipped. Toast: "Added 3 paints to Ultramarines", "Added to Ultramarines" for one new paint, or "Already in Ultramarines" when none were new
+7. A successful add, Done, or leaving the screen ends Select mode and clears the ticks. Focus returns to Select
+
+Picker errors:
+- The palette would go over 200 paints → nothing is added and "This palette is full (200 paints)" shows in the sheet, which stays open so another palette can be chosen
+- Anything else → "Couldn't add to the palette. Check your connection and try again." in the sheet
+
+Remove a paint:
+1. On the palette, tap the **Remove** button (an ✕ icon) at the end of a paint's row. It's named "Remove Macragge Blue from palette", or "Remove unknown paint from palette" for a paint the catalog doesn't have
+2. The paint leaves the palette at once, with no confirmation, and a toast says "Removed Macragge Blue". The other paints keep their order. Re-adding it is one tap from the paint's page (DECISIONS 051)
+3. If it fails: the toast "Couldn't remove Macragge Blue. Check your connection and try again." and the paint stays
 
 Rename and delete:
 1. Tap the **Palette actions** button (next to the title) → a sheet with Rename and Delete palette
@@ -236,5 +263,6 @@ Loading State:
 "Loading your palettes…" (list) or "Loading palette…" (a palette) as a status message.
 
 Offline:
-- Loaded list or palette stays visible; New palette and Palette actions are disabled, and a status line says "Connect to the internet to edit palettes."; back online re-enables them
+- Loaded list or palette stays visible; New palette, Palette actions and each paint's Remove button are disabled, and a status line says "Connect to the internet to edit palettes."; back online re-enables them
+- Add to palette on paint detail, in the selection bar and in the picker is disabled, with the same status line. Select mode can still be turned on and paints ticked; only adding waits for the connection
 - Nothing loaded yet (for example after a reload offline): "Palettes need an internet connection."

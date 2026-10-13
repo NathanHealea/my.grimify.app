@@ -142,7 +142,28 @@ Args: `{ paletteId: Id<"palettes"> }`
 Behavior: a missing palette or someone else's → `NOT_FOUND`; otherwise deletes the document
 Returns: `null`
 
-Palette errors are thrown as `ConvexError` with the code string as data: `UNAUTHENTICATED`, `PALETTE_NAME_INVALID`, `PALETTE_LIMIT`, `NOT_FOUND`. The name sheet shows "Give the palette a name" for `PALETTE_NAME_INVALID`, "You can have up to 50 palettes" for `PALETTE_LIMIT`, and "Couldn't save the palette. Check your connection and try again." for anything else.
+### palettes.addPaints — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes">, paintIds: string[] }`
+Behavior:
+- More than 200 IDs in one call → `PALETTE_FULL`
+- Any ID that doesn't match `^[a-z0-9-]{3,100}$` → `INVALID_PAINT_ID`, and nothing is added. IDs aren't checked against the catalog (same as `userPaints.set`; DECISIONS 051)
+- A missing palette or someone else's → `NOT_FOUND`
+- Appends the IDs not already in the main list to its end, in the order given. A repeated ID within the call is added once
+- The result would hold more than 200 paints → `PALETTE_FULL`, and nothing is added
+- Sets `paintIds` and `updatedAt = now` only when at least one paint was added; otherwise the document is unchanged
+Returns: `{ added: number }` — how many paints were new (0 when all were already there)
+
+### palettes.removePaint — mutation
+Authentication: Required
+Args: `{ paletteId: Id<"palettes">, paintId: string }`
+Behavior:
+- A missing palette or someone else's → `NOT_FOUND`
+- Removes the paint from the main list and from every group's `paintIds`; the other paints keep their order
+- Sets `updatedAt = now`; a paint that isn't in the palette changes nothing, `updatedAt` included
+Returns: `null`
+
+Palette errors are thrown as `ConvexError` with the code string as data: `UNAUTHENTICATED`, `PALETTE_NAME_INVALID`, `PALETTE_LIMIT`, `NOT_FOUND`, `INVALID_PAINT_ID`, `PALETTE_FULL`. The name sheet shows "Give the palette a name" for `PALETTE_NAME_INVALID`, "You can have up to 50 palettes" for `PALETTE_LIMIT`, and "Couldn't save the palette. Check your connection and try again." for anything else. The Add to palette sheet shows "This palette is full (200 paints)" for `PALETTE_FULL` and "Couldn't add to the palette. Check your connection and try again." for anything else. A failed remove toasts "Couldn't remove <name>. Check your connection and try again."
 
 ---
 
@@ -169,7 +190,7 @@ The client reads the code from `error.data` (`src/features/collection/outbox.ts`
 | code | Thrown by | Meaning |
 |---|---|---|
 | `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`) | No signed-in user, or no `users` row yet |
-| `INVALID_PAINT_ID` | `userPaints.set` | `paintId` doesn't match `^[a-z0-9-]{3,100}$` |
+| `INVALID_PAINT_ID` | `userPaints.set`, `palettes.addPaints` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
 | `NO_FLAGS` | `userPaints.set` | None of `owned` / `wishlisted` / `favorite` given |
 | `CLOCK_IN_FUTURE` | `userPaints.set` | `clientUpdatedAt` more than 5 minutes ahead |
 

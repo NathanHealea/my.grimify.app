@@ -1,7 +1,7 @@
 # Catalog: Search and Filters
 
-> Covers the Paints screen: the search box, chips, the Filters sheet and the result list.
-> User journey: [UX_FLOWS.md Flows 2 and 7](../../UX_FLOWS.md). Rationale: [DECISIONS 009, 021, 022, 023, 024, 031](../../DECISIONS.md).
+> Covers the Paints screen: the search box, chips, the Filters sheet, the result list and Select mode.
+> User journey: [UX_FLOWS.md Flows 2 and 7](../../UX_FLOWS.md). Rationale: [DECISIONS 009, 021, 022, 023, 024, 031, 051](../../DECISIONS.md).
 
 ## TL;DR
 
@@ -10,6 +10,7 @@
 - The query and filters live **in the URL** (`?q=`, `?brand=`, `?line=`, `?type=`, `?hue=`, `?show=`), so Back works and views are linkable.
 - **Filters combine with the query**: OR within one filter, AND across filters and with the search box.
 - **My Paints reuses this same screen**, scoped to the collection (DECISIONS 031).
+- **Select mode** (signed in) swaps each row's toggles for a checkbox so several paints can go into a palette at once (DECISIONS 051).
 
 ## Where the code lives
 
@@ -18,6 +19,7 @@
 | `src/routes/paints/index.tsx` | Route `/paints/`; validates search params with Zod; turns changes into navigation |
 | `src/features/catalog/paints-screen.tsx` | `<PaintsScreen>`: search box, chips, hue dots, result list, paging |
 | `src/features/catalog/paints-filters.tsx` | `<PaintsFilters>`: the Filters bottom sheet |
+| `src/features/catalog/selection-bar.tsx` | `<SelectionBar>`: Select mode's bar; opens the [palette picker](../palettes.md) |
 | `src/features/catalog/parse-query.ts` | `parseQuery`, `removeToken`, `suggest`, `hueLabel` |
 | `src/features/catalog/search.ts` | `createNameIndex` (Fuse.js), `searchPaints` |
 | `src/features/catalog/filters.ts` | `Filters` type; URL parse and serialize; `normalizeFilters`; `scopeFor` |
@@ -73,14 +75,25 @@ The sheet edits a **draft**. **"Show N paints" commits it**, and the count is li
 - No results shows **"No paints match"** and **Clear all**, which clears the query and every filter in one history entry.
 - Each row carries the Own/Want/Favorite toggles from the [collection feature](../collection/).
 
+## Select mode
+
+- **Select** sits beside the result count, **only when signed in** (`useUser().isSignedIn`). Palettes need an account.
+- Ticked IDs live in component state (`selected: string[] | null`, `null` = off), **not in the URL**. Search and filter changes keep them; leaving the screen drops them.
+- While selecting, `<PaintRow>` gets `selection` instead of the link and toggles: the row is a `<label>` for a checkbox named **"Select <name>"**, so a tap anywhere on it ticks.
+- Order is **tick order**; that's the order paints are added. At **200** ticks (`MAX_SELECTED`, the palette cap) the unticked boxes are disabled.
+- `<SelectionBar>` (a `section` named "Selection") shows **"n selected"** in a `status` region, **Add to palette** (disabled at 0 or offline, with the offline note) and **Done**. A successful add or Done turns the mode off.
+- Focus goes to the first checkbox when the mode starts and back to Select when it ends. `data-selecting` on the screen adds bottom padding for the fixed bar.
+
 ## Change it safely
 
 - **New search syntax** goes in `parseQuery`. Add a `QueryToken` kind so it gets a chip.
+- **Select mode must leave the default row alone**: without `selection`, `<PaintRow>` renders exactly as before (link plus `actions`).
 - **New filter**: add it to `Filters`, `FilterParams`, `parseFilterParams`, `serializeFilters`, `countActive` and `matchesFilters`, **and** to the route's Zod `searchSchema` in both `routes/paints/index.tsx` and `routes/my-paints.tsx`.
-- Tests sit next to each file: `parse-query.test.ts`, `search.test.ts`, `filters.test.ts`, `paints-screen.test.tsx`, `paints-filters.test.tsx`.
+- Tests sit next to each file: `parse-query.test.ts`, `search.test.ts`, `filters.test.ts`, `paints-screen.test.tsx` (Select mode included), `paints-filters.test.tsx`.
 
 ## Relations to other features
 
 - **Catalog pipeline** ([data-pipeline.md](data-pipeline.md)): `<CatalogGate>` supplies the catalog and the name index.
 - **Matching** ([matching.md](../matching.md)): `deltaE`, `hexToLab` and `matchLabel` rank hex searches.
 - **Collection** ([collection](../collection/)): `useCollection()` feeds the Show only filter. `useCanSavePaints()` decides whether it appears. My Paints passes `scope`.
+- **Palettes** ([palettes.md](../palettes.md)): Select mode's bar opens `<AddToPaletteSheet>` with the ticked IDs.

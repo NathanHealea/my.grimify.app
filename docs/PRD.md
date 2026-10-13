@@ -191,11 +191,13 @@ Purpose:
 Let painters collect the paints for a scheme ("Ultramarines", "Nurgle Rot") in one named place. Pulled forward from Future as an online-only first version (DECISIONS 047).
 
 User Flow:
-Palettes tab → New palette → name it → the palette opens. Rename or delete it from its actions button. Adding paints, groups and drag and drop follow in later stories of the palettes epic.
+Palettes tab → New palette → name it → the palette opens. Rename or delete it from its actions button. Add a paint from its page with "Add to palette", or tap Select in Paints or My Paints, tick several paints and add them at once. Remove a paint with the ✕ on its row in the palette. Groups and drag and drop follow in later stories of the palettes epic.
 
 Acceptance Criteria:
 - Requires sign-in; signed-out users see "Sign in to keep color palettes on any device." and a Sign in button
 - Up to 50 palettes per user; names of 1–60 characters
+- Up to 200 paints per palette; a paint appears at most once in the main list, and new paints go to the end in the order chosen
+- Removing a paint takes it out of the palette at once, with no confirmation (DECISIONS 051)
 - A palette shows its paints in the user's order, each with swatch, name and brand
 - Online only: offline, loaded palettes stay visible but can't be edited
 - Deleting the account deletes all palettes
@@ -204,6 +206,8 @@ Edge Cases:
 - A paint ID the catalog no longer has → shown as "Unknown paint"
 - Another user's palette ID or a mangled URL → "Palette not found"
 - Two devices editing one palette → the last write wins (DECISIONS 049)
+- Adding paints that are already there → "Already in <palette>", no duplicates
+- An add that would pass 200 paints → nothing is added; "This palette is full (200 paints)"
 
 ---
 

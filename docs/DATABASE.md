@@ -179,7 +179,7 @@ Fields:
 - `updatedAt: number` — **server** time of the last change (orders the Palettes list)
 - `_creationTime`
 
-Limits: 50 palettes per user and names of 1–60 characters, enforced in the mutations. 200 paints per palette and 30 groups per palette are planned with the stories that add them (DECISIONS 048).
+Limits: 50 palettes per user, names of 1–60 characters and 200 paints per palette, enforced in the mutations (`palettes.addPaints` throws `PALETTE_FULL`). 30 groups per palette is planned with the groups story (DECISIONS 048, 051).
 
 ### Convex schema (reference)
 ```ts
@@ -256,7 +256,7 @@ Foreign Keys:
 ## 8. Data Validation
 
 - Catalog: Zod schema; `hex` matches `^#[0-9A-F]{6}$`; `brandId`/`lineId` must exist; IDs are unique; `hueOverride` must be a valid HueFamily
-- Convex: argument validators on every function; `paintId` matches `^[a-z0-9-]{3,100}$`; palette names are trimmed and must be 1–60 characters
+- Convex: argument validators on every function; `paintId` (in `userPaints.set`, and every ID in `palettes.addPaints`) matches `^[a-z0-9-]{3,100}$`; palette names are trimmed and must be 1–60 characters
 - Strings are trimmed; `notes` (if added) is capped at 500 characters
 
 ---

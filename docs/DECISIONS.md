@@ -1026,7 +1026,7 @@ Palettes need a main list in a user-chosen order and named groups that reference
 Decision:
 - One `palettes` document per palette: `userId`, `name`, `paintIds` (main list, in order), `groups` (`{ id, name, paintIds }[]`, in order) and `updatedAt` (server time). Index `by_userId`.
 - Groups are in the stored shape from the first story, empty until the groups story, so no migration is needed later.
-- Caps, enforced server-side: 50 palettes per user and names of 1–60 characters after trimming, both enforced now (`PALETTE_LIMIT`, `PALETTE_NAME_INVALID`). 200 paints per palette and 30 groups per palette land with the stories that add paints and groups.
+- Caps, enforced server-side: 50 palettes per user and names of 1–60 characters after trimming, both enforced now (`PALETTE_LIMIT`, `PALETTE_NAME_INVALID`). 200 paints per palette and 30 groups per palette land with the stories that add paints and groups. (The 200-paint cap is enforced from the palette-paints story, `PALETTE_FULL`; DECISIONS 051.)
 - Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, and `rename` and `remove` throw `NOT_FOUND`. `palettes.get` takes a plain string and returns `null` for anything that isn't a palette ID, so a mangled URL shows "Palette not found" instead of failing argument validation.
 - `users.deleteAccount` deletes the caller's palettes in the same transaction as the `users` row. The 50-palette cap keeps that inside one transaction.
 
@@ -1079,3 +1079,31 @@ Alternatives:
 Consequences:
 Positive: every label stays on one line at 320px and 640px with no renamed tabs.
 Trade-off: phones under 360px lose the icons; the labels and `aria-current` pill still mark each tab.
+
+---
+
+## Decision 051 — Add paints through a picker and Select mode; remove without confirmation
+
+Date: 2026-10-12
+Status: Accepted
+
+Context:
+Palettes could be created but stayed empty (DECISIONS 047). Painters need to put catalog paints in and take mis-adds out. Paint rows in Paints and My Paints already carry three 44px toggles (Own, Want, Favorite); at 320px they leave the name about 80px, and a fourth button would leave about 28px. Building a scheme often means adding several paints at once.
+
+Decision:
+- **Adding:** an "Add to palette" button on paint detail, and a Select mode in Paints and My Paints. Both open one picker sheet that lists the user's palettes plus "New palette". Rows get no add button of their own. Select mode swaps each row's toggles for a checkbox, ticks survive search and filter changes, and paints are added in the order ticked.
+- **Server:** `palettes.addPaints({ paletteId, paintIds })` appends the IDs not already in the main list, in order, and returns `{ added }`. `palettes.removePaint({ paletteId, paintId })` removes a paint from the main list and every group.
+- **Paint IDs** are checked for shape only (`INVALID_PAINT_ID`), not against the catalog, the same as `userPaints.set`. A paint missing from the catalog shows as "Unknown paint".
+- **Caps:** 200 paints per palette (DECISIONS 048) and at most 200 IDs per call. An add that would go over adds nothing and throws `PALETTE_FULL`; the picker shows "This palette is full (200 paints)". Select mode stops at 200 ticks, so one add always fits an empty palette.
+- **Removal has no confirmation.** It takes effect at once with the toast "Removed <name>". Re-adding is one tap from the paint's page. There's no undo, because toasts have no action button.
+- **Signed out**, Add to palette on paint detail opens sign-in and doesn't replay after sign-in, unlike Own/Want (DECISIONS 030). Select mode isn't offered signed out.
+
+Alternatives:
+- A fourth "Add to palette" button on every row: one tap from the list, but it squeezes paint names to about 28px at 320px
+- Checking IDs against the catalog on the server: catches made-up IDs, but the catalog is static JSON outside Convex (DECISIONS 004), so the server would need its own copy kept in sync
+- A confirmation sheet for Remove: guards against a mis-tap, but slows the common case for an action that's cheap to reverse
+- Replaying the add after sign-in, as Own/Want does: smoother, but it needs a pending palette choice held across the sign-in sheet and then the picker
+
+Consequences:
+Positive: rows keep their room for names; many paints go in with one write; a mis-add is undone in one tap.
+Trade-off: adding from the list takes Select, tick, Add, choose. The picker doesn't show which palettes already hold the paint, so the user learns that from the "Already in" toast. A mis-tapped Remove loses the paint's place in the list; re-adding puts it at the end.
