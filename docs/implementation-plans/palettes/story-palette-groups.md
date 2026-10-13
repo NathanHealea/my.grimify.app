@@ -2,7 +2,7 @@
 type: story
 epic: palettes    # removed by `wi new` when there is no parent epic
 slug: palette-groups
-status: staged
+status: released
 branch: story/palette-groups
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/story-palette-groups
 created: 2026-10-12
@@ -11,7 +11,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.17.0
 review_approved: 2026-10-13
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.17.0
 ---
 
 # Palette groups
@@ -142,3 +142,4 @@ Already in place:
 - 2026-10-13 — Steps 1-3 done. Focusing a new group no longer assumes Convex renders it before createGroup resolves; the docs don't promise that order.
 - 2026-10-13 — Staged: verification passed; version 0.16.0 → 0.17.0; no changelog file.
 - 2026-10-13 — Review approved.
+- 2026-10-13 — Released 0.17.0 as v0.17.0.
