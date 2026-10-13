@@ -2,10 +2,9 @@
   transform: translate3d(var(--drag-x, 0), var(--drag-y, 0), 0);
   transition: var(--drag-transition, none);
 
+  /* The glass preview follows the pointer; the row left behind marks where the paint will land. */
   &[data-dragging] {
-    position: relative;
-    z-index: 1;
-    background: var(--color-surface);
+    opacity: var(--opacity-muted);
   }
 }
 

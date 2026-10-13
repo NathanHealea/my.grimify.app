@@ -1,0 +1,61 @@
+/* Same glass as the nav bar (DECISIONS 045). Text stays --color-text: muted grey falls under 4.5:1 on glass. */
+.drag-preview {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--row-min-height);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  cursor: grabbing;
+  background: var(--color-glass);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  /* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 only knows the prefixed name */
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .drag-preview {
+    background: var(--color-surface);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .drag-preview {
+    background: var(--color-surface);
+    /* stylelint-disable-next-line property-no-vendor-prefix -- matches the rule above */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+.drag-preview__group {
+  font-weight: var(--weight-semibold);
+}
+
+.drag-preview__unknown-swatch {
+  flex-shrink: 0;
+  width: var(--swatch-size);
+  height: var(--swatch-size);
+  background: var(--color-secondary);
+  border: var(--border-width) dashed var(--color-input-border);
+  border-radius: var(--radius-md);
+}
+
+.drag-preview__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.drag-preview__name {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.drag-preview__brand {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}

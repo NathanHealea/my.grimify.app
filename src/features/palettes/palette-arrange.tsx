@@ -3,6 +3,7 @@ import "./palette-arrange.css";
 import {
   DndContext,
   type DragEndEvent,
+  DragOverlay,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -12,13 +13,15 @@ import {
 import { sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { useMutation } from "convex/react";
 import { GripVertical } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { Catalog } from "@/features/catalog/schema";
 import { useToast } from "@/features/feedback/toast-provider";
 
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { DragPreview } from "./drag-preview";
 import { type DragData, type DropPlan, optimisticMove, planDrop } from "./drop-plan";
 
 const DRAG_INSTRUCTIONS =
@@ -48,17 +51,25 @@ export function usePaletteMoves(paletteId: string, nameOf: (paintId: string) => 
   };
 }
 
+// jsdom has no matchMedia.
+const prefersReducedMotion = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
 export function PaletteArrange({
   palette,
+  catalog,
   online,
-  nameOf,
   children,
 }: {
   palette: Doc<"palettes">;
+  catalog: Catalog;
   online: boolean;
-  nameOf: (paintId: string) => string;
   children: ReactNode;
 }) {
+  const paints = useMemo(() => new Map(catalog.paints.map((p) => [p.id, p])), [catalog]);
+  const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
+  const nameOf = (paintId: string) => paints.get(paintId)?.name ?? "unknown paint";
+  const [dragging, setDragging] = useState<DragData | null>(null);
   // Touch waits for a short hold so a swipe that starts on a handle still scrolls; mouse needs a little travel.
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -68,9 +79,21 @@ export function PaletteArrange({
   const move = usePaletteMoves(palette._id, nameOf);
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    setDragging(null);
     // Edits need a connection (DECISIONS 047); a drag that ends offline changes nothing.
     if (!online) return;
     move(planDrop(active.data.current as DragData, over?.data.current as DragData, palette));
+  };
+
+  const preview = (data: DragData) => {
+    if (data.type === "paint") {
+      const paint = paints.get(data.paintId);
+      return (
+        <DragPreview kind="paint" paint={paint} brandName={paint && brands.get(paint.brandId)} />
+      );
+    }
+    const group = palette.groups.find((g) => g.id === data.groupId);
+    return <DragPreview kind="group" name={group?.name ?? ""} />;
   };
 
   return (
@@ -81,9 +104,14 @@ export function PaletteArrange({
         container: document.body,
         screenReaderInstructions: { draggable: DRAG_INSTRUCTIONS },
       }}
+      onDragStart={({ active }) => setDragging(active.data.current as DragData)}
       onDragEnd={onDragEnd}
+      onDragCancel={() => setDragging(null)}
     >
       {children}
+      <DragOverlay dropAnimation={prefersReducedMotion() ? null : undefined}>
+        {dragging && preview(dragging)}
+      </DragOverlay>
     </DndContext>
   );
 }

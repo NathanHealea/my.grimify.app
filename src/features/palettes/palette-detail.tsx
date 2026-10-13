@@ -139,7 +139,7 @@ function PaletteContent({
 
       <CatalogGate>
         {(catalog) => (
-          <PaletteArrange palette={palette} online={online} nameOf={paintNamer(catalog)}>
+          <PaletteArrange palette={palette} catalog={catalog} online={online}>
             <section className="palette-detail__section" aria-labelledby={allPaintsId}>
               <div className="palette-detail__section-heading">
                 <h2 id={allPaintsId}>All paints</h2>
@@ -246,10 +246,6 @@ function PaletteContent({
       </Sheet>
     </div>
   );
-}
-
-function paintNamer(catalog: Catalog): (paintId: string) => string {
-  return (paintId) => catalog.paints.find((p) => p.id === paintId)?.name ?? "unknown paint";
 }
 
 function PaintList({
