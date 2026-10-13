@@ -1,10 +1,15 @@
-import { act, fireEvent, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { useUser } from "@clerk/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { type FunctionReference, getFunctionName } from "convex/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { catalogOf, catalogPaint } from "@/test/catalog-fixture";
 import { triggerIntersection } from "@/test/intersection-observer";
 import { renderRoute } from "@/test/render-route";
 
+import { api } from "../../../convex/_generated/api";
+import { resetCatalogCache } from "./load-catalog";
 import type { Catalog } from "./schema";
 
 const NAMED = [
@@ -30,6 +35,27 @@ function serve(catalog: Catalog) {
 
 const rows = () =>
   screen.queryAllByRole("listitem").filter((li) => li.classList.contains("paint-row"));
+
+const nameOf = (ref: unknown) => getFunctionName(ref as FunctionReference<"query" | "mutation">);
+
+const defaultUseMutation = vi.mocked(useMutation).getMockImplementation();
+
+function signIn() {
+  vi.mocked(useUser).mockReturnValue({
+    isLoaded: true,
+    isSignedIn: true,
+    user: { id: "user_test" },
+  } as unknown as ReturnType<typeof useUser>);
+  vi.mocked(useConvexAuth).mockReturnValue({
+    isLoading: false,
+    isRefreshing: false,
+    isAuthenticated: true,
+  });
+}
+
+const selectionBar = () => screen.getByRole("region", { name: "Selection" });
+
+const rowLinks = () => rows().flatMap((row) => within(row).queryAllByRole("link"));
 
 describe("PaintsScreen", () => {
   it("shows loading, then error with retry, then the list", async () => {
@@ -140,5 +166,206 @@ describe("PaintsScreen", () => {
 
     expect(await screen.findByRole("searchbox")).toHaveValue("123");
     expect(await screen.findByText("No paints match")).toBeInTheDocument();
+  });
+
+  describe("select mode", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.mocked(useMutation).mockImplementation(defaultUseMutation!);
+      vi.mocked(useQuery).mockImplementation((() => undefined) as typeof useQuery);
+      vi.mocked(useUser).mockReturnValue({
+        isLoaded: true,
+        isSignedIn: false,
+        user: null,
+      } as unknown as ReturnType<typeof useUser>);
+      vi.mocked(useConvexAuth).mockReturnValue({
+        isLoading: false,
+        isRefreshing: false,
+        isAuthenticated: false,
+      });
+    });
+
+    it("select mode ticks paints and keeps them across searches", { timeout: 30_000 }, async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      expect(screen.getByRole("button", { name: "Mark Blood Red as owned" })).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Selection" })).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+
+      expect(screen.queryByRole("button", { name: "Select" })).toBeNull();
+      expect(screen.getAllByRole("checkbox", { name: /^Select / })).toHaveLength(4);
+      expect(screen.queryAllByRole("button", { name: /^Mark / })).toHaveLength(0);
+      expect(rowLinks()).toHaveLength(0);
+      const count = within(selectionBar()).getByText("0 selected");
+      expect(count.closest('[role="status"]')).not.toBeNull();
+      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeDisabled();
+
+      const macragge = rows().find((row) => row.textContent?.includes("Macragge Blue"))!;
+      fireEvent.click(macragge.querySelector(".paint-row__name")!);
+      expect(screen.getByRole("checkbox", { name: "Select Macragge Blue" })).toBeChecked();
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
+      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
+      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeEnabled();
+
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "vallejo" } });
+      await vi.waitFor(() =>
+        expect(rows().map((row) => row.querySelector(".paint-row__name")?.textContent)).toEqual([
+          "Blood Red",
+          "Dark Blue",
+        ]),
+      );
+      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
+      expect(within(selectionBar()).getByText("3 selected")).toBeInTheDocument();
+
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
+      await vi.waitFor(() => expect(rows()).toHaveLength(4));
+      expect(screen.getByRole("checkbox", { name: "Select Macragge Blue" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "Select Mephiston Red" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "Select Dark Blue" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "Select Blood Red" })).not.toBeChecked();
+
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
+
+      expect(screen.queryByRole("region", { name: "Selection" })).toBeNull();
+      expect(screen.queryAllByRole("checkbox", { name: /^Select / })).toHaveLength(0);
+      expect(
+        screen.getByRole("button", { name: "Mark Macragge Blue as owned" }),
+      ).toBeInTheDocument();
+      expect(rowLinks()).toHaveLength(4);
+
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      expect(within(selectionBar()).getByText("0 selected")).toBeInTheDocument();
+      expect(
+        screen
+          .getAllByRole("checkbox", { name: /^Select / })
+          .filter((box) => box.matches(":checked")),
+      ).toHaveLength(0);
+
+      cleanup();
+      resetCatalogCache();
+      const many = Array.from({ length: 201 }, (_, i) =>
+        catalogPaint({
+          brandId: "army-painter",
+          name: `Grey ${String(i).padStart(3, "0")}`,
+          hex: "#808080",
+        }),
+      );
+      serve(catalogOf(many));
+      renderRoute("/paints");
+
+      await screen.findByText("Grey 000");
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      for (let page = 0; page < 3; page++) act(() => triggerIntersection());
+      await vi.waitFor(() => expect(rows()).toHaveLength(201));
+
+      const boxes = screen.getAllByRole("checkbox", { name: /^Select / });
+      for (const box of boxes.slice(0, 200)) fireEvent.click(box);
+
+      expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
+      const last = boxes[200];
+      expect(last).not.toBeChecked();
+      expect(last).toBeDisabled();
+      fireEvent.click(last);
+      expect(last).not.toBeChecked();
+      expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
+      expect(boxes[0]).toBeChecked();
+      expect(boxes[0]).toBeEnabled();
+
+      fireEvent.click(boxes[0]);
+      expect(within(selectionBar()).getByText("199 selected")).toBeInTheDocument();
+      expect(last).toBeEnabled();
+    });
+
+    it("selection bar adds the selection", async () => {
+      const [mephiston, macragge, darkBlue] = NAMED;
+      serve(catalogOf(NAMED));
+      signIn();
+      vi.mocked(useQuery).mockImplementation(((query: unknown) =>
+        nameOf(query) === nameOf(api.palettes.listMine)
+          ? [
+              {
+                _id: "palette-a",
+                name: "Ultramarines",
+                paintCount: 0,
+                previewPaintIds: [],
+                updatedAt: 1,
+              },
+            ]
+          : undefined) as typeof useQuery);
+      const addPaints = vi.fn<
+        (args: { paletteId: string; paintIds: string[] }) => Promise<{ added: number }>
+      >(() => Promise.resolve({ added: 3 }));
+      const other = vi.fn(() => Promise.resolve(null));
+      vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+        const fn = nameOf(ref) === nameOf(api.palettes.addPaints) ? addPaints : other;
+        return Object.assign(fn, { withOptimisticUpdate: () => fn });
+      }) as unknown as typeof useMutation);
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
+      expect(within(selectionBar()).getByText("3 selected")).toBeInTheDocument();
+
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Add to palette" }));
+      const picker = screen.getByRole("dialog", { name: "Add to palette" });
+      fireEvent.click(within(picker).getByRole("button", { name: /^Ultramarines/ }));
+
+      await waitFor(() =>
+        expect(addPaints).toHaveBeenCalledExactlyOnceWith({
+          paletteId: "palette-a",
+          paintIds: [darkBlue.id, mephiston.id, macragge.id],
+        }),
+      );
+      expect(await screen.findByText("Added 3 paints to Ultramarines")).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole("region", { name: "Selection" })).toBeNull());
+      expect(screen.queryAllByRole("checkbox", { name: /^Select / })).toHaveLength(0);
+      expect(screen.getByRole("button", { name: "Mark Dark Blue as owned" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Select" })).toBeInTheDocument();
+
+      cleanup();
+      const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Blood Red" }));
+      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeEnabled();
+
+      onLine.mockReturnValue(false);
+      act(() => void window.dispatchEvent(new Event("offline")));
+
+      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeDisabled();
+      const note = screen.getByText("Connect to the internet to edit palettes.");
+      expect(note.closest('[role="status"]')).not.toBeNull();
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
+      expect(screen.getByRole("checkbox", { name: "Select Dark Blue" })).toBeChecked();
+      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
+
+      cleanup();
+      onLine.mockReturnValue(true);
+      vi.mocked(useUser).mockReturnValue({
+        isLoaded: true,
+        isSignedIn: false,
+        user: null,
+      } as unknown as ReturnType<typeof useUser>);
+      vi.mocked(useConvexAuth).mockReturnValue({
+        isLoading: false,
+        isRefreshing: false,
+        isAuthenticated: false,
+      });
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      expect(screen.queryByRole("button", { name: "Select" })).toBeNull();
+      expect(screen.queryAllByRole("checkbox", { name: /^Select / })).toHaveLength(0);
+    });
   });
 });

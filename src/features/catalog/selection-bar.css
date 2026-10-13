@@ -1,0 +1,48 @@
+/* Sits where toasts and the update prompt do: just above the floating nav, or at the bottom edge from 640px. */
+.selection-bar {
+  position: fixed;
+  right: calc(var(--space-3) + env(safe-area-inset-right));
+  bottom: calc(
+    var(--space-3) + env(safe-area-inset-bottom) + var(--tab-bar-height) + var(--space-2)
+  );
+  left: calc(var(--space-3) + env(safe-area-inset-left));
+  z-index: var(--z-tab-bar);
+  display: flex;
+  flex-wrap: wrap;
+  max-width: var(--content-max-width);
+  margin-inline: auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.selection-bar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.selection-bar__count {
+  font-weight: var(--weight-semibold);
+}
+
+.selection-bar__note {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  color: var(--color-muted-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .selection-bar {
+    box-shadow: none;
+  }
+}
+
+@media (width >= 640px) {
+  .selection-bar {
+    bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  }
+}

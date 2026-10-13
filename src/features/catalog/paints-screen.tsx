@@ -1,5 +1,6 @@
 import "./paints-screen.css";
 
+import { useUser } from "@clerk/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { HueDots } from "@/components/hue-dots";
@@ -26,6 +27,7 @@ import { PaintsFilters } from "./paints-filters";
 import { hueLabel, type ParsedQuery, parseQuery, removeToken, suggest } from "./parse-query";
 import type { Catalog } from "./schema";
 import { type NameIndex, searchPaints, type SearchResult } from "./search";
+import { SelectionBar } from "./selection-bar";
 
 type Props = {
   /** The committed query from the URL. */
@@ -47,6 +49,8 @@ type Props = {
 
 const PAGE_SIZE = 60;
 const TYPING_DEBOUNCE_MS = 100;
+// Matches the palette cap in convex/palettes.ts, so one add can always fit an empty palette.
+const MAX_SELECTED = 200;
 
 export function PaintsScreen(props: Props) {
   return (
@@ -69,6 +73,21 @@ function PaintsSearch({
   index,
 }: Props & { catalog: Catalog; index: NameIndex }) {
   const collection = useCollection();
+  const { isSignedIn } = useUser();
+  // Palettes need an account, so select mode is only offered signed in; null means not selecting.
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const selecting = selected !== null;
+  const selectButton = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const wasSelecting = useRef(selecting);
+
+  // The button that was pressed disappears either way, so focus moves on rather than dropping to the page.
+  useEffect(() => {
+    if (wasSelecting.current === selecting) return;
+    wasSelecting.current = selecting;
+    if (selecting) listRef.current?.querySelector("input")?.focus();
+    else selectButton.current?.focus();
+  }, [selecting]);
   const canShow = useCanSavePaints() && !hideShow;
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(query);
@@ -153,7 +172,7 @@ function PaintsSearch({
   ];
 
   return (
-    <div className="paints-screen">
+    <div className="paints-screen" data-selecting={selected ? true : undefined}>
       <form className="paints-screen__search" role="search" onSubmit={(e) => e.preventDefault()}>
         <div className="paints-screen__search-row">
           <Input
@@ -230,9 +249,16 @@ function PaintsSearch({
             </div>
           )}
 
-          <p className="paints-screen__count" role="status">
-            {results.length === 1 ? "1 paint" : `${results.length.toLocaleString("en")} paints`}
-          </p>
+          <div className="paints-screen__count-row">
+            <p className="paints-screen__count" role="status">
+              {results.length === 1 ? "1 paint" : `${results.length.toLocaleString("en")} paints`}
+            </p>
+            {isSignedIn && selected === null && (
+              <Button ref={selectButton} variant="outline" onClick={() => setSelected([])}>
+                Select
+              </Button>
+            )}
+          </div>
 
           {results.length === 0 ? (
             <div className="paints-screen__empty">
@@ -250,17 +276,34 @@ function PaintsSearch({
             </div>
           ) : (
             <>
-              <ul className="paints-screen__list">
-                {results.slice(0, limit).map(({ paint, label }) => (
-                  <PaintRow
-                    key={paint.id}
-                    paint={paint}
-                    brandName={brandNames.get(paint.brandId) ?? paint.brandId}
-                    lineName={lineNames.get(paint.lineId) ?? paint.lineId}
-                    match={label}
-                    actions={<PaintToggles paintId={paint.id} paintName={paint.name} />}
-                  />
-                ))}
+              <ul ref={listRef} className="paints-screen__list">
+                {results.slice(0, limit).map(({ paint, label }) => {
+                  const ticked = selected?.includes(paint.id) ?? false;
+                  return (
+                    <PaintRow
+                      key={paint.id}
+                      paint={paint}
+                      brandName={brandNames.get(paint.brandId) ?? paint.brandId}
+                      lineName={lineNames.get(paint.lineId) ?? paint.lineId}
+                      match={label}
+                      actions={<PaintToggles paintId={paint.id} paintName={paint.name} />}
+                      selection={
+                        selected
+                          ? {
+                              selected: ticked,
+                              disabled: !ticked && selected.length >= MAX_SELECTED,
+                              onToggle: () =>
+                                setSelected((current) =>
+                                  current?.includes(paint.id)
+                                    ? current.filter((id) => id !== paint.id)
+                                    : [...(current ?? []), paint.id],
+                                ),
+                            }
+                          : undefined
+                      }
+                    />
+                  );
+                })}
               </ul>
               {limit < results.length && (
                 <LoadMore onVisible={() => setLimit((n) => n + PAGE_SIZE)} />
@@ -269,6 +312,7 @@ function PaintsSearch({
           )}
         </>
       )}
+      {selected && <SelectionBar paintIds={selected} onDone={() => setSelected(null)} />}
     </div>
   );
 }
