@@ -158,6 +158,52 @@ describe("PaletteDetail", () => {
     expect(removePaint).toHaveBeenCalledTimes(2);
   });
 
+  it("moves focus to a neighbouring paint after a remove", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([red.id, vallejo.id]));
+    let finish = () => {};
+    const removePaint = vi.fn(
+      () =>
+        new Promise<null>((resolve) => {
+          finish = () => resolve(null);
+        }),
+    );
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const fn =
+        nameOf(ref) === nameOf(api.palettes.removePaint)
+          ? removePaint
+          : vi.fn(() => Promise.resolve(null));
+      return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    }) as unknown as typeof useMutation);
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    // The palette query is mocked, so a connection flip stands in for Convex pushing the new list.
+    const serverUpdates = (next: ReturnType<typeof palette>) => {
+      onLine.mockReturnValue(false);
+      act(() => void window.dispatchEvent(new Event("offline")));
+      signedInWith(next);
+      onLine.mockReturnValue(true);
+      act(() => void window.dispatchEvent(new Event("online")));
+    };
+
+    const removeRed = await screen.findByRole("button", {
+      name: "Remove Mephiston Red from palette",
+    });
+    removeRed.focus();
+    fireEvent.click(removeRed);
+    expect(removeRed).toBeDisabled();
+    fireEvent.click(removeRed);
+    expect(removePaint).toHaveBeenCalledTimes(1);
+
+    await act(() => Promise.resolve(finish()));
+    serverUpdates(palette([vallejo.id]));
+    expect(screen.getByRole("button", { name: "Remove Blood Red from palette" })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Blood Red from palette" }));
+    await act(() => Promise.resolve(finish()));
+    serverUpdates(palette([]));
+    expect(screen.getByRole("button", { name: "Palette actions" })).toHaveFocus();
+  });
+
   it("delete asks for confirmation", async () => {
     signedInWith(palette([red.id]));
     const { remove } = mockMutations();

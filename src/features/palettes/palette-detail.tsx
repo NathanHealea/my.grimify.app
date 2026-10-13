@@ -4,7 +4,7 @@ import { useUser } from "@clerk/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { Ellipsis, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 
 import { PageTitle } from "@/components/page-title";
 import { PaintSwatch } from "@/components/paint-swatch";
@@ -137,6 +137,7 @@ function PaletteContent({
             paintIds={palette.paintIds}
             catalog={catalog}
             online={online}
+            lastFocus={actionsButton}
           />
         )}
       </CatalogGate>
@@ -216,36 +217,66 @@ function PaintList({
   paintIds,
   catalog,
   online,
+  lastFocus,
 }: {
   paletteId: Id<"palettes">;
   paintIds: string[];
   catalog: Catalog;
   online: boolean;
+  /** Where focus goes once the last paint is removed. */
+  lastFocus: RefObject<HTMLElement | null>;
 }) {
   const removePaint = useMutation(api.palettes.removePaint);
   const toast = useToast();
   const paints = useMemo(() => new Map(catalog.paints.map((p) => [p.id, p])), [catalog]);
   const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
+  const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  // The focused Remove button leaves with its row, so focus moves to a neighbour's (WCAG 2.4.3).
+  const focusAfter = useRef<{ removed: string; next: string | undefined } | null>(null);
+
+  useEffect(() => {
+    const plan = focusAfter.current;
+    if (!plan || paintIds.includes(plan.removed)) return;
+    focusAfter.current = null;
+    const target = plan.next === undefined ? undefined : buttons.current.get(plan.next);
+    (target ?? lastFocus.current)?.focus();
+  }, [paintIds, lastFocus]);
 
   if (paintIds.length === 0) {
     return <p className="palette-detail__empty">No paints in this palette yet</p>;
   }
 
   const remove = (paintId: string, name: string) => {
+    const index = paintIds.indexOf(paintId);
+    focusAfter.current = { removed: paintId, next: paintIds[index + 1] ?? paintIds[index - 1] };
+    setPending((current) => new Set(current).add(paintId));
     removePaint({ paletteId, paintId })
       .then(() => toast(`Removed ${name}`))
       .catch((cause: unknown) => {
+        focusAfter.current = null;
         console.error("Removing the paint failed", cause);
         toast(`Couldn't remove ${name}. Check your connection and try again.`);
-      });
+      })
+      .finally(() =>
+        setPending((current) => {
+          const next = new Set(current);
+          next.delete(paintId);
+          return next;
+        }),
+      );
   };
 
   const removeButton = (paintId: string, name: string) => (
     <Button
       variant="ghost"
       size="icon"
+      ref={(element) => {
+        if (element) buttons.current.set(paintId, element);
+        else buttons.current.delete(paintId);
+      }}
       aria-label={`Remove ${name} from palette`}
-      disabled={!online}
+      disabled={!online || pending.has(paintId)}
       onClick={() => remove(paintId, name)}
     >
       <X aria-hidden="true" />
