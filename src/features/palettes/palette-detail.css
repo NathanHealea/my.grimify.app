@@ -80,6 +80,11 @@
   overflow-wrap: anywhere;
 }
 
+/* An unknown paint has no link to stretch, so its name pushes the Remove button to the row's end. */
+.palette-detail__paint > .palette-detail__name {
+  flex: 1;
+}
+
 .palette-detail__brand {
   font-size: var(--text-small);
   line-height: var(--leading-small);

@@ -3,7 +3,7 @@ import "./palette-detail.css";
 import { useUser } from "@clerk/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { PageTitle } from "@/components/page-title";
@@ -24,7 +24,7 @@ import { useToast } from "@/features/feedback/toast-provider";
 import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
 import { api } from "../../../convex/_generated/api";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { OFFLINE_EDIT_NOTE, PaletteNameSheet } from "./palette-name-sheet";
 import { PalettesLoading, PalettesSignedOut } from "./palettes-screen";
 
@@ -131,7 +131,14 @@ function PaletteContent({
       </p>
 
       <CatalogGate>
-        {(catalog) => <PaintList paintIds={palette.paintIds} catalog={catalog} />}
+        {(catalog) => (
+          <PaintList
+            paletteId={palette._id}
+            paintIds={palette.paintIds}
+            catalog={catalog}
+            online={online}
+          />
+        )}
       </CatalogGate>
 
       <Sheet open={sheet === "actions"} onOpenChange={(open) => setSheet(open ? "actions" : null)}>
@@ -204,13 +211,46 @@ function PaletteContent({
   );
 }
 
-function PaintList({ paintIds, catalog }: { paintIds: string[]; catalog: Catalog }) {
+function PaintList({
+  paletteId,
+  paintIds,
+  catalog,
+  online,
+}: {
+  paletteId: Id<"palettes">;
+  paintIds: string[];
+  catalog: Catalog;
+  online: boolean;
+}) {
+  const removePaint = useMutation(api.palettes.removePaint);
+  const toast = useToast();
   const paints = useMemo(() => new Map(catalog.paints.map((p) => [p.id, p])), [catalog]);
   const brands = useMemo(() => new Map(catalog.brands.map((b) => [b.id, b.name])), [catalog]);
 
   if (paintIds.length === 0) {
     return <p className="palette-detail__empty">No paints in this palette yet</p>;
   }
+
+  const remove = (paintId: string, name: string) => {
+    removePaint({ paletteId, paintId })
+      .then(() => toast(`Removed ${name}`))
+      .catch((cause: unknown) => {
+        console.error("Removing the paint failed", cause);
+        toast(`Couldn't remove ${name}. Check your connection and try again.`);
+      });
+  };
+
+  const removeButton = (paintId: string, name: string) => (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={`Remove ${name} from palette`}
+      disabled={!online}
+      onClick={() => remove(paintId, name)}
+    >
+      <X aria-hidden="true" />
+    </Button>
+  );
 
   return (
     <ul className="palette-detail__paints" aria-label="Paints in this palette">
@@ -221,6 +261,7 @@ function PaintList({ paintIds, catalog }: { paintIds: string[]; catalog: Catalog
             <li key={paintId} className="palette-detail__paint">
               <span className="palette-detail__unknown-swatch" aria-hidden="true" />
               <span className="palette-detail__name">Unknown paint</span>
+              {removeButton(paintId, "unknown paint")}
             </li>
           );
         }
@@ -233,6 +274,7 @@ function PaintList({ paintIds, catalog }: { paintIds: string[]; catalog: Catalog
                 <span className="palette-detail__brand">{brands.get(paint.brandId)}</span>
               </span>
             </Link>
+            {removeButton(paintId, paint.name)}
           </li>
         );
       })}

@@ -110,6 +110,54 @@ describe("PaletteDetail", () => {
     expect(screen.getByRole("link", { name: "All palettes" })).toHaveAttribute("href", "/palettes");
   });
 
+  it("removes a paint from the palette screen", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([red.id, "retired-paint-id", vallejo.id]));
+    const removePaint = vi.fn<(args: { paletteId: string; paintId: string }) => Promise<null>>(() =>
+      Promise.resolve(null),
+    );
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const fn =
+        nameOf(ref) === nameOf(api.palettes.removePaint)
+          ? removePaint
+          : vi.fn(() => Promise.resolve(null));
+      return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    }) as unknown as typeof useMutation);
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    fireEvent.click(
+      await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" }),
+    );
+
+    expect(removePaint).toHaveBeenCalledExactlyOnceWith({ paletteId: PALETTE_ID, paintId: red.id });
+    expect(await screen.findByText("Removed Mephiston Red")).toBeVisible();
+
+    fireEvent.click(
+      within(list).getByRole("button", { name: "Remove unknown paint from palette" }),
+    );
+    expect(removePaint).toHaveBeenLastCalledWith({
+      paletteId: PALETTE_ID,
+      paintId: "retired-paint-id",
+    });
+
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    const main = screen.getByRole("main");
+    const removeBloodRed = within(list).getByRole("button", {
+      name: "Remove Blood Red from palette",
+    });
+    expect(removeBloodRed).toBeDisabled();
+    expect(
+      within(list).getByRole("button", { name: "Remove unknown paint from palette" }),
+    ).toBeDisabled();
+    expect(within(main).getByRole("status")).toHaveTextContent(
+      "Connect to the internet to edit palettes.",
+    );
+    fireEvent.click(removeBloodRed);
+    expect(removePaint).toHaveBeenCalledTimes(2);
+  });
+
   it("delete asks for confirmation", async () => {
     signedInWith(palette([red.id]));
     const { remove } = mockMutations();
