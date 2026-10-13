@@ -1,6 +1,6 @@
 import "./add-to-palette-sheet.css";
 
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { Plus } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
@@ -32,7 +32,9 @@ function addedMessage(added: number, name: string): string {
 
 /** Picks one of the user's palettes, or makes a new one, and adds the paints to it. */
 export function AddToPaletteSheet({ open, onOpenChange, paintIds, onAdded, returnFocus }: Props) {
-  const palettes = useQuery(api.palettes.listMine, open ? {} : "skip");
+  const { isAuthenticated } = useConvexAuth();
+  // Clerk can report signed in before Convex has the identity; listMine would throw until then.
+  const palettes = useQuery(api.palettes.listMine, open && isAuthenticated ? {} : "skip");
   const addPaints = useMutation(api.palettes.addPaints);
   const create = useMutation(api.palettes.create);
   const toast = useToast();

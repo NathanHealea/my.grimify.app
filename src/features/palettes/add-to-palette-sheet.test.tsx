@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
 import { ConvexError } from "convex/values";
 import { useState } from "react";
@@ -22,9 +22,16 @@ const nameOf = (ref: unknown) => getFunctionName(ref as FunctionReference<"query
 
 const defaultUseMutation = vi.mocked(useMutation).getMockImplementation();
 
-function withPalettes(palettes: PaletteRow[]) {
-  vi.mocked(useQuery).mockImplementation(((query: unknown) =>
-    nameOf(query) === nameOf(api.palettes.listMine) ? palettes : undefined) as typeof useQuery);
+function withPalettes(palettes: PaletteRow[], { authenticated = true } = {}) {
+  vi.mocked(useConvexAuth).mockReturnValue({
+    isLoading: false,
+    isRefreshing: false,
+    isAuthenticated: authenticated,
+  });
+  vi.mocked(useQuery).mockImplementation(((query: unknown, args: unknown) =>
+    args !== "skip" && nameOf(query) === nameOf(api.palettes.listMine)
+      ? palettes
+      : undefined) as typeof useQuery);
 }
 
 function mockMutations() {
@@ -85,6 +92,11 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.mocked(useMutation).mockImplementation(defaultUseMutation!);
   vi.mocked(useQuery).mockImplementation((() => undefined) as typeof useQuery);
+  vi.mocked(useConvexAuth).mockReturnValue({
+    isLoading: false,
+    isRefreshing: false,
+    isAuthenticated: false,
+  });
 });
 
 describe("AddToPaletteSheet", () => {
@@ -189,5 +201,32 @@ describe("AddToPaletteSheet", () => {
     expect(create.mock.invocationCallOrder[0]).toBeLessThan(addPaints.mock.invocationCallOrder[0]);
     expect(onAdded).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("waits for Convex to know the user before listing palettes", () => {
+    withPalettes(
+      [
+        {
+          _id: "palette-a",
+          name: "Ultramarines",
+          paintCount: 0,
+          previewPaintIds: [],
+          updatedAt: 1,
+        },
+      ],
+      { authenticated: false },
+    );
+    mockMutations();
+    render(
+      <Harness
+        paintIds={["citadel-base-mephiston-red"]}
+        onOpenChange={vi.fn()}
+        onAdded={vi.fn()}
+      />,
+    );
+
+    const picker = openPicker();
+    expect(within(picker).getByText("Loading your palettes…")).toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: /^Ultramarines/ })).toBeNull();
   });
 });
