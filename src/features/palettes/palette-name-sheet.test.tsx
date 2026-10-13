@@ -89,6 +89,69 @@ describe("PaletteNameSheet", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "New palette" })).toHaveFocus());
   });
 
+  it("name sheet names groups", async () => {
+    const onSave = vi.fn<(name: string) => Promise<unknown>>();
+    function GroupHarness() {
+      const [open, setOpen] = useState(false);
+      const trigger = useRef<HTMLButtonElement>(null);
+      return (
+        <>
+          <button ref={trigger} type="button" onClick={() => setOpen(true)}>
+            New group
+          </button>
+          <PaletteNameSheet
+            kind="group"
+            open={open}
+            onOpenChange={setOpen}
+            title="New group"
+            submitLabel="Add"
+            onSave={onSave}
+            returnFocus={trigger}
+          />
+        </>
+      );
+    }
+    render(<GroupHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "New group" }));
+    const dialog = screen.getByRole("dialog", { name: "New group" });
+    const field = within(dialog).getByLabelText("Group name");
+    const typeGroupName = (value: string) => fireEvent.change(field, { target: { value } });
+
+    typeGroupName("   ");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Give the group a name");
+
+    typeGroupName("x".repeat(61));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Use 60 characters or fewer");
+    expect(onSave).not.toHaveBeenCalled();
+
+    onSave.mockRejectedValueOnce(new ConvexError("GROUP_LIMIT"));
+    typeGroupName("Metals");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        "A palette can have up to 30 groups",
+      ),
+    );
+    expect(onSave).toHaveBeenCalledExactlyOnceWith("Metals");
+
+    onSave.mockRejectedValueOnce(new ConvexError("GROUP_NAME_INVALID"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("alert")).toHaveTextContent("Give the group a name"),
+    );
+
+    onSave.mockRejectedValueOnce(new Error("network down"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        "Couldn't save the group. Check your connection and try again.",
+      ),
+    );
+    expect(screen.getByRole("dialog", { name: "New group" })).toBeInTheDocument();
+  });
+
   it("disables saving offline and says why", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     render(<CreateHarness onSave={() => Promise.resolve()} />);

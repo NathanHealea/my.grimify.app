@@ -24,11 +24,19 @@ const MAX_NAME_LENGTH = 60;
 const SERVER_MESSAGES: Record<string, string> = {
   PALETTE_LIMIT: "You can have up to 50 palettes",
   PALETTE_NAME_INVALID: "Give the palette a name",
+  GROUP_LIMIT: "A palette can have up to 30 groups",
+  GROUP_NAME_INVALID: "Give the group a name",
+};
+
+const WORDING = {
+  palette: { label: "Palette name", blank: "Give the palette a name", noun: "palette" },
+  group: { label: "Group name", blank: "Give the group a name", noun: "group" },
 };
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  kind?: keyof typeof WORDING;
   title: string;
   submitLabel: string;
   initialName?: string;
@@ -37,10 +45,11 @@ type Props = {
   returnFocus: RefObject<HTMLElement | null>;
 };
 
-/** Names a new palette or renames one; validates like the server so most errors never round-trip. */
+/** Names a new palette or group, or renames one; validates like the server so most errors never round-trip. */
 export function PaletteNameSheet({
   open,
   onOpenChange,
+  kind = "palette",
   title,
   submitLabel,
   initialName = "",
@@ -55,11 +64,12 @@ export function PaletteNameSheet({
   const locked = saving && online;
   const fieldId = useId();
   const errorId = useId();
+  const wording = WORDING[kind];
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const trimmed = name.trim();
-    if (trimmed.length === 0) return setError("Give the palette a name");
+    if (trimmed.length === 0) return setError(wording.blank);
     if (trimmed.length > MAX_NAME_LENGTH) return setError("Use 60 characters or fewer");
     setSaving(true);
     setError(null);
@@ -68,10 +78,10 @@ export function PaletteNameSheet({
       .catch((cause: unknown) => {
         const code =
           cause instanceof ConvexError && typeof cause.data === "string" ? cause.data : "";
-        if (!SERVER_MESSAGES[code]) console.error("Saving the palette failed", cause);
+        if (!SERVER_MESSAGES[code]) console.error(`Saving the ${wording.noun} failed`, cause);
         setError(
           SERVER_MESSAGES[code] ??
-            "Couldn't save the palette. Check your connection and try again.",
+            `Couldn't save the ${wording.noun}. Check your connection and try again.`,
         );
       })
       .finally(() => setSaving(false));
@@ -103,7 +113,7 @@ export function PaletteNameSheet({
           </SheetHeader>
           <SheetBody className="palette-name-sheet__body">
             <label className="palette-name-sheet__label" htmlFor={fieldId}>
-              Palette name
+              {wording.label}
             </label>
             <Input
               id={fieldId}
