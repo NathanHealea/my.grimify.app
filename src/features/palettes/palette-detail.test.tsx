@@ -205,6 +205,78 @@ describe("PaletteDetail", () => {
     expect(screen.getByRole("button", { name: "Palette actions" })).toHaveFocus();
   });
 
+  it("moves focus to the paint above after removing the last one", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(palette([red.id, vallejo.id]));
+    const removePaint = vi.fn(() => Promise.resolve(null));
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const fn =
+        nameOf(ref) === nameOf(api.palettes.removePaint)
+          ? removePaint
+          : vi.fn(() => Promise.resolve(null));
+      return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    }) as unknown as typeof useMutation);
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const removeBloodRed = await screen.findByRole("button", {
+      name: "Remove Blood Red from palette",
+    });
+    removeBloodRed.focus();
+    fireEvent.click(removeBloodRed);
+    await act(() => Promise.resolve());
+    // The palette query is mocked, so a connection flip stands in for Convex pushing the new list.
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    signedInWith(palette([red.id]));
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+
+    expect(screen.getByRole("button", { name: "Remove Mephiston Red from palette" })).toHaveFocus();
+  });
+
+  it("reports a failed remove and lets the user retry", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    signedInWith(palette([red.id, vallejo.id]));
+    const removePaint = vi.fn(() => Promise.reject(new Error("network down")));
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const fn =
+        nameOf(ref) === nameOf(api.palettes.removePaint)
+          ? removePaint
+          : vi.fn(() => Promise.resolve(null));
+      return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    }) as unknown as typeof useMutation);
+    renderRoute(`/palettes/${PALETTE_ID}`);
+
+    const removeRed = await screen.findByRole("button", {
+      name: "Remove Mephiston Red from palette",
+    });
+    removeRed.focus();
+    fireEvent.click(removeRed);
+
+    expect(
+      await screen.findByText(
+        "Couldn't remove Mephiston Red. Check your connection and try again.",
+      ),
+    ).toBeVisible();
+    await waitFor(() => expect(removeRed).not.toHaveAttribute("aria-disabled"));
+    expect(removeRed).toHaveFocus();
+    fireEvent.click(removeRed);
+    expect(removePaint).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(removeRed).not.toHaveAttribute("aria-disabled"));
+
+    // Red leaves from another device; the failed remove mustn't then pull focus to its neighbour.
+    const actions = screen.getByRole("button", { name: "Palette actions" });
+    actions.focus();
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+    signedInWith(palette([vallejo.id]));
+    onLine.mockReturnValue(true);
+    act(() => void window.dispatchEvent(new Event("online")));
+
+    expect(actions).toHaveFocus();
+  });
+
   it("delete asks for confirmation", async () => {
     signedInWith(palette([red.id]));
     const { remove } = mockMutations();

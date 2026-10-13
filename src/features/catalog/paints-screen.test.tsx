@@ -287,6 +287,21 @@ describe("PaintsScreen", () => {
       expect(last).toBeEnabled();
     });
 
+    it("moves focus into the list and back to the entry button", async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+
+      expect(screen.getAllByRole("checkbox", { name: /^Select / })[0]).toHaveFocus();
+
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
+
+      expect(screen.getByRole("button", { name: "Add to palette" })).toHaveFocus();
+    });
+
     it("returns focus to the search box when select mode ends with no results", async () => {
       serve(catalogOf(NAMED));
       signIn();

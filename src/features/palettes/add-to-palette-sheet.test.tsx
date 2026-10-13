@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
 import { ConvexError } from "convex/values";
@@ -177,6 +177,94 @@ describe("AddToPaletteSheet", () => {
       .getAllByRole("button")
       .filter((button) => !dismiss.includes(button));
     expect(choices).toEqual([within(empty).getByRole("button", { name: "New palette" })]);
+  });
+
+  it("reports a failed add without closing", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    withPalettes([
+      { _id: "palette-a", name: "Ultramarines", paintCount: 3, previewPaintIds: [], updatedAt: 1 },
+    ]);
+    const { addPaints } = mockMutations();
+    addPaints.mockRejectedValueOnce(new Error("network down"));
+    const onOpenChange = vi.fn();
+    const onAdded = vi.fn();
+    render(
+      <Harness
+        paintIds={["citadel-macragge-blue"]}
+        onOpenChange={onOpenChange}
+        onAdded={onAdded}
+      />,
+    );
+
+    const dialog = openPicker();
+    onOpenChange.mockClear();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Ultramarines/ }));
+
+    await waitFor(() =>
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        "Couldn't add to the palette. Check your connection and try again.",
+      ),
+    );
+    expect(screen.getByRole("dialog", { name: "Add to palette" })).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(onAdded).not.toHaveBeenCalled();
+  });
+
+  it("locks the picker while adding", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    withPalettes([
+      { _id: "palette-a", name: "Ultramarines", paintCount: 3, previewPaintIds: [], updatedAt: 1 },
+    ]);
+    const { addPaints } = mockMutations();
+    let finish = () => {};
+    addPaints.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ added: 1 });
+        }),
+    );
+    render(
+      <Harness paintIds={["citadel-macragge-blue"]} onOpenChange={vi.fn()} onAdded={vi.fn()} />,
+    );
+
+    const dialog = openPicker();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Ultramarines/ }));
+
+    expect(within(dialog).getByRole("button", { name: /^Ultramarines/ })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "New palette" })).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Add to palette" })).toBeInTheDocument();
+
+    await act(() => Promise.resolve(finish()));
+    expect(await screen.findByText("Added to Ultramarines")).toBeInTheDocument();
+  });
+
+  it("disables the picker offline and doesn't trap a pending add", () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    withPalettes([
+      { _id: "palette-a", name: "Ultramarines", paintCount: 3, previewPaintIds: [], updatedAt: 1 },
+    ]);
+    const { addPaints } = mockMutations();
+    // Convex holds a mutation until the connection returns.
+    addPaints.mockImplementationOnce(() => new Promise(() => {}));
+    render(
+      <Harness paintIds={["citadel-macragge-blue"]} onOpenChange={vi.fn()} onAdded={vi.fn()} />,
+    );
+
+    const dialog = openPicker();
+    expect(within(dialog).getByRole("button", { name: /^Ultramarines/ })).toBeEnabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Ultramarines/ }));
+
+    onLine.mockReturnValue(false);
+    act(() => void window.dispatchEvent(new Event("offline")));
+
+    expect(within(dialog).getByRole("button", { name: /^Ultramarines/ })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "New palette" })).toBeDisabled();
+    expect(within(dialog).getByRole("status")).toHaveTextContent(
+      "Connect to the internet to edit palettes.",
+    );
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Add to palette" })).not.toBeInTheDocument();
   });
 
   it("picker creates a palette and adds to it", async () => {

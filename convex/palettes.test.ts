@@ -245,6 +245,34 @@ describe("palettes", () => {
     expect((await t.run((ctx) => ctx.db.get(other)))?.paintIds).toEqual([]);
   });
 
+  it("accepts exactly 200 paints in one call", async () => {
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    const twoHundred = Array.from({ length: 200 }, (_, i) => `p-${i}`);
+
+    expect(
+      await as.mutation(api.palettes.addPaints, { paletteId: id, paintIds: twoHundred }),
+    ).toEqual({ added: 200 });
+    expect((await t.run((ctx) => ctx.db.get(id)))?.paintIds).toEqual(twoHundred);
+  });
+
+  it("leaves the palette untouched when every paint is already in it", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    await t.run((ctx) => ctx.db.patch(id, { paintIds: ["p-1", "p-2"] }));
+
+    vi.setSystemTime(2_000);
+    expect(
+      await as.mutation(api.palettes.addPaints, { paletteId: id, paintIds: ["p-2", "p-1"] }),
+    ).toEqual({ added: 0 });
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      paintIds: ["p-1", "p-2"],
+      updatedAt: 1_000,
+    });
+  });
+
   it("rejects malformed paint IDs", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);
@@ -302,6 +330,28 @@ describe("palettes", () => {
       await as.mutation(api.palettes.removePaint, { paletteId: id, paintId: "p-9" }),
     ).toBeNull();
     expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({ ...expected, updatedAt: 2_000 });
+  });
+
+  it("removes a paint that is only in a group", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { t, as } = await signedIn("a");
+    const id = await as.mutation(api.palettes.create, { name: "Ultramarines" });
+    await t.run((ctx) =>
+      ctx.db.patch(id, {
+        paintIds: ["p-1"],
+        groups: [{ id: "g-1", name: "Armour", paintIds: ["p-1", "p-5"] }],
+      }),
+    );
+
+    vi.setSystemTime(2_000);
+    await as.mutation(api.palettes.removePaint, { paletteId: id, paintId: "p-5" });
+
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
+      paintIds: ["p-1"],
+      groups: [{ id: "g-1", name: "Armour", paintIds: ["p-1"] }],
+      updatedAt: 2_000,
+    });
   });
 
   it("keeps add and remove to the owner", async () => {
