@@ -915,7 +915,7 @@ Trade-off: a request for a missing hashed asset also gets `index.html` (200, HTM
 ## Decision 044 — Dev and stage environments, deployed by one command each
 
 Date: 2026-10-09
-Status: Accepted
+Status: Accepted; promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only)
 
 Context:
 Only `main` deployed, from Workers Builds, so nothing could be tried on real hosting with real sign-in before reaching users. A branch build would have pushed that branch's Convex functions to production (041). The owner wants `main ← stage ← dev ← work items`, hotfixes to `main`, dev and stage both deployed, and "a simple command for each deployment" with no web UI. Cloudflare's branch preview URLs are on `*.workers.dev`, where production Clerk keys don't work, and preview deployments in Convex expire.
@@ -1194,3 +1194,25 @@ Consequences:
 Positive: a shorter, calmer phone bar with four even targets at every phone width, and the overflow at 320px is gone.
 Trade-off: people must recognise the icons (Palette for Paints, Library for My Paints, SwatchBook for Palettes, a gear for Settings) without words; the active tab's pill and the screen-reader names still identify each one. WCAG 2.1 AA is still met: every link has a name, and with no visible label, 2.5.3 Label in Name doesn't apply. The icons are checked for 3:1 contrast on the glass (1.4.11).
 
+---
+
+## Decision 055 — Promote environments by fast-forward only
+
+Date: 2026-10-13
+Status: Accepted; amends 044 (promotion and hotfix back-merge)
+
+Context:
+044 made promotions `git merge --no-ff`. Each promotion and hotfix back-merge added a merge commit that lived only on the receiving branch and above, so `dev`, `stage` and `main` never shared a tip even when their files were identical: on 2026-10-11, after a hotfix, the three had no file differences but `dev` held two commits `main` lacked. `wi release` now fast-forwards work items into `dev` and tags each item's last commit, so releases add no merge commits either. The owner wants the branches to match after a promotion.
+
+Decision:
+- Promotions are `git merge --ff-only`: `stage` fast-forwards to `dev`, `main` to `stage`. A promotion refuses when the target has a commit the source lacks.
+- A hotfix lands on `main`, then `main` is merged into `dev` only; `stage` and `main` pick up the back-merge on the next promotion.
+- A bad promotion is undone by reverting on `dev` and promoting, or by a hotfix revert on `main`; never by moving a branch back.
+
+Alternatives:
+- Keep `--no-ff`: each promotion is marked by a merge commit and undone by one revert, but the branches never point at the same commit and a tag doesn't name what's live
+- Deploy every environment from tags on one branch: one history and no promotion merges, but `scripts/deploy.ts`, the environment branches and DEPLOYMENT.md would all change, and stage and production would no longer be branches you can switch to
+
+Consequences:
+Positive: after promoting, `dev`, `stage` and `main` are the same commit, so a version tag names the same code on every branch, and no branch collects merge commits of its own.
+Trade-off: git no longer records when a batch reached stage or production; deploy output and tags are the record. `main` can sit past the latest tag when a promotion carries commits after the last release. Undoing a promotion takes a revert per change. A hotfix that isn't merged back into `dev` makes the next promotion refuse; that's the safe failure, fixed by doing the back-merge and promoting again.

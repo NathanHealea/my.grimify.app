@@ -31,7 +31,7 @@ A mobile-first PWA for miniature painters: search paints across brands, find cro
 - verify_commands:
   - npm run check
   - npm run build
-- Branches: work items merge into `dev`; `dev` is promoted to `stage`, `stage` to `main`. Hotfixes branch from and merge into `main` by hand, then `main` is merged back into `stage` and `dev` (docs/DEPLOYMENT.md § Branches).
+- Branches: work items merge into `dev`; `dev` is promoted to `stage`, `stage` to `main` by fast-forward. Hotfixes branch from and merge into `main` by hand, then `main` is merged back into `dev` only (docs/DEPLOYMENT.md § Branches).
 - `bug_tracking`: GitHub Issues on `NathanHealea/v2.grimify.app` (label `bug`, or `enhancement` for follow-ups). Found a bug or follow-up outside the current item? File an issue instead of fixing it in passing. A work item that fixes an issue links it (DECISIONS 026).
 
 <!-- convex-ai-start -->
