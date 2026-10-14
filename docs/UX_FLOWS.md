@@ -277,6 +277,7 @@ Arrange (drag and drop, DECISIONS 053):
 1. Tap **Arrange** (next to "All paints") → every paint row and group heading swaps its controls for **Move <name>** (or **Move group <name>**) and a **Drag <name>** handle. Links, Groups, Remove, Actions and New group are hidden. The button reads **Done**; tapping it puts everything back and keeps focus on it. Offline, Arrange is disabled
 2. Drag a handle (hold briefly on touch; the rest of the row scrolls the page). A frosted preview of the paint (swatch, name, brand) or the group's name follows the finger
    - Within All paints or one group, or among groups: rows shift to make room; drop to reorder
+   - Dragging a group: every group shows only its heading until the drop or cancel, so groups shift by one row
    - From All paints into a group: the group is outlined and a line marks the spot. Drop adds the paint there; it stays in All paints. Dropping on the group's heading or empty space puts it at the end
    - From one group to another: the same, but the paint leaves the first group
    - Onto a group that already holds it, or from a group back to All paints: nothing changes
