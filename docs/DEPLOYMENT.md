@@ -46,7 +46,7 @@ story/… bug/… task/…  →  dev  →  stage  →  main
   ```bash
   git fetch && git switch main && git merge --ff-only origin/main && git merge --ff-only origin/stage && git push && npm run deploy:prod
   ```
-- If a promotion stops with "Not possible to fast-forward", the target has a commit the source lacks, usually a hotfix that wasn't merged back into `dev`. Do the back-merge below, then promote again.
+- If a promotion stops with "Not possible to fast-forward", the target has a commit the source lacks, because a hotfix reached `main` after the last promotion. Do the back-merge below if it isn't done, then promote dev to stage before stage to production: `stage` only gets the hotfix from `dev`, so a batch already on stage can't go to production on its own.
 - Hotfix: `wi` supports one base branch, so a hotfix is done by hand. Branch from `main`, fix, run `npm run check` and `npm run build`, merge into `main`, push, `npm run deploy:prod`. Then merge `main` into `dev` only, so the fix isn't lost; `stage` and `main` get the back-merge on the next promotion:
   ```bash
   git fetch && git switch dev && git merge --ff-only origin/dev && git merge origin/main && git push && npm run deploy:dev
