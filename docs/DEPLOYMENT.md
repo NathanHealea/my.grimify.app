@@ -37,16 +37,22 @@ story/… bug/… task/…  →  dev  →  stage  →  main
 ```
 
 - Work items (`wi start`) branch from `dev` and `wi release` merges them into `dev` (`base_branch: dev`). Deploy dev to try them.
+- Promotions fast-forward (DECISIONS 055), so after promoting, the branches point at the same commit and add no merge commits.
 - Promote dev to stage when it's ready for a final check:
   ```bash
-  git fetch && git switch stage && git merge --ff-only origin/stage && git merge --no-ff origin/dev && git push && npm run deploy:stage
+  git fetch && git switch stage && git merge --ff-only origin/stage && git merge --ff-only origin/dev && git push && npm run deploy:stage
   ```
 - Promote stage to production:
   ```bash
-  git fetch && git switch main && git merge --ff-only origin/main && git merge --no-ff origin/stage && git push && npm run deploy:prod
+  git fetch && git switch main && git merge --ff-only origin/main && git merge --ff-only origin/stage && git push && npm run deploy:prod
   ```
-- Hotfix: `wi` supports one base branch, so a hotfix is done by hand. Branch from `main`, fix, run `npm run check` and `npm run build`, merge into `main`, push, `npm run deploy:prod`. Then merge `main` into `stage` and `stage` into `dev` so the fix isn't lost on the next promotion.
-- Version tags come from `wi release`, so they sit on merges into `dev`; promotion carries those commits up unchanged.
+- If a promotion stops with "Not possible to fast-forward", the target has a commit the source lacks, usually a hotfix that wasn't merged back into `dev`. Do the back-merge below, then promote again.
+- Hotfix: `wi` supports one base branch, so a hotfix is done by hand. Branch from `main`, fix, run `npm run check` and `npm run build`, merge into `main`, push, `npm run deploy:prod`. Then merge `main` into `dev` only, so the fix isn't lost; `stage` and `main` get the back-merge on the next promotion:
+  ```bash
+  git fetch && git switch dev && git merge --ff-only origin/dev && git merge origin/main && git push && npm run deploy:dev
+  ```
+- Undo a bad promotion without moving a branch back (that needs a force push): revert the change on `dev` and promote again, or, when production can't wait, ship the revert as a hotfix.
+- Version tags come from `wi release`, which fast-forwards each work item into `dev` and tags the item's last commit. Promotions carry those commits up unchanged, so a tag names the same code on every branch.
 
 ---
 
