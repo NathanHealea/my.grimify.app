@@ -310,6 +310,101 @@ describe("Arrange mode", () => {
     ).toBeVisible();
   });
 
+  it("collapses every group to its heading while a group is dragged", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    expect(within(trim()).getByRole("button", { name: "Drag Mephiston Red" })).toBeVisible();
+
+    const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
+    handle.focus();
+    fireEvent.keyDown(handle, { code: "Space", key: " " });
+
+    await waitFor(() => expect(trim()).toHaveAttribute("data-dragging"));
+    expect(within(trim()).queryByRole("button", { name: "Drag Mephiston Red" })).toBeNull();
+    expect(within(trim()).queryByRole("button", { name: "Drag Blood Red" })).toBeNull();
+    expect(within(highlights()).queryByText("No paints in this group yet")).toBeNull();
+    expect(within(trim()).getByRole("heading", { name: "Trim" })).toBeVisible();
+    expect(within(highlights()).getByRole("heading", { name: "Highlights" })).toBeVisible();
+  });
+
+  it("expands the groups again when a group drag is dropped or cancelled", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    const handle = () => within(trim()).getByRole("button", { name: "Drag group Trim" });
+
+    for (const end of [
+      { code: "Space", key: " " },
+      { code: "Escape", key: "Escape" },
+    ]) {
+      handle().focus();
+      fireEvent.keyDown(handle(), { code: "Space", key: " " });
+      await waitFor(() =>
+        expect(within(trim()).queryByRole("button", { name: "Drag Mephiston Red" })).toBeNull(),
+      );
+      fireEvent.keyDown(handle(), end);
+      expect(
+        await within(trim()).findByRole("button", { name: "Drag Mephiston Red" }),
+      ).toBeVisible();
+      expect(within(trim()).getByRole("button", { name: "Drag Blood Red" })).toBeVisible();
+    }
+  });
+
+  it("keeps groups expanded while a paint is dragged", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+
+    const handle = within(trim()).getByRole("button", { name: "Drag Mephiston Red" });
+    handle.focus();
+    fireEvent.keyDown(handle, { code: "Space", key: " " });
+
+    await waitFor(() => expect(handle.closest("li")).toHaveAttribute("data-dragging"));
+    expect(within(trim()).getByRole("button", { name: "Drag Mephiston Red" })).toBeVisible();
+    expect(within(trim()).getByRole("button", { name: "Drag Blood Red" })).toBeVisible();
+    expect(within(highlights()).getByText("No paints in this group yet")).toBeVisible();
+  });
+
+  it("keeps focus on the group handle when a keyboard group drag collapses the groups", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+
+    const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
+    handle.focus();
+    fireEvent.keyDown(handle, { code: "Space", key: " " });
+
+    await waitFor(() =>
+      expect(within(trim()).queryByRole("button", { name: "Drag Mephiston Red" })).toBeNull(),
+    );
+    expect(within(trim()).getByRole("button", { name: "Drag group Trim" })).toBe(
+      document.activeElement,
+    );
+    // The over announcement for the group's own place replaces the pick-up in the same render.
+    expect(document.querySelector('[id^="DndLiveRegion-"]')).toHaveTextContent(
+      "Group Trim is over position 1 of 2.",
+    );
+  });
+
   it("sends every drop to its mutation and shows it at once", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const cached = twoGroups();

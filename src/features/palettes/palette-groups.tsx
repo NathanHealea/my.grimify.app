@@ -87,6 +87,8 @@ export function PaletteGroups({
   const focusAfterRename = useRef<string | null>(null);
   // Convex holds a mutation until the connection returns, so offline a pending delete mustn't trap the user.
   const locked = deleting && online;
+  // Groups vary in height and the sorting strategy shifts by the dragged one's, so a group drag shows headings only.
+  const collapsed = (useDndContext().active?.data.current as DragData | undefined)?.type === "group";
 
   const actionsFor = (groupId: string) => () => actionButtons.current.get(groupId) ?? null;
   // A ref whose target is worked out when the name sheet closes, by which time a new group has rendered.
@@ -235,6 +237,7 @@ export function PaletteGroups({
               paints={paints}
               brands={brands}
               online={online}
+              collapsed={collapsed}
             />
           ))}
         </div>
@@ -548,12 +551,14 @@ function ArrangeGroup({
   paints,
   brands,
   online,
+  collapsed,
 }: {
   group: Group;
   headingId: string;
   paints: Map<string, Catalog["paints"][number]>;
   brands: Map<string, string>;
   online: boolean;
+  collapsed: boolean;
 }) {
   const data: DragData = { type: "group", groupId: group.id };
   const id = sortableIdOf(data);
@@ -607,7 +612,7 @@ function ArrangeGroup({
             disabled={!online}
           />
         </div>
-        {group.paintIds.length === 0 ? (
+        {collapsed ? null : group.paintIds.length === 0 ? (
           <p className="palette-groups__empty">No paints in this group yet</p>
         ) : (
           <SortableContext
