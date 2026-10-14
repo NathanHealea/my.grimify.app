@@ -1,13 +1,13 @@
 ---
 type: task
 slug: ff-promotions
-status: in-progress
+status: staged
 branch: task/ff-promotions
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/task-ff-promotions
 created: 2026-10-11
 approved: 2026-10-13
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.19.1
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
@@ -96,3 +96,4 @@ This task changes documented commands only; the project's test suites (Vitest, P
 - 2026-10-13 — Started on branch task/ff-promotions from origin/dev.
 - 2026-10-13 — Decision numbered 055, not 047: 047 was used by palettes after this plan was written. T1-T3 pass on the new commands and fail on the old --no-ff ones; T4 passes. T5 doc review done.
 - 2026-10-13 — Review: corrected refusal guidance (hotfix while stage holds a batch; stray commit on stage), --no-edit on the back-merge, 044 status. Both recovery paths checked in a throwaway repo.
+- 2026-10-13 — Staged: verification passed; version 0.19.0 → 0.19.1; no changelog file.
