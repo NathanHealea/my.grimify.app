@@ -1063,7 +1063,7 @@ Trade-off: if two devices change the same list at nearly the same moment, the ea
 ## Decision 050 — Hide nav icons on the narrowest phones
 
 Date: 2026-10-12
-Status: Accepted
+Status: Superseded by 054
 
 Context:
 The Palettes tab (DECISIONS 047) makes four nav items. With icons, they overflow a 320px bar by up to 43px and "My Paints" wraps, and phone padding is already `--space-1`. At 640px the desktop bar, with the back link and both status pills showing, ran 19px past the screen.
@@ -1171,4 +1171,26 @@ Alternatives:
 Consequences:
 Positive: reordering and grouping work by touch, mouse, keyboard and menu, each move is one atomic write, and moves feel instant.
 Trade-off: removing a paint or opening its groups needs "Done" first. Keyboard moves between lists step through every row in between. Two dependencies, last released 2024-12. An optimistic move against a palette another device just changed can show the wrong order until the server answers (last write still wins, 049). Touch behaviour is only verifiable on a real iPhone.
+
+---
+
+## Decision 054 — Icons only in the phone nav
+
+Date: 2026-10-13
+Status: Accepted; supersedes 050
+
+Context:
+The owner wants a cleaner phone nav: the four tabs as icons, without labels. DECISIONS 050 went the other way under 360px, dropping the icons and keeping the labels, because four labelled items with icons overflow a 320px bar.
+
+Decision:
+Under 640px each tab shows only its icon. The label stays in the link, clipped to a 1px box (`--visually-hidden-size`, `clip-path: inset(50%)`), so the link keeps its name for screen readers and voice control. From 640px tabs show icon and label as before. The under-360px rule is removed.
+
+Alternatives:
+- `aria-label` on the link with the label removed: same result, but the name would live in two places
+- Icons with labels only on the active tab: keeps a hint of text, but the bar's width changes as you switch tabs
+- Keep 050: labels are easier to recognise, but not what the owner wants
+
+Consequences:
+Positive: a shorter, calmer phone bar with four even targets at every phone width, and the overflow at 320px is gone.
+Trade-off: people must recognise the icons (Palette for Paints, Library for My Paints, SwatchBook for Palettes, a gear for Settings) without words; the active tab's pill and the screen-reader names still identify each one. WCAG 2.1 AA is still met: every link has a name, and with no visible label, 2.5.3 Label in Name doesn't apply. The icons are checked for 3:1 contrast on the glass (1.4.11).
 

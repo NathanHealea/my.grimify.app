@@ -40,7 +40,7 @@
 
 `src/components/app-shell.tsx`:
 
-- **Tabs**: Paints, My Paints, Palettes and Settings, with lucide icons. Under 360px the icons hide (DECISIONS 050).
+- **Tabs**: Paints, My Paints, Palettes and Settings, with lucide icons. On phones (under 640px) only the icons show; each label is clipped out of view but still names its link (DECISIONS 054).
 - **Back button**: if the previous history entry is in the app, it calls `history.back()`, which **keeps the list's search and filters**. Otherwise it links to `to`. It exists because **iOS standalone has no browser back button**.
 - **Collapsing title**: an `IntersectionObserver` watches the page's `<h1>`. When it slides under the header, `data-scrolled` shows the small title (DECISIONS 040, 046).
 - **Status**: "Offline" and "n change(s) waiting to sync". Both are `role="status"`.
