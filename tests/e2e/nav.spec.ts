@@ -185,10 +185,12 @@ async function expectOneLineItems(page: Page, width: number) {
     expect.soft(icon.height, `${name}: icon height`).toBeCloseTo(24, 0);
 
     if (width < 640) {
-      // A visually hidden label is clipped to at most 1×1px, or has no box at all.
-      const hidden = await labelEl.boundingBox();
-      expect.soft(hidden?.width ?? 0, `${name}: label hidden (width)`).toBeLessThanOrEqual(1);
-      expect.soft(hidden?.height ?? 0, `${name}: label hidden (height)`).toBeLessThanOrEqual(1);
+      // Clipped, not removed: a 1×1px box, and the label still names the link under real CSS.
+      const hidden = await box(labelEl);
+      expect.soft(hidden.width, `${name}: label hidden (width)`).toBeLessThanOrEqual(1);
+      expect.soft(hidden.height, `${name}: label hidden (height)`).toBeLessThanOrEqual(1);
+      const label = await labelEl.evaluate((el) => el.textContent ?? "");
+      await expect.soft(tab, `${name}: named by its label`).toHaveAccessibleName(label);
       continue;
     }
     const label = await box(labelEl);
