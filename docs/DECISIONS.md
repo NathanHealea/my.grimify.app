@@ -1063,7 +1063,7 @@ Trade-off: if two devices change the same list at nearly the same moment, the ea
 ## Decision 050 — Hide nav icons on the narrowest phones
 
 Date: 2026-10-12
-Status: Superseded by 054
+Status: Partly superseded by 054 (icons now show only on phones, with no 360px rule); the 640–767px padding still stands
 
 Context:
 The Palettes tab (DECISIONS 047) makes four nav items. With icons, they overflow a 320px bar by up to 43px and "My Paints" wraps, and phone padding is already `--space-1`. At 640px the desktop bar, with the back link and both status pills showing, ran 19px past the screen.
