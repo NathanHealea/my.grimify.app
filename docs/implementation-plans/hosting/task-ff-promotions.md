@@ -1,11 +1,11 @@
 ---
 type: task
 slug: ff-promotions
-status: planned      # planned | in-progress | changes-requested | staged | released
+status: in-progress
 branch: task/ff-promotions
-worktree_path:       # set by `wi start`
+worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/task-ff-promotions
 created: 2026-10-11
-approved:            # set by `wi approve`
+approved: 2026-10-13
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version:             # set by `wi stage`
 review_approved:     # set by `wi accept`
@@ -92,3 +92,5 @@ This task changes documented commands only; the project's test suites (Vitest, P
 ## Progress log
 
 - 2026-10-11 — Planned.
+- 2026-10-13 — Plan approved.
+- 2026-10-13 — Started on branch task/ff-promotions from origin/dev.
