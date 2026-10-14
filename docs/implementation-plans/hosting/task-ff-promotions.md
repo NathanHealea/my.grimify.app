@@ -95,3 +95,4 @@ This task changes documented commands only; the project's test suites (Vitest, P
 - 2026-10-13 — Plan approved.
 - 2026-10-13 — Started on branch task/ff-promotions from origin/dev.
 - 2026-10-13 — Decision numbered 055, not 047: 047 was used by palettes after this plan was written. T1-T3 pass on the new commands and fail on the old --no-ff ones; T4 passes. T5 doc review done.
+- 2026-10-13 — Review: corrected refusal guidance (hotfix while stage holds a batch; stray commit on stage), --no-edit on the back-merge, 044 status. Both recovery paths checked in a throwaway repo.
