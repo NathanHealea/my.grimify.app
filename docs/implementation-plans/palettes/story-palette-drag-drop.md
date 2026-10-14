@@ -2,7 +2,7 @@
 type: story
 epic: palettes    # removed by `wi new` when there is no parent epic
 slug: palette-drag-drop
-status: staged
+status: released
 branch: story/palette-drag-drop
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/story-palette-drag-drop
 created: 2026-10-13
@@ -11,7 +11,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.18.0
 review_approved: 2026-10-13
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.18.0
 ---
 
 # Drag and drop with glass drag preview
@@ -208,3 +208,4 @@ All of these go in the stage summary.
 - 2026-10-13 — Build complete: steps 1-8 done. E2E T13 written, not run (needs functions on the personal Convex dev deployment). iPhone touch check still outstanding.
 - 2026-10-13 — Staged: verification passed; version 0.17.0 → 0.18.0; no changelog file.
 - 2026-10-13 — Review approved.
+- 2026-10-13 — Released 0.18.0 as v0.18.0.
