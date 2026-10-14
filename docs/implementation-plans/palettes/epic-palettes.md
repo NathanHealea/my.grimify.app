@@ -88,7 +88,7 @@ Status column by matching the Slug column, so keep slugs exact.
 | 1 | story | palettes-core | Palettes tab, storage and palette CRUD | R1, R3, R9, R10 | — | released |
 | 2 | story | palette-paints | Add and remove palette paints | R2, R5 (remove half) | 1 | released |
 | 3 | story | palette-groups | Palette groups (create, rename, multi-group, move/copy menu) | R4, R5, R8 (menu half) | 1 | released |
-| 4 | story | palette-drag-drop | Drag and drop with glass drag preview | R6, R7, R8 (drag half) | 3 | proposed |
+| 4 | story | palette-drag-drop | Drag and drop with glass drag preview | R6, R7, R8 (drag half) | 3 | released |
 
 **Independently shippable:** 1 ships alone (palettes you can name and view, empty until 2). 2 and 3 each ship alone after 1, in either order. 4 needs 3, because cross-group drags need groups. 1 and 4 hold the riskiest parts: 1 fixes the data model every later child depends on, and 4 brings in the new library, so 4's plan opens with a dnd-kit spike on an iPhone before building the full UI.
 
