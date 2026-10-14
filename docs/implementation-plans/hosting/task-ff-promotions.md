@@ -1,7 +1,7 @@
 ---
 type: task
 slug: ff-promotions
-status: staged
+status: released
 branch: task/ff-promotions
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/task-ff-promotions
 created: 2026-10-11
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.19.1
 review_approved: 2026-10-13
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.19.1
 ---
 
 # Fast-forward environment promotions
@@ -98,3 +98,4 @@ This task changes documented commands only; the project's test suites (Vitest, P
 - 2026-10-13 — Review: corrected refusal guidance (hotfix while stage holds a batch; stray commit on stage), --no-edit on the back-merge, 044 status. Both recovery paths checked in a throwaway repo.
 - 2026-10-13 — Staged: verification passed; version 0.19.0 → 0.19.1; no changelog file.
 - 2026-10-13 — Review approved.
+- 2026-10-13 — Released 0.19.1 as v0.19.1.
