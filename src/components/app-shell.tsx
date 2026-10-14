@@ -69,7 +69,7 @@ function Shell({ children }: Props) {
                 <li key={to} className="app-shell__tab-item">
                   <Link to={to} className="app-shell__tab">
                     <Icon className="app-shell__tab-icon" aria-hidden="true" />
-                    <span>{label}</span>
+                    <span className="app-shell__tab-label">{label}</span>
                   </Link>
                 </li>
               ))}

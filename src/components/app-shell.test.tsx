@@ -36,6 +36,16 @@ describe("AppShell", () => {
     ]);
   });
 
+  it("names each tab by its label", async () => {
+    renderRoute("/paints");
+
+    const nav = await findMainNav();
+    const named = ["Paints", "My Paints", "Palettes", "Settings"].map((name) =>
+      within(nav).getByRole("link", { name }),
+    );
+    expect(named).toEqual(within(nav).getAllByRole("link"));
+  });
+
   it("marks only the current tab with aria-current", async () => {
     renderRoute("/my-paints");
 

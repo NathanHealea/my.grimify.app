@@ -78,6 +78,9 @@
   /* Sizing */
   --border-width: 1px;
   --focus-ring-width: 2px;
+
+  /* The smallest box screen readers still read: text clipped to it is invisible but announced. */
+  --visually-hidden-size: 1px;
   --focus-ring-offset: 2px;
   --touch-target: 44px;
   --touch-target-sm: 36px;

@@ -105,7 +105,7 @@ test("keeps the phone bar plain glass", async ({ page }) => {
   }
 });
 
-test("keeps nav text readable over any swatch", async ({ page }) => {
+test("keeps nav icons readable over any swatch", async ({ page }) => {
   for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     await page.goto("/paints");
@@ -119,20 +119,21 @@ test("keeps nav text readable over any swatch", async ({ page }) => {
       over(glass, { r: 0, g: 0, b: 0, a: 1 }),
       over(glass, { r: 255, g: 255, b: 255, a: 1 }),
     ];
-    const inactive = bar.locator('.app-shell__tab:not([aria-current="page"]) span');
+    // Phones show icons only; lucide icons draw in currentColor, so the svg's color is the stroke (1.4.11).
+    const inactive = bar.locator('.app-shell__tab:not([aria-current="page"]) svg');
     await expect(inactive).toHaveCount(3);
     const active = bar.locator('.app-shell__tab[aria-current="page"]');
     await expect(active).toHaveCount(1);
 
-    const labels = await Promise.all((await inactive.all()).map((l) => computedColor(l, "color")));
+    const icons = await Promise.all((await inactive.all()).map((i) => computedColor(i, "color")));
     const pill = await computedColor(active, "background-color");
 
     for (const backdrop of backdrops) {
-      for (const label of labels) {
+      for (const icon of icons) {
         expect(
-          contrast(over(label, backdrop), backdrop),
-          `${colorScheme} label`,
-        ).toBeGreaterThanOrEqual(4.5);
+          contrast(over(icon, backdrop), backdrop),
+          `${colorScheme} icon`,
+        ).toBeGreaterThanOrEqual(3);
       }
       expect(
         contrast(over(pill, backdrop), backdrop),
@@ -141,7 +142,7 @@ test("keeps nav text readable over any swatch", async ({ page }) => {
     }
 
     // The focus ring is drawn outside the item, on the glass, so it needs 3:1 against the same blends.
-    const target = inactive.first().locator("..");
+    const target = bar.locator('.app-shell__tab:not([aria-current="page"])').first();
     // WebKit doesn't Tab to links by default; a script focus with no pointer use still counts as keyboard focus.
     await target.focus();
     expect(await target.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
@@ -171,23 +172,28 @@ async function expectOneLineItems(page: Page, width: number) {
     .evaluate((list) => list.scrollWidth - list.clientWidth);
   expect.soft(overflow, `items fit inside the bar at ${width}px`).toBeLessThanOrEqual(0);
   for (const tab of await tabs.all()) {
-    const name = `${await tab.innerText()} at ${width}px`;
+    // textContent, not innerText: a visually hidden label has no rendered text.
+    const name = `${await tab.evaluate((el) => el.textContent)} at ${width}px`;
     const labelEl = tab.locator("span");
-    const label = await box(labelEl);
-    const lineHeight = await labelEl.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
     const item = await box(tab);
     expect.soft(item.width, `${name}: target width`).toBeGreaterThanOrEqual(44);
     expect.soft(item.height, `${name}: target height`).toBeGreaterThanOrEqual(44);
-    expect.soft(label.height, `${name}: label on one line`).toBeLessThanOrEqual(lineHeight + 1);
-    if (width < 360) {
-      await expect
-        .soft(tab.locator("svg.app-shell__tab-icon"), `${name}: icon hidden`)
-        .toBeHidden();
-      continue;
-    }
-    const icon = await box(tab.locator("svg.app-shell__tab-icon"));
+    const iconEl = tab.locator("svg.app-shell__tab-icon");
+    await expect.soft(iconEl, `${name}: icon visible`).toBeVisible();
+    const icon = await box(iconEl);
     expect.soft(icon.width, `${name}: icon width`).toBeCloseTo(24, 0);
     expect.soft(icon.height, `${name}: icon height`).toBeCloseTo(24, 0);
+
+    if (width < 640) {
+      // A visually hidden label is clipped to at most 1×1px, or has no box at all.
+      const hidden = await labelEl.boundingBox();
+      expect.soft(hidden?.width ?? 0, `${name}: label hidden (width)`).toBeLessThanOrEqual(1);
+      expect.soft(hidden?.height ?? 0, `${name}: label hidden (height)`).toBeLessThanOrEqual(1);
+      continue;
+    }
+    const label = await box(labelEl);
+    const lineHeight = await labelEl.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+    expect.soft(label.height, `${name}: label on one line`).toBeLessThanOrEqual(lineHeight + 1);
 
     expect
       .soft(
@@ -221,7 +227,7 @@ test("lays the nav out per screen size", async ({ page }) => {
   await expectOneLineItems(page, device.width);
   await expectBottomBar(page, device.width);
 
-  // R1 says every width; 320px is the narrowest phone and the tightest fit (risk 3). Icons hide there.
+  // 320px is the narrowest phone and the tightest fit for four icon-only tabs.
   await page.setViewportSize({ width: 320, height: 640 });
   await expectOneLineItems(page, 320);
   await expectBottomBar(page, 320);

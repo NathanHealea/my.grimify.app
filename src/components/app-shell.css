@@ -223,10 +223,17 @@
   height: var(--icon-size-tab);
 }
 
-/* Four labels plus icons overflow a 320px bar; under 360px the labels carry the tabs alone (DECISIONS 050). */
-@media (width < 360px) {
-  .app-shell__tab-icon {
-    display: none;
+/* Phones show icons only (DECISIONS 054). The label stays in the page, clipped rather than hidden,
+   so it still names the link for screen readers and voice control. */
+@media (width < 640px) {
+  .app-shell__tab-label {
+    position: absolute;
+    width: var(--visually-hidden-size);
+    height: var(--visually-hidden-size);
+    margin: calc(var(--visually-hidden-size) * -1);
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
   }
 }
 
