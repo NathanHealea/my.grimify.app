@@ -2,13 +2,13 @@
 type: story
 epic: palettes    # removed by `wi new` when there is no parent epic
 slug: palette-drag-drop
-status: in-progress
+status: staged
 branch: story/palette-drag-drop
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/story-palette-drag-drop
 created: 2026-10-13
 approved: 2026-10-13
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.18.0
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
@@ -206,3 +206,4 @@ All of these go in the stage summary.
 - 2026-10-13 — Started on branch story/palette-drag-drop from origin/dev.
 - 2026-10-13 — Step 2 built without the planned iPhone stop: the user approved completing the item; the iPhone check moves to the stage summary as a must-do before accept. A drag that ends offline is ignored rather than cancelled mid-drag (dnd-kit has no public cancel). Drag instructions set in step 2 because the T7 test needs them; the drag component lives in palette-arrange.tsx.
 - 2026-10-13 — Build complete: steps 1-8 done. E2E T13 written, not run (needs functions on the personal Convex dev deployment). iPhone touch check still outstanding.
+- 2026-10-13 — Staged: verification passed; version 0.17.0 → 0.18.0; no changelog file.
