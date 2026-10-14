@@ -179,7 +179,7 @@
   list-style: none;
 }
 
-/* Sized by content, then sharing the spare width: equal thirds can't fit "My Paints" at 320px. */
+/* Sized by content, then sharing the spare width: from 640px the labels differ in length, so equal shares would crowd "My Paints". */
 .app-shell__tab-item {
   display: flex;
   flex: 1 1 auto;
@@ -197,7 +197,7 @@
   font-size: var(--text-small);
   line-height: var(--leading-small);
 
-  /* Content-sized, so labels stay on one line when they fit; with large system text they wrap rather than leave the screen. */
+  /* From 640px, where labels show, they stay on one line when they fit and wrap with large system text rather than leave the screen. */
   text-align: center;
 
   /* Full text colour, not muted: muted grey drops under 4.5:1 on glass over dark swatches. */
