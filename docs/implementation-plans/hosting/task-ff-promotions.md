@@ -32,7 +32,7 @@ Fast-forward works from today's state: `origin/stage` is an ancestor of `origin/
 **In scope**
 
 - `docs/DEPLOYMENT.md` § Branches: promotion commands use `git merge --ff-only`; the hotfix rule back-merges `main` into `dev` only; a short note on undoing a promotion
-- `docs/DECISIONS.md`: Decision 047 amending 044's promotion line; 044's status line notes the amendment
+- `docs/DECISIONS.md`: Decision 055 amending 044's promotion line; 044's status line notes the amendment
 - `CLAUDE.md` Work Item Workflow "Branches" line: hotfix back-merge into `dev` only
 
 **Out of scope**
@@ -68,14 +68,14 @@ This task changes documented commands only; the project's test suites (Vitest, P
 | T2 | R1 | `promote refuses a diverged target` | same | Commit directly on `stage`, run dev→stage promotion: non-zero exit, output contains "Not possible to fast-forward", `stage` SHA unchanged, nothing pushed |
 | T3 | R3 | `hotfix then promote stays fast-forward` | same | Follow the hotfix steps verbatim (branch from `main`, merge into `main`, merge `main` into `dev`), then both promotions: every command exits 0 and the three branches end on one SHA containing the hotfix commit |
 | T4 | R1 | `today's branches fast-forward` | run against the real repo, read-only | `git merge-base --is-ancestor origin/stage origin/dev` and `git merge-base --is-ancestor origin/main origin/stage` both exit 0 |
-| T5 | R4, R5 | doc review | `docs/DEPLOYMENT.md`, `docs/DECISIONS.md`, `CLAUDE.md` | Undo note present and uses no `--force`; Decision 047 has Context/Decision/Alternatives/Consequences; 044 status amended; `CLAUDE.md` and DEPLOYMENT.md hotfix wording agree; `grep -n "no-ff" docs/DEPLOYMENT.md` shows only the `wi release` mention, if any |
+| T5 | R4, R5 | doc review | `docs/DEPLOYMENT.md`, `docs/DECISIONS.md`, `CLAUDE.md` | Undo note present and uses no `--force`; Decision 055 has Context/Decision/Alternatives/Consequences; 044 status amended; `CLAUDE.md` and DEPLOYMENT.md hotfix wording agree; `grep -n "no-ff" docs/DEPLOYMENT.md` shows only the `wi release` mention, if any |
 
 **Not unit testable:** R1–R3 are git procedures; T1–T3 run them in a throwaway repo instead. R4–R5 are checked by reading (T5).
 
 ## Implementation plan
 
-1. [ ] Promotion and hotfix commands: write and run the throwaway-repo check against the proposed commands, then change DEPLOYMENT.md § Branches to `--ff-only` promotions, `main`→`dev`-only hotfix back-merge, the undo note, and line 49's tag placement (tags now sit on each item's last commit) — touches `docs/DEPLOYMENT.md` — tests T1, T2, T3, T4
-2. [ ] Record the decision: Decision 047 (promotions fast-forward; alternatives `--no-ff` and tag deploys from one branch), 044's status line, and the `CLAUDE.md` Branches line — touches `docs/DECISIONS.md`, `CLAUDE.md` — tests T5
+1. [x] Promotion and hotfix commands: write and run the throwaway-repo check against the proposed commands, then change DEPLOYMENT.md § Branches to `--ff-only` promotions, `main`→`dev`-only hotfix back-merge, the undo note, and line 49's tag placement (tags now sit on each item's last commit) — touches `docs/DEPLOYMENT.md` — tests T1, T2, T3, T4
+2. [x] Record the decision: Decision 055 (promotions fast-forward; alternatives `--no-ff` and tag deploys from one branch), 044's status line, and the `CLAUDE.md` Branches line — touches `docs/DECISIONS.md`, `CLAUDE.md` — tests T5
 
 **Must not change:** `scripts/deploy.ts`; `wi` configuration (`base_branch: dev`); tags already pushed; existing history.
 
@@ -94,3 +94,4 @@ This task changes documented commands only; the project's test suites (Vitest, P
 - 2026-10-11 — Planned.
 - 2026-10-13 — Plan approved.
 - 2026-10-13 — Started on branch task/ff-promotions from origin/dev.
+- 2026-10-13 — Decision numbered 055, not 047: 047 was used by palettes after this plan was written. T1-T3 pass on the new commands and fail on the old --no-ff ones; T4 passes. T5 doc review done.
