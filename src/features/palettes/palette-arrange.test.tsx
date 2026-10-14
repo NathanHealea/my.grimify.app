@@ -1,13 +1,15 @@
 import { useUser } from "@clerk/react";
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ToastProvider } from "@/features/feedback/toast-provider";
 import { catalogOf, catalogPaint } from "@/test/catalog-fixture";
 import { renderRoute } from "@/test/render-route";
 
 import { api } from "../../../convex/_generated/api";
+import { usePaletteMoves } from "./palette-arrange";
 import { OFFLINE_EDIT_NOTE } from "./palette-name-sheet";
 
 const red = catalogPaint({ brandId: "citadel", name: "Mephiston Red", hex: "#9B130B" });
@@ -193,9 +195,19 @@ describe("Arrange mode", () => {
       within(trim).getByRole("button", { name: "Drag Mephiston Red" }),
     ];
     expect(groupHandles.filter(isDisabled)).toHaveLength(0);
+    const moveButtons = () => [
+      within(list).getByRole("button", { name: "Move Mephiston Red" }),
+      within(list).getByRole("button", { name: "Move Blood Red" }),
+      within(trim).getByRole("button", { name: "Move group Trim" }),
+      within(trim).getByRole("button", { name: "Move Mephiston Red" }),
+    ];
+    expect(moveButtons().filter(isDisabled)).toHaveLength(0);
 
     onLine.mockReturnValue(false);
     act(() => void window.dispatchEvent(new Event("offline")));
+    expect(moveButtons().filter((button) => !isDisabled(button))).toHaveLength(0);
+    // Done stays usable offline so the user can leave arrange mode.
+    expect(within(main).getByRole("button", { name: "Done" })).toBeEnabled();
     expect(isDisabled(within(list).getByRole("button", { name: "Drag Mephiston Red" }))).toBe(true);
     expect(isDisabled(within(list).getByRole("button", { name: "Drag Blood Red" }))).toBe(true);
     expect(isDisabled(within(trim).getByRole("button", { name: "Drag group Trim" }))).toBe(true);
@@ -295,6 +307,104 @@ describe("Arrange mode", () => {
     expect(movePaint).toHaveBeenCalledOnce();
     expect(
       await screen.findByText("Couldn't move Mephiston Red. Check your connection and try again."),
+    ).toBeVisible();
+  });
+
+  it("sends every drop to its mutation and shows it at once", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const cached = twoGroups();
+    type Updater = (store: unknown, args: Record<string, unknown>) => void;
+    const calls: Record<string, { fn: ReturnType<typeof vi.fn>; updater?: Updater }> = {};
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
+      const entry = (calls[nameOf(ref)] ??= {
+        fn: vi.fn(() =>
+          nameOf(ref) === nameOf(api.palettes.moveGroup)
+            ? Promise.reject(new Error("network down"))
+            : Promise.resolve(null),
+        ),
+      });
+      return Object.assign(entry.fn, {
+        withOptimisticUpdate: (updater: Updater) => {
+          entry.updater = updater;
+          return entry.fn;
+        },
+      });
+    }) as unknown as typeof useMutation);
+    const { result } = renderHook(
+      () => usePaletteMoves(cached as never, (paintId) => (paintId === red.id ? red.name : "?")),
+      { wrapper: ToastProvider },
+    );
+    const shown = (mutation: unknown) => {
+      const { fn, updater } = calls[nameOf(mutation)];
+      const store = { getQuery: vi.fn(() => cached), setQuery: vi.fn(), getAllQueries: vi.fn() };
+      updater!(store, fn.mock.lastCall![0] as Record<string, unknown>);
+      return store.setQuery.mock.lastCall![2] as ReturnType<typeof twoGroups>;
+    };
+
+    act(() => result.current({ kind: "movePaint", paintId: red.id, toIndex: 1 }));
+    expect(calls[nameOf(api.palettes.movePaint)].fn).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      paintId: red.id,
+      toIndex: 1,
+    });
+    expect(shown(api.palettes.movePaint).paintIds).toEqual([vallejo.id, red.id]);
+
+    act(() =>
+      result.current({
+        kind: "moveGroupPaint",
+        groupId: "group-trim",
+        paintId: vallejo.id,
+        toIndex: 0,
+      }),
+    );
+    expect(shown(api.palettes.moveGroupPaint).groups[0].paintIds).toEqual([vallejo.id, red.id]);
+
+    act(() =>
+      result.current({
+        kind: "addPaintToGroup",
+        groupId: "group-highlights",
+        paintId: red.id,
+        toIndex: 0,
+      }),
+    );
+    expect(calls[nameOf(api.palettes.addPaintToGroup)].fn).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      groupId: "group-highlights",
+      paintId: red.id,
+      toIndex: 0,
+    });
+    expect(shown(api.palettes.addPaintToGroup).groups[1].paintIds).toEqual([red.id]);
+
+    act(() =>
+      result.current({
+        kind: "movePaintToGroup",
+        fromGroupId: "group-trim",
+        toGroupId: "group-highlights",
+        paintId: vallejo.id,
+        toIndex: 0,
+      }),
+    );
+    expect(calls[nameOf(api.palettes.movePaintToGroup)].fn).toHaveBeenCalledExactlyOnceWith({
+      paletteId: PALETTE_ID,
+      fromGroupId: "group-trim",
+      toGroupId: "group-highlights",
+      paintId: vallejo.id,
+      toIndex: 0,
+    });
+    expect(shown(api.palettes.movePaintToGroup).groups).toEqual([
+      { id: "group-trim", name: "Trim", paintIds: [red.id] },
+      { id: "group-highlights", name: "Highlights", paintIds: [vallejo.id] },
+    ]);
+
+    act(() => result.current({ kind: "moveGroup", groupId: "group-highlights", toIndex: 0 }));
+    expect(shown(api.palettes.moveGroup).groups.map((g) => g.id)).toEqual([
+      "group-highlights",
+      "group-trim",
+    ]);
+    expect(
+      await screen.findByText(
+        "Couldn't move group Highlights. Check your connection and try again.",
+      ),
     ).toBeVisible();
   });
 });

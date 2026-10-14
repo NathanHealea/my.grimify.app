@@ -659,7 +659,12 @@ describe("palettes", () => {
 
     vi.setSystemTime(2_000);
     const move = (paintId: string, fromGroupId: string, toGroupId: string) =>
-      as.mutation(api.palettes.movePaintToGroup, { paletteId: id, paintId, fromGroupId, toGroupId });
+      as.mutation(api.palettes.movePaintToGroup, {
+        paletteId: id,
+        paintId,
+        fromGroupId,
+        toGroupId,
+      });
     expect(await move("p-2", "g-1", "g-2")).toBeNull();
     expect(await move("p-9", "g-1", "g-2")).toBeNull();
     expect(await move("p-1", "g-1", "g-1")).toBeNull();
@@ -1004,6 +1009,34 @@ describe("palettes", () => {
     });
     expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
       paintIds: ["p-1", "p-2", "p-3", "p-4"],
+      groups: [
+        { id: "g-1", name: "Armour", paintIds: ["p-4"] },
+        { id: "g-2", name: "Trim", paintIds: ["p-3", "p-1", "p-4", "p-2"] },
+      ],
+      updatedAt: 6_000,
+    });
+
+    vi.setSystemTime(7_000);
+    for (const toIndex of [-1, 1.5]) {
+      await expect(
+        as.mutation(api.palettes.addPaintToGroup, {
+          paletteId: id,
+          groupId: "g-1",
+          paintId: "p-1",
+          toIndex,
+        }),
+      ).rejects.toThrow("INVALID_INDEX");
+      await expect(
+        as.mutation(api.palettes.movePaintToGroup, {
+          paletteId: id,
+          paintId: "p-2",
+          fromGroupId: "g-2",
+          toGroupId: "g-1",
+          toIndex,
+        }),
+      ).rejects.toThrow("INVALID_INDEX");
+    }
+    expect(await t.run((ctx) => ctx.db.get(id))).toMatchObject({
       groups: [
         { id: "g-1", name: "Armour", paintIds: ["p-4"] },
         { id: "g-2", name: "Trim", paintIds: ["p-3", "p-1", "p-4", "p-2"] },
