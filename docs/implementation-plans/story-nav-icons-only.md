@@ -66,8 +66,8 @@ On phones (under 640px) the floating bottom nav shows only its four icons, each 
 
 ## Implementation plan
 
-1. [ ] Hide the tab labels visually under 640px and drop the under-360px icon rule; update the nav E2E checks — touches `src/components/app-shell.tsx`, `src/components/app-shell.css`, `src/components/app-shell.test.tsx`, `tests/e2e/nav.spec.ts` — tests T1, T2, T3
-2. [ ] Update docs — touches `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/app-shell-ui.md` — tests none (docs only)
+1. [x] Hide the tab labels visually under 640px and drop the under-360px icon rule; update the nav E2E checks — touches `src/components/app-shell.tsx`, `src/components/app-shell.css`, `src/components/app-shell.test.tsx`, `tests/e2e/nav.spec.ts` — tests T1, T2, T3
+2. [x] Update docs — touches `docs/DESIGN_SYSTEM.md`, `docs/DECISIONS.md`, `docs/features/app-shell-ui.md` — tests none (docs only)
 
 **Must not change:**
 - the tabs, their routes and order;
@@ -89,3 +89,4 @@ On phones (under 640px) the floating bottom nav shows only its four icons, each 
 - 2026-10-13 — Planned.
 - 2026-10-13 — Plan approved.
 - 2026-10-13 — Started on branch story/nav-icons-only from origin/dev.
+- 2026-10-13 — Step 1 also touches src/styles/tokens.css (--visually-hidden-size) because stylelint allows px only in tokens. nav.spec.ts ran locally: 7 passed, 1 skipped on iPhone 15 and Pixel 7; a first parallel run hit a one-off WebKit canvas InvalidStateError in computedColor that didn't recur (also passes on dev).
