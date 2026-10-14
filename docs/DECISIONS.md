@@ -915,7 +915,7 @@ Trade-off: a request for a missing hashed asset also gets `index.html` (200, HTM
 ## Decision 044 — Dev and stage environments, deployed by one command each
 
 Date: 2026-10-09
-Status: Accepted; promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only)
+Status: Accepted; promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only; tags now sit on each item's last commit)
 
 Context:
 Only `main` deployed, from Workers Builds, so nothing could be tried on real hosting with real sign-in before reaching users. A branch build would have pushed that branch's Convex functions to production (041). The owner wants `main ← stage ← dev ← work items`, hotfixes to `main`, dev and stage both deployed, and "a simple command for each deployment" with no web UI. Cloudflare's branch preview URLs are on `*.workers.dev`, where production Clerk keys don't work, and preview deployments in Convex expire.
