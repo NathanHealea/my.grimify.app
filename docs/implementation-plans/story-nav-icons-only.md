@@ -1,7 +1,7 @@
 ---
 type: story
 slug: nav-icons-only
-status: staged
+status: released
 branch: story/nav-icons-only
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/story-nav-icons-only
 created: 2026-10-13
@@ -10,7 +10,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.19.0
 review_approved: 2026-10-13
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.19.0
 ---
 
 # Icon-only nav on phones
@@ -92,3 +92,4 @@ On phones (under 640px) the floating bottom nav shows only its four icons, each 
 - 2026-10-13 — Step 1 also touches src/styles/tokens.css (--visually-hidden-size) because stylelint allows px only in tokens. nav.spec.ts ran locally: 7 passed, 1 skipped on iPhone 15 and Pixel 7; a first parallel run hit a one-off WebKit canvas InvalidStateError in computedColor that didn't recur (also passes on dev).
 - 2026-10-13 — Staged: verification passed; version 0.18.0 → 0.19.0; no changelog file.
 - 2026-10-13 — Review approved.
+- 2026-10-13 — Released 0.19.0 as v0.19.0.
