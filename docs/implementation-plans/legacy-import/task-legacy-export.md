@@ -2,13 +2,13 @@
 type: task
 epic: legacy-import    # removed by `wi new` when there is no parent epic
 slug: legacy-export
-status: in-progress
+status: staged
 branch: task/legacy-export
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/task-legacy-export
 created: 2026-10-17
 approved: 2026-10-17
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.19.7
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -111,3 +111,6 @@ Adds an admin-run script, `npm run legacy:export`, that reads every old Grimify 
 - 2026-10-17 — Started on branch task/legacy-export from origin/dev.
 - 2026-10-17 — Implemented steps 1-6. Deviations: added unmapped reason not-in-legacy-file (paints added in the old admin UI) with a T2 assertion; CLI takes the legacy JSON dir as a second argument and reads .env.legacy.local if present; refuses to overwrite an existing export; files written mode 600. Baseline build needs VITE_CONVEX_URL in the worktree (no .env.local); verified with a placeholder URL.
 - 2026-10-17 — Unverified: whether Supabase's new sb_secret_ keys accept Authorization: Bearer alongside apikey (T9 requires both headers); the legacy service-role JWT is sent the same way. Confirm on the first real run.
+- 2026-10-17 — Review cycle 1: fixed paging on short pages (MED), emails now from Supabase Auth confirmed addresses (MED), emoji cut, config hardening, privacy docs
+- 2026-10-17 — Review cycle 2 clean apart from LOWs; test audit: 6 tests added, auth mapping extracted and tested
+- 2026-10-17 — Staged: verification passed; version 0.19.6 → 0.19.7; no changelog file.
