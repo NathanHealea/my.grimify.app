@@ -1,4 +1,8 @@
 // @vitest-environment node
+import { mkdirSync, mkdtempSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { HASH_KEY_MIN_LENGTH, readConfig } from "./export-config.ts";
@@ -78,6 +82,30 @@ describe("readConfig validates the environment", () => {
     const env = { ...validEnv(), LEGACY_SUPABASE_URL: "https://example-project.supabase.test/" };
     expect(readConfig(env, OUT_DIR, REPO_ROOT).supabaseUrl).toBe(
       "https://example-project.supabase.test",
+    );
+  });
+});
+
+describe("readConfig hardening", () => {
+  it("rejects a non-https Supabase URL", () => {
+    const env = { ...validEnv(), LEGACY_SUPABASE_URL: "http://localhost:54321" };
+    expect(() => readConfig(env, OUT_DIR, REPO_ROOT)).toThrow("https://");
+  });
+
+  it("rejects a secret key with whitespace or control characters without echoing it", () => {
+    const env = { ...validEnv(), LEGACY_SUPABASE_SECRET_KEY: "sb_secret_abc\ndef" };
+    expect(() => readConfig(env, OUT_DIR, REPO_ROOT)).toThrow(/^(?!.*sb_secret_abc)/s);
+    expect(() => readConfig(env, OUT_DIR, REPO_ROOT)).toThrow("LEGACY_SUPABASE_SECRET_KEY");
+  });
+
+  it("refuses an output path that reaches the repo through a symlink", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "legacy-config-"));
+    const repo = join(scratch, "repo");
+    mkdirSync(join(repo, "out"), { recursive: true });
+    symlinkSync(join(repo, "out"), join(scratch, "link"));
+
+    expect(() => readConfig(validEnv(), join(scratch, "link", "export"), repo)).toThrow(
+      "outside the repository",
     );
   });
 });

@@ -1,4 +1,5 @@
-import { isAbsolute, relative, resolve } from "node:path";
+import { existsSync, realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 export type ExportConfig = {
   supabaseUrl: string;
@@ -15,13 +16,28 @@ function required(env: Record<string, string | undefined>, name: string): string
   return value;
 }
 
+// Resolves symlinks in the longest existing prefix, so a link can't hide that a path is in the repo.
+function realPath(path: string): string {
+  const absolute = resolve(path);
+  if (existsSync(absolute)) return realpathSync(absolute);
+  const parent = dirname(absolute);
+  return parent === absolute ? absolute : join(realPath(parent), basename(absolute));
+}
+
 export function readConfig(
   env: Record<string, string | undefined>,
   outDirArg: string | undefined,
   repoRoot: string,
 ): ExportConfig {
   const supabaseUrl = required(env, "LEGACY_SUPABASE_URL").replace(/\/+$/, "");
+  if (!supabaseUrl.startsWith("https://")) {
+    throw new Error("LEGACY_SUPABASE_URL must be an https:// URL");
+  }
   const secretKey = required(env, "LEGACY_SUPABASE_SECRET_KEY");
+  // Checked here so a malformed key fails without fetch echoing it in a header error.
+  if (!/^[\x21-\x7e]+$/.test(secretKey)) {
+    throw new Error("LEGACY_SUPABASE_SECRET_KEY has spaces or control characters");
+  }
   const hashKey = required(env, "LEGACY_IMPORT_HASH_KEY");
   if (hashKey.length < HASH_KEY_MIN_LENGTH) {
     throw new Error(`LEGACY_IMPORT_HASH_KEY must be at least ${HASH_KEY_MIN_LENGTH} characters`);
@@ -29,7 +45,7 @@ export function readConfig(
   if (!outDirArg) throw new Error("usage: npm run legacy:export -- <output-dir>");
 
   const outDir = resolve(outDirArg);
-  const fromRepo = relative(resolve(repoRoot), outDir);
+  const fromRepo = relative(realPath(repoRoot), realPath(outDir));
   if (fromRepo === "" || (!fromRepo.startsWith("..") && !isAbsolute(fromRepo))) {
     throw new Error(`The output directory must be outside the repository: ${outDir}`);
   }
