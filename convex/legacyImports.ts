@@ -1,13 +1,16 @@
 import { ConvexError, v } from "convex/values";
 
+import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { findUser } from "./lib/auth";
 import { cleanName, MAX_GROUPS, MAX_PAINTS, MAX_PALETTES, newGroupId } from "./palettes";
 import { legacyPaletteValidator } from "./schema";
 import { PAINT_ID } from "./userPaints";
+import { DELETE_BATCH } from "./users";
 
 const EMAIL_HASH = /^[0-9a-f]{64}$/;
+const RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
 
 type LegacyPalette = typeof legacyPaletteValidator.type;
 
@@ -200,5 +203,31 @@ export const claim = internalMutation({
       palettesAdded: added.length,
       palettesSkipped: staged.palettes.length - added.length + staged.palettesOmitted,
     };
+  },
+});
+
+/**
+ * Deletes staged rows loaded, and claim records made, more than 180 days ago (DECISIONS 058), at most
+ * DELETE_BATCH per transaction, scheduling itself again while any are left. Run daily by crons.ts.
+ */
+export const purgeExpired = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const cutoff = Date.now() - RETENTION_MS;
+    const imports = await ctx.db
+      .query("legacyImports")
+      .withIndex("by_loadedAt", (q) => q.lt("loadedAt", cutoff))
+      .take(DELETE_BATCH);
+    for (const row of imports) await ctx.db.delete("legacyImports", row._id);
+    const claims = await ctx.db
+      .query("legacyImportClaims")
+      .withIndex("by_claimedAt", (q) => q.lt("claimedAt", cutoff))
+      .take(DELETE_BATCH - imports.length);
+    for (const row of claims) await ctx.db.delete("legacyImportClaims", row._id);
+    if (imports.length + claims.length === DELETE_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.legacyImports.purgeExpired, {});
+    }
+    return null;
   },
 });

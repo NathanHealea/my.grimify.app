@@ -320,3 +320,76 @@ describe("legacyImports.stageChunk", () => {
     expect(all[0].complete).toBe(true);
   });
 });
+
+describe("legacyImports.purgeExpired", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const NOW = 1_800_000_000_000;
+
+  function hashOf(i: number) {
+    return i.toString(16).padStart(64, "0");
+  }
+
+  function stagedRow(emailHash: string, loadedAt: number, complete: boolean) {
+    return { emailHash, ownedPaintIds: [], palettes: [], palettesOmitted: 0, complete, loadedAt };
+  }
+
+  it("purgeExpired deletes only rows past 180 days", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("legacyImports", stagedRow(hashOf(1), NOW - 181 * DAY, true));
+      await ctx.db.insert("legacyImports", stagedRow(hashOf(2), NOW - 181 * DAY, false));
+      await ctx.db.insert("legacyImports", stagedRow(hashOf(3), NOW - 180 * DAY, true));
+      await ctx.db.insert("legacyImports", stagedRow(hashOf(4), NOW - 179 * DAY, false));
+      await ctx.db.insert("legacyImportClaims", {
+        emailHash: hashOf(5),
+        claimedAt: NOW - 181 * DAY,
+      });
+      await ctx.db.insert("legacyImportClaims", {
+        emailHash: hashOf(6),
+        claimedAt: NOW - 180 * DAY,
+      });
+      await ctx.db.insert("legacyImportClaims", {
+        emailHash: hashOf(7),
+        claimedAt: NOW - 179 * DAY,
+      });
+    });
+
+    expect(await t.mutation(internal.legacyImports.purgeExpired, {})).toBeNull();
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    expect((await rows(t)).map((r) => r.emailHash)).toEqual([hashOf(3), hashOf(4)]);
+    const claims = await t.run((ctx) => ctx.db.query("legacyImportClaims").collect());
+    expect(claims.map((c) => c.emailHash)).toEqual([hashOf(6), hashOf(7)]);
+  });
+
+  it("purgeExpired works in batches", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 600; i++) {
+        await ctx.db.insert("legacyImports", stagedRow(hashOf(i), NOW - 200 * DAY, i % 2 === 0));
+        await ctx.db.insert("legacyImportClaims", {
+          emailHash: hashOf(600 + i),
+          claimedAt: NOW - 200 * DAY,
+        });
+      }
+      await ctx.db.insert("legacyImports", stagedRow(hashOf(5_000), NOW - DAY, true));
+    });
+    const countAll = () =>
+      t.run(async (ctx) => {
+        const imports = await ctx.db.query("legacyImports").collect();
+        const claims = await ctx.db.query("legacyImportClaims").collect();
+        return imports.length + claims.length;
+      });
+
+    await t.mutation(internal.legacyImports.purgeExpired, {});
+    expect(await countAll()).toBe(1_201 - 500);
+
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(await countAll()).toBe(1);
+    expect((await rows(t)).map((r) => r.emailHash)).toEqual([hashOf(5_000)]);
+  });
+});
