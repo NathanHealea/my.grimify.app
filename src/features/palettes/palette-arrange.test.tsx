@@ -331,6 +331,16 @@ describe("Arrange mode", () => {
     expect(within(highlights()).queryByText("No paints in this group yet")).toBeNull();
     expect(within(trim()).getByRole("heading", { name: "Trim" })).toBeVisible();
     expect(within(highlights()).getByRole("heading", { name: "Highlights" })).toBeVisible();
+
+    fireEvent.keyDown(handle, { code: "Escape", key: "Escape" });
+    await within(trim()).findByRole("button", { name: "Drag Mephiston Red" });
+    const other = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    other.focus();
+    fireEvent.keyDown(other, { code: "Space", key: " " });
+
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    expect(within(trim()).queryByRole("button", { name: "Drag Mephiston Red" })).toBeNull();
+    expect(within(trim()).queryByRole("button", { name: "Drag Blood Red" })).toBeNull();
   });
 
   it("expands the groups again when a group drag is dropped or cancelled", async () => {
@@ -341,6 +351,7 @@ describe("Arrange mode", () => {
     await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
     fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
     const trim = () => screen.getByRole("region", { name: "Trim" });
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
     const handle = () => within(trim()).getByRole("button", { name: "Drag group Trim" });
 
     for (const end of [
@@ -357,6 +368,7 @@ describe("Arrange mode", () => {
         await within(trim()).findByRole("button", { name: "Drag Mephiston Red" }),
       ).toBeVisible();
       expect(within(trim()).getByRole("button", { name: "Drag Blood Red" })).toBeVisible();
+      expect(within(highlights()).getByText("No paints in this group yet")).toBeVisible();
     }
   });
 
