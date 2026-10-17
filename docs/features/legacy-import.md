@@ -1,11 +1,11 @@
 # Legacy Import
 
 > Covers bringing old Grimify (the Supabase app in `../grimify.app`) owned paints and palettes into this app.
-> Plan: [epic-legacy-import.md](../implementation-plans/legacy-import/epic-legacy-import.md). Env vars: [ENVIRONMENT.md](../ENVIRONMENT.md). Rationale: [DECISIONS 056, 057, 058](../DECISIONS.md).
+> Plan: [epic-legacy-import.md](../implementation-plans/legacy-import/epic-legacy-import.md). Env vars: [ENVIRONMENT.md](../ENVIRONMENT.md). Rationale: [DECISIONS 056, 057, 058, 059](../DECISIONS.md). Flow: [UX_FLOWS Flow 11](../UX_FLOWS.md).
 
 ## TL;DR
 
-- Built so far: **the export and the loader**. Claiming on sign-in and the purge are later work items.
+- Built so far: **the export, the loader and claiming on sign-in**. The purge is a later work item.
 - `npm run legacy:export -- <output-dir> <grimify>/scripts/data` reads the old project **read-only** and writes **`export.json`** and **`report.json`**.
 - Each old user becomes one record keyed by **`emailHash`**, an **HMAC-SHA256 of the normalized email** with `LEGACY_IMPORT_HASH_KEY`. The output holds **no email and no old UUID**.
 - Old paints map to catalog IDs with **the same derivation as the catalog import**. Paints that don't map are **left out and listed in the report**.
@@ -13,6 +13,7 @@
 - Emails come from **Supabase Auth's admin API, confirmed addresses only**, not from `profiles.email`, which any old user could edit on their own row.
 - `npm run legacy:load -- <env> <export.json>` stages the export in that environment's Convex deployment, in **`legacyImports`**, one row per `emailHash`. Loading again gives the same rows and **skips hashes already claimed**.
 - The output directory **must be outside the repository**. **Only production gets real data**: dev and stage get a made-up export hashed with their own key.
+- After sign-in, a user whose **verified** email hashes to a staged row is offered **Import**, **Not now** or **Discard**. The server reads the addresses from **Clerk's Backend API** (`CLERK_SECRET_KEY`); Import or Discard deletes the row and records the hash, so it **can't be claimed twice**.
 - After the production load, **delete the export and `.env.legacy.local`** (or rotate the old project's secret key). Unclaimed staged data is purged 180 days after loading.
 
 ## Where the code lives
@@ -27,7 +28,11 @@
 | `scripts/legacy/transform.ts` | `transform`: old rows → export records and report |
 | `scripts/legacy-load.ts` | The loader CLI: environment, deploy key, runs `npx convex run` |
 | `scripts/legacy/load.ts` | `readExport`, `chunkRecord` (under 100 KB per call), `loaderEnv`, `loadExport` |
-| `convex/legacyImports.ts` | `stageChunk`: the internal mutation each chunk is sent to |
+| `convex/legacyImports.ts` | `stageChunk`: the internal mutation each chunk is sent to; `summaryForHashes` and `claim` for the claim |
+| `convex/legacyClaim.ts` | `findMine`, `resolveMine`: the public actions the prompt calls |
+| `convex/lib/clerk.ts` | `verifiedEmails`: a Clerk user's verified addresses from the Backend API |
+| `convex/lib/emailHash.ts` | `hashEmail`: the export's HMAC with Web Crypto, for the Convex runtime |
+| `src/features/legacy-import/legacy-import-prompt.tsx` | The prompt sheet, mounted once in `AppProviders` |
 | `scripts/catalog/import-legacy.ts` | `legacyPaintId`, shared with `convertBrand` |
 
 ## Running the export
@@ -92,7 +97,25 @@ The command stops with exit code 2, before any call, when the environment is unk
 
 To debug a failure, load the same record from a made-up export into dev, or run `stageChunk` from the Convex dashboard on dev.
 
+## Claiming on sign-in
+
+Prerequisites on the deployment: the staged data from its own export, `LEGACY_IMPORT_HASH_KEY` set to the key that export was hashed with, and `CLERK_SECRET_KEY` set to the secret key of the Clerk instance its users sign in with (ENVIRONMENT.md). **Both are set only on production.** Develop and stage leave them unset, so the feature is off there: they sign in with the production Clerk instance, and its `sk_live_` key can read and change every production user, which is too broad for a non-production deployment. Without the hash key nobody sees a prompt, so the code can ship ahead of the data.
+
+1. Once per signed-in session, after `users.me` is non-null, the app calls `legacyClaim.findMine`.
+2. The action takes the Clerk user ID from the session (`identity.subject`), reads `GET https://api.clerk.com/v1/users/{id}`, keeps addresses whose `verification.status` is `verified` by `email_code` or `email_link` (`verification.strategy`; an OAuth or SAML provider's address doesn't count), and hashes them like the export (`hashEmail`, Web Crypto).
+3. `legacyImports.summaryForHashes` returns the counts for the first **complete** staged row matching a hash, or null. Unverified addresses, incomplete loads and users without a `users` row get null.
+4. The sheet shows the counts (palettes include those the export counted as omitted). Import or Discard calls `legacyClaim.resolveMine`, which repeats the lookup and runs `legacyImports.claim` in one transaction:
+   - Deletes the staged row and inserts the hash into `legacyImportClaims`, so a second call from any account fails with `LEGACY_IMPORT_NOT_FOUND` and a later load skips it.
+   - Import: each staged paint becomes `owned: true` with `updatedAt` at the claim time (an existing row with a later `updatedAt` keeps it), keeping `wishlisted` and `favorite`; paints already owned are left alone. Staged palettes are added oldest first, with new group IDs, until the user has 50; the rest, plus `palettesOmitted`, come back as `palettesSkipped`.
+   - Discard: nothing is written to the user's data.
+5. The outcome, or a failure, is shown inside the sheet in a `role="status"` region that's always mounted, not as a toast: while the sheet is open, Radix Dialog hides the rest of the page, toasts included, from assistive tech. After a success the sheet shows the outcome and a **Done** button. `LEGACY_IMPORT_NOT_FOUND` (another tab or device resolved it first) gets the same result step with "Your old data was already brought over or discarded." rather than a retryable error.
+
+If an account has several verified addresses with staged data, one is offered per session, in Clerk's order. A user whose new account uses a different address can't claim. Nothing about the email is stored or logged; a failed Clerk call throws with its HTTP status only.
+
+To try it end to end, use a personal `npx convex dev` deployment signed in through the Clerk dev instance: set its `CLERK_SECRET_KEY` to the dev instance's `sk_test_` key and its own `LEGACY_IMPORT_HASH_KEY`, and stage a made-up export whose record is hashed from an address you can sign in with.
+
 ## Relations to other features
 
 - **Catalog**: reads `data/catalog/*.json` for valid IDs and shares the ID derivation with the catalog import ([catalog/data-pipeline.md](catalog/data-pipeline.md)).
-- **Palettes**: the caps match `convex/palettes.ts` ([palettes.md](palettes.md)).
+- **Palettes**: the caps match `convex/palettes.ts` ([palettes.md](palettes.md)); imported palettes get group IDs from its `newGroupId`.
+- **Collection**: imported paints are ordinary `userPaints` rows, so the last-write-wins rule (DECISIONS 010) applies from the claim time on.

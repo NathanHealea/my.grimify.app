@@ -1289,3 +1289,28 @@ Alternatives:
 Consequences:
 Positive: no public surface; the loader uses the deploy access the owner already has.
 Trade-off: Convex now holds pseudonymous data about people who haven't joined, until they claim or the purge runs (180 days). A load takes about a second per chunk.
+
+---
+
+## Decision 059 — Read verified email addresses from Clerk's Backend API to claim old data
+
+Date: 2026-10-17
+Status: Accepted (work item `legacy-claim`, epic `legacy-import`)
+
+Context:
+A staged import is claimed by whoever signs in with a verified email that hashes to its `emailHash` (056). The Clerk session token Convex receives carries no email (claims on the dev instance: `aud, exp, fva, iat, iss, nbf, sid, sts, sub, v`), so `ctx.auth.getUserIdentity()` can't supply one. Convex keeps no email (028).
+
+Decision:
+- The public actions `legacyClaim.findMine` and `legacyClaim.resolveMine` read the caller's email addresses from `GET https://api.clerk.com/v1/users/{identity.subject}` with `CLERK_SECRET_KEY`, keep only those whose `verification.status` is `verified` and whose `verification.strategy` is `email_code` or `email_link` (proved by email; sign-in is email code only, 027; an address asserted by an OAuth or SAML provider doesn't count), hash them with `LEGACY_IMPORT_HASH_KEY` (Web Crypto, same value as the export script) and pass the hashes with the caller's `tokenIdentifier` to internal functions. No address is stored or logged, and nothing about the user comes from the client.
+- The first complete staged row matching any verified address, in Clerk's order, is the one offered and claimed.
+- Without `LEGACY_IMPORT_HASH_KEY` the feature is off: `findMine` returns null and `resolveMine` throws `LEGACY_IMPORT_NOT_FOUND`. With the hash key but no `CLERK_SECRET_KEY`, both throw, because that's a broken setup rather than a choice.
+- The app calls `findMine` once per signed-in session, after the `users` row exists.
+- A claimed paint's `updatedAt` is the server's claim time, or the row's own `updatedAt` when that's later, so a claim never moves a row backwards and lets an older queued device write win. Trade-off: every other write is stamped by the device's clock (010) and the claim by the server's, so a device whose clock runs ahead can still stamp an edit made before the claim later than the claim; that edit wins, and the paint may stay unowned until the user marks it.
+
+Alternatives:
+- Add `email` and a verified flag to the Clerk session token (Sessions page shortcodes): no outbound call, but a dashboard change on every Clerk instance that the repo can't record or test, and every Convex call would carry the email
+- Ask the browser for the email and send it up: the client could claim anyone's data
+
+Consequences:
+Positive: verification comes from Clerk's own record; no Clerk dashboard change.
+Trade-off: the deployment holds `CLERK_SECRET_KEY`, which can read and change every Clerk user. So it and `LEGACY_IMPORT_HASH_KEY` are set only on the production deployment: develop and stage sign in with the production Clerk instance, so their key would be the production `sk_live_` key, too broad for non-production. The feature is off there, and the prompt is tested end to end on a personal `npx convex dev` deployment with the Clerk dev instance and a made-up export. Each new session of a signed-in user makes one call to Clerk. A Clerk outage only means no prompt that session.

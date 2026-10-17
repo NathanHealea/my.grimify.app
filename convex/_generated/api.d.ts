@@ -8,8 +8,11 @@
  * @module
  */
 
+import type * as legacyClaim from "../legacyClaim.js";
 import type * as legacyImports from "../legacyImports.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_clerk from "../lib/clerk.js";
+import type * as lib_emailHash from "../lib/emailHash.js";
 import type * as palettes from "../palettes.js";
 import type * as userPaints from "../userPaints.js";
 import type * as users from "../users.js";
@@ -21,8 +24,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  legacyClaim: typeof legacyClaim;
   legacyImports: typeof legacyImports;
   "lib/auth": typeof lib_auth;
+  "lib/clerk": typeof lib_clerk;
+  "lib/emailHash": typeof lib_emailHash;
   palettes: typeof palettes;
   userPaints: typeof userPaints;
   users: typeof users;

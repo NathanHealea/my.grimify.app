@@ -1,0 +1,13 @@
+/* Three buttons don't fit one row at 320px with 200% text, so they wrap rather than scroll sideways. */
+.legacy-import-prompt__footer {
+  flex-wrap: wrap;
+}
+
+/* Always mounted so screen readers announce the outcome when its text is set. */
+.legacy-import-prompt__status {
+  color: var(--color-text);
+
+  &:not(:empty) {
+    margin-top: var(--space-3);
+  }
+}
