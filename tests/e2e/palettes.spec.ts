@@ -311,3 +311,111 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
     .click();
   await expect(page).toHaveURL(/\/palettes$/);
 });
+
+test("keeps a dragged group under the pointer when picking it up shortens the page", async ({
+  page,
+}, info) => {
+  const name = `E2E group drag ${info.project.name} ${Date.now()}`;
+  const main = page.getByRole("main");
+  const paintNames = ["Mephiston Red", "Evil Sunz Scarlet", "Abaddon Black", "Macragge Blue"];
+
+  await page.goto("/palettes");
+  await clerk.signIn({ page, emailAddress: E2E_EMAIL });
+  await page.goto("/palettes");
+  await main.getByRole("button", { name: "New palette" }).click();
+  const createSheet = page.getByRole("dialog", { name: "New palette" });
+  await createSheet.getByLabel("Palette name").fill(name);
+  await createSheet.getByRole("button", { name: "Create" }).click();
+  await expect(page).toHaveURL(/\/palettes\/[^/]+$/);
+  const paletteUrl = page.url();
+
+  await page.goto("/paints");
+  await main.getByRole("button", { name: "Add to palette" }).click();
+  const search = main.getByRole("searchbox", { name: "Search paints" });
+  for (const paint of paintNames) {
+    await search.fill(paint.toLowerCase());
+    await main
+      .getByRole("checkbox", { name: `Select ${paint}` })
+      .first()
+      .check();
+  }
+  const bar = main.getByRole("region", { name: "Selection" });
+  await expect(bar.getByRole("status").first()).toHaveText("4 selected");
+  await bar.getByRole("button", { name: "Add to palette" }).click();
+  await page
+    .getByRole("dialog", { name: "Add to palette" })
+    .getByRole("button", { name: new RegExp(`^${name}`) })
+    .click();
+  await expect(page.getByText(`Added 4 paints to ${name}`)).toBeVisible();
+
+  await page.goto(paletteUrl);
+  for (const group of ["Alpha", "Beta", "Gamma"]) {
+    await main.getByRole("button", { name: "New group" }).click();
+    const sheet = page.getByRole("dialog", { name: "New group" });
+    await sheet.getByLabel("Group name").fill(group);
+    await sheet.getByRole("button", { name: "Create" }).click();
+    await expect(main.getByRole("heading", { level: 2, name: group })).toBeFocused();
+  }
+  for (const paint of paintNames) {
+    await main.getByRole("button", { name: `Groups for ${paint}` }).click();
+    const membership = page.getByRole("dialog", { name: `Groups for ${paint}` });
+    for (const group of ["Alpha", "Beta"]) {
+      await membership.getByRole("checkbox", { name: group }).check();
+      await expect(membership.getByRole("checkbox", { name: group })).toBeChecked();
+    }
+    await membership.getByRole("button", { name: "Done" }).click();
+  }
+  const alpha = main.getByRole("region", { name: "Alpha" });
+  const gamma = main.getByRole("region", { name: "Gamma" });
+  const groupHeadings = main.getByRole("heading", { level: 2 });
+  await expect(alpha.getByRole("listitem")).toHaveCount(4);
+  await expect(main.getByRole("region", { name: "Beta" }).getByRole("listitem")).toHaveCount(4);
+
+  await main.getByRole("button", { name: "Arrange" }).click();
+  await expect(main.getByRole("button", { name: "Done" })).toBeVisible();
+
+  // Scrolled this far, collapsing the groups shortens the page below the scroll position, so the browser clamps it.
+  // Alpha sits just under the sticky app header, which would otherwise take the press.
+  const header = await page.getByRole("banner").boundingBox();
+  if (!header) throw new Error("The app header is not visible");
+  await alpha.evaluate((section, headerBottom) => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    window.scrollBy(0, Math.min(0, section.getBoundingClientRect().top - headerBottom));
+  }, header.y + header.height);
+  const handle = alpha.getByRole("button", { name: "Drag group Alpha" });
+  const from = await handle.boundingBox();
+  const groupBox = await alpha.boundingBox();
+  if (!from || !groupBox) throw new Error("Alpha is not visible");
+  const x = from.x + from.width / 2;
+  const pressY = from.y + from.height / 2;
+  const grabOffset = pressY - groupBox.y;
+  // The preview only moves on pointer moves after the 5px activation, so the last move must come after it.
+  const pointerY = pressY + 20;
+
+  await page.mouse.move(x, pressY);
+  await page.mouse.down();
+  await page.mouse.move(x, pressY + 10, { steps: 2 });
+  await page.mouse.move(x, pointerY, { steps: 2 });
+  const preview = page.locator(".drag-preview");
+  await expect(preview).toBeVisible();
+  await expect
+    .poll(async () =>
+      Math.abs(((await preview.boundingBox())?.y ?? Infinity) - (pointerY - grabOffset)),
+    )
+    .toBeLessThanOrEqual(2);
+
+  const to = await gamma.boundingBox();
+  if (!to) throw new Error("Gamma is not visible");
+  await page.mouse.move(x, to.y + grabOffset, { steps: 15 });
+  await page.mouse.up();
+  await expect(groupHeadings).toHaveText(["All paints", "Beta", "Gamma", "Alpha"]);
+
+  await main.getByRole("button", { name: "Done" }).click();
+  await main.getByRole("button", { name: "Palette actions" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete palette" }).click();
+  await page
+    .getByRole("dialog", { name: `Delete "${name}"?` })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/palettes$/);
+});
