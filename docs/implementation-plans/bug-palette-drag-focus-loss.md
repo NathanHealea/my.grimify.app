@@ -8,7 +8,7 @@ created: 2026-10-16
 approved: 2026-10-16
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
 version: 0.19.3
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-16
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
 ---
@@ -93,3 +93,4 @@ Vitest + Testing Library in `src/features/palettes/palette-arrange.test.tsx`, us
 - 2026-10-16 — Started on branch bug/palette-drag-focus-loss from origin/dev.
 - 2026-10-16 — Review: T1 now also covers a focused Move button, and T3 a focused All paints row (main: ID), after mutation audit found both untested
 - 2026-10-16 — Staged: verification passed; version 0.19.2 → 0.19.3; no changelog file.
+- 2026-10-16 — Review approved.
