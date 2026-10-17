@@ -182,6 +182,8 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
   const main = page.getByRole("main");
   const picker = page.getByRole("dialog", { name: "Add to palette" });
   const choose = () => picker.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  // dnd-kit ignores presses during its 250ms drop animation.
+  const dropSettled = () => expect(page.locator(".drag-preview")).toHaveCount(0);
   // dnd-kit's MouseSensor only starts after 5px of travel, and needs intermediate moves to track the pointer.
   const mouseDrag = async (
     handle: ReturnType<typeof page.locator>,
@@ -197,6 +199,7 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
     await page.mouse.move(startX, startY + 10, { steps: 2 });
     await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 });
     await page.mouse.up();
+    await dropSettled();
   };
 
   await page.goto("/palettes");
@@ -255,12 +258,18 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
   await expect(main.getByRole("button", { name: "Done" })).toBeVisible();
 
   await allPaints.getByRole("button", { name: "Drag Mephiston Red" }).focus();
+  const live = page.locator('[id^="DndLiveRegion"]');
   await page.keyboard.press("Space");
-  await page.keyboard.press("ArrowDown");
+  // The keyboard sensor starts listening a timer turn after pick-up (20ms on Chromium), so an early arrow is lost.
+  await expect(async () => {
+    if (/over position 1 of 3/.test((await live.textContent()) ?? "")) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(live).toHaveText(/over position 2 of 3 in All paints\./, { timeout: 500 });
+  }).toPass();
   await page.keyboard.press("Space");
-  await expect(page.locator('[id^="DndLiveRegion"]')).toHaveText(
-    /Dropped .* at position \d+ of \d+ in All paints\./,
-  );
+  await expect(live).toHaveText(/Dropped .* at position \d+ of \d+ in All paints\./);
+  await dropSettled();
   await expect(paints.nth(0)).toContainText("Evil Sunz Scarlet");
   await expect(paints.nth(1)).toContainText("Mephiston Red");
   await expect(paints.nth(2)).toContainText("Abaddon Black");
@@ -283,11 +292,15 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
   await expect(trim.getByRole("listitem").nth(0)).toContainText("Mephiston Red");
   await expect(trim.getByRole("listitem").nth(1)).toContainText("Evil Sunz Scarlet");
 
-  await trim.getByRole("button", { name: "Move group Trim" }).click();
-  await page
-    .getByRole("dialog", { name: "Move group Trim" })
-    .getByRole("button", { name: "Move up" })
-    .click();
+  // A drop that unmounts the dragged row skips the animation, so the 50ms click block can still swallow this click.
+  const moveSheet = page.getByRole("dialog", { name: "Move group Trim" });
+  await expect(async () => {
+    if (!(await moveSheet.isVisible())) {
+      await trim.getByRole("button", { name: "Move group Trim" }).click();
+    }
+    await expect(moveSheet).toBeVisible({ timeout: 500 });
+  }).toPass();
+  await moveSheet.getByRole("button", { name: "Move up" }).click();
   await expect(groupHeadings).toHaveText(["All paints", "Trim", "Armor"]);
 
   await main.getByRole("button", { name: "Done" }).click();
