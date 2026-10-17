@@ -114,6 +114,12 @@ const authUserSchema = z.object({
 async function readUsers(source: Source): Promise<OldData["profiles"]> {
   const users = z.array(authUserSchema).parse(await fetchAuthUsers(source));
   console.log(`Read ${users.length} auth users`);
+  // Pages shift if someone signs up or is deleted mid-export; a repeat means the read isn't a snapshot.
+  if (new Set(users.map((user) => user.id)).size !== users.length) {
+    throw new Error(
+      "An auth user appeared twice while paging; stop sign-ups on the old app and run again",
+    );
+  }
   return users.map((user) => ({
     id: user.id,
     email: user.email && user.email_confirmed_at ? user.email : null,
