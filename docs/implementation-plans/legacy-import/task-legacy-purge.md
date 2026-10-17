@@ -9,7 +9,7 @@ created: 2026-10-17
 approved: 2026-10-17
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.20.1
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-17
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -84,3 +84,4 @@ Adds a daily Convex cron that deletes staged old-Grimify imports and claim recor
 - 2026-10-17 — T3 asserted cron args as {}; convex stores interval args as [args], so the assertion was corrected to [{}]. api.d.ts gained the crons module by hand (codegen needs network).
 - 2026-10-17 — Reviews: LOW docs only (API layout, DECISIONS 058 retention trade-offs) fixed; test audit 11/13 killed, 2 harmless survivors
 - 2026-10-17 — Staged: verification passed; version 0.20.0 → 0.20.1; no changelog file.
+- 2026-10-17 — Review approved.
