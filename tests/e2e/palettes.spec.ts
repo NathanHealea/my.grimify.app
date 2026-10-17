@@ -182,7 +182,7 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
   const main = page.getByRole("main");
   const picker = page.getByRole("dialog", { name: "Add to palette" });
   const choose = () => picker.getByRole("button", { name: new RegExp(`^${name}`) }).click();
-  // dnd-kit ignores presses during its 250ms drop animation.
+  // dnd-kit's drop preview animates over the page for 250ms and can take or move the next press.
   const dropSettled = () => expect(page.locator(".drag-preview")).toHaveCount(0);
   // dnd-kit's MouseSensor only starts after 5px of travel, and needs intermediate moves to track the pointer.
   const mouseDrag = async (
@@ -261,12 +261,15 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
   const live = page.locator('[id^="DndLiveRegion"]');
   await page.keyboard.press("Space");
   // The keyboard sensor starts listening a timer turn after pick-up (20ms on Chromium), so an early arrow is lost.
+  let arrows = 0;
   await expect(async () => {
     if (/over position 1 of 3/.test((await live.textContent()) ?? "")) {
+      arrows++;
       await page.keyboard.press("ArrowDown");
     }
     await expect(live).toHaveText(/over position 2 of 3 in All paints\./, { timeout: 500 });
-  }).toPass();
+  }).toPass({ timeout: 5_000 });
+  expect(arrows, "ArrowDown presses before the move registered").toBeLessThanOrEqual(2);
   await page.keyboard.press("Space");
   await expect(live).toHaveText(/Dropped .* at position \d+ of \d+ in All paints\./);
   await dropSettled();
@@ -294,12 +297,15 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
 
   // A drop that unmounts the dragged row skips the animation, so the 50ms click block can still swallow this click.
   const moveSheet = page.getByRole("dialog", { name: "Move group Trim" });
+  let clicks = 0;
   await expect(async () => {
     if (!(await moveSheet.isVisible())) {
+      clicks++;
       await trim.getByRole("button", { name: "Move group Trim" }).click();
     }
     await expect(moveSheet).toBeVisible({ timeout: 500 });
-  }).toPass();
+  }).toPass({ timeout: 5_000 });
+  expect(clicks, "Move group Trim clicks before the sheet opened").toBeLessThanOrEqual(2);
   await moveSheet.getByRole("button", { name: "Move up" }).click();
   await expect(groupHeadings).toHaveText(["All paints", "Trim", "Armor"]);
 
