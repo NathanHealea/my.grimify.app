@@ -70,7 +70,8 @@
     "deploy:dev": "node scripts/deploy.ts dev",
     "deploy:stage": "node scripts/deploy.ts stage",
     "deploy:prod": "node scripts/deploy.ts prod",
-    "legacy:export": "node --env-file-if-exists=.env.legacy.local scripts/legacy-export.ts"
+    "legacy:export": "node --env-file-if-exists=.env.legacy.local scripts/legacy-export.ts",
+    "legacy:load": "node scripts/legacy-load.ts"
   },
   "allowScripts": {
     "fsevents@2.3.3": true
