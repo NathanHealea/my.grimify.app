@@ -8,7 +8,7 @@ created: 2026-10-16
 approved: 2026-10-16
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
 version: 0.19.4
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-16
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
 ---
@@ -104,3 +104,4 @@ Unit tests in `src/features/palettes/palette-arrange.test.tsx` (Vitest + Testing
 - 2026-10-16 — Review: shift fixed at first measure; comment/docs corrected (targets follow via the measured overlay, not a scroll adjustment); T4 asserts the page shortened below the scroll position (WebKit doesn't move the heading, so a heading-moved guard failed there)
 - 2026-10-16 — Test audit: added touch, mid-drag re-measure and two-drags tests; each kills its mutant. Remaining survivors (paint drags without the group check, a single reset removed) behave the same as the real code
 - 2026-10-16 — Staged: verification passed; version 0.19.3 → 0.19.4; no changelog file.
+- 2026-10-16 — Review approved.
