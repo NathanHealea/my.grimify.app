@@ -83,6 +83,15 @@ describe("legacy load", () => {
     expect(chunks.flatMap((chunk) => chunk.ownedPaintIds)).toEqual(record.ownedPaintIds);
     expect(chunks.flatMap((chunk) => chunk.palettes)).toEqual(record.palettes);
 
+    const longOwned = Array.from({ length: 2837 }, (_, i) => `${paintId(i)}-${"x".repeat(15)}`);
+    expect(Buffer.byteLength(JSON.stringify(longOwned))).toBeGreaterThan(130_000);
+    const ownedChunks = chunkRecord({ emailHash: HASH_A, ownedPaintIds: longOwned, palettes: [] });
+    expect(ownedChunks.length).toBeGreaterThan(1);
+    for (const chunk of ownedChunks) {
+      expect(Buffer.byteLength(JSON.stringify(chunk))).toBeLessThan(CHUNK_MAX_BYTES);
+    }
+    expect(ownedChunks.flatMap((chunk) => chunk.ownedPaintIds)).toEqual(longOwned);
+
     expect(chunkRecord({ emailHash: HASH_A, ownedPaintIds: [], palettes: [] })).toEqual([
       { emailHash: HASH_A, reset: true, done: true, ownedPaintIds: [], palettes: [] },
     ]);
@@ -200,6 +209,37 @@ describe("legacy load", () => {
       HASH_B,
       HASH_C,
     ]);
+
+    const exitedWithOutput = stubRunner([
+      { code: 0, stdout: 'A notice from the CLI\n"staged"\n' },
+      { code: 1, stdout: '"staged"\n' },
+    ]);
+    expect(await loadExport(records, env, exitedWithOutput.run)).toEqual({
+      staged: 2,
+      claimed: 0,
+      failed: 1,
+    });
+
+    const oversized: ExportRecord = {
+      emailHash: HASH_B,
+      ownedPaintIds: [],
+      palettes: [
+        {
+          name: "Everything",
+          paintIds: Array.from({ length: 2837 }, (_, i) => `${paintId(i)}-${"x".repeat(15)}`),
+          groups: [],
+        },
+      ],
+    };
+    const unsplittable = stubRunner([]);
+    expect(
+      await loadExport(
+        [smallRecord(HASH_A), oversized, smallRecord(HASH_C)],
+        env,
+        unsplittable.run,
+      ),
+    ).toEqual({ staged: 2, claimed: 0, failed: 1 });
+    expect(unsplittable.calls.map((call) => stagedArgs(call).emailHash)).toEqual([HASH_A, HASH_C]);
 
     const printed = [...log.mock.calls, ...error.mock.calls].flat().map(String).join("\n");
     for (const hash of [HASH_A, HASH_B, HASH_C]) expect(printed).not.toContain(hash);

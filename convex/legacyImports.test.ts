@@ -49,6 +49,7 @@ describe("legacyImports.stageChunk", () => {
         palettes: [palette("Ultramarines", ["citadel-base-macragge-blue"])],
       }),
     ).toBe("staged");
+    expect((await rows(t)).map((r) => r.complete)).toEqual([false]);
 
     vi.setSystemTime(2_000);
     expect(
