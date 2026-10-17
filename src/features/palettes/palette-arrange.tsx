@@ -10,6 +10,7 @@ import {
   DragOverlay,
   type DragStartEvent,
   KeyboardSensor,
+  type Modifier,
   MouseSensor,
   type Over,
   pointerWithin,
@@ -193,6 +194,15 @@ function reorderPlan(data: DragData, toIndex: number): DropPlan {
 const prefersReducedMotion = () =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
+/** Where a mouse or touch press happened; null for the keyboard. TouchEvent is missing on desktop Safari. */
+function pointerYOf(event: Event | null): number | null {
+  if (event instanceof MouseEvent) return event.clientY;
+  if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
+    return event.touches[0]?.clientY ?? null;
+  }
+  return null;
+}
+
 export function PaletteArrange({
   palette,
   catalog,
@@ -234,6 +244,20 @@ export function PaletteArrange({
   };
   const byKeyboard = useRef(false);
   const focusAfterDrop = useRef<string | null>(null);
+  // Picking up a group collapses the groups, which can shorten the page enough to clamp the scroll; dnd-kit's
+  // one-time scroll compensation then can't put the heading back, so the preview would sit off the grab point (#23).
+  const grabOffset = useRef<number | null>(null);
+  const modifiers = useMemo<Modifier[]>(
+    () => [
+      // activeNodeRect, not draggingNodeRect: dnd-kit measures the overlay with its transform, which includes this shift.
+      ({ activatorEvent, activeNodeRect, transform }) => {
+        const pressY = pointerYOf(activatorEvent);
+        if (grabOffset.current === null || pressY === null || !activeNodeRect) return transform;
+        return { ...transform, y: transform.y + pressY - grabOffset.current - activeNodeRect.top };
+      },
+    ],
+    [],
+  );
 
   useEffect(() => {
     const id = focusAfterDrop.current;
@@ -248,6 +272,15 @@ export function PaletteArrange({
     byKeyboard.current = activatorEvent instanceof KeyboardEvent;
     const data = dataOf(active);
     setDragging(data ?? null);
+    // Runs before the collapse renders, so the node is still where it was pressed.
+    const pressY = pointerYOf(activatorEvent);
+    const node = document
+      .querySelector(`[data-drag-handle="${String(active.id)}"]`)
+      ?.closest(".palette-arrange__item");
+    grabOffset.current =
+      data?.type === "group" && pressY !== null && node
+        ? pressY - node.getBoundingClientRect().top
+        : null;
     // A group drag unmounts group paint rows, and a pointer press doesn't move focus off them in Safari (#22).
     const focused = document.activeElement;
     const focusedId =
@@ -261,6 +294,7 @@ export function PaletteArrange({
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     const data = dataOf(active);
+    grabOffset.current = null;
     setDragging(null);
     if (!data) return;
     // Edits need a connection (DECISIONS 047); a drag that ends offline changes nothing.
@@ -278,6 +312,7 @@ export function PaletteArrange({
   };
 
   const onDragCancel = () => {
+    grabOffset.current = null;
     if (byKeyboard.current && dragging) focusAfterDrop.current = sortableIdOf(dragging);
     setDragging(null);
   };
@@ -321,6 +356,7 @@ export function PaletteArrange({
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
+      modifiers={modifiers}
       accessibility={{
         container: document.body,
         restoreFocus: false,

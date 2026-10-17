@@ -82,6 +82,40 @@ function startMouseDrag(handle: HTMLElement) {
   fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
 }
 
+const originalRect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect")
+  ?.value as (this: Element) => DOMRect;
+
+/** Highlights' section sits at 300 while any group shows paint rows and at 100 once they collapse, like a clamped scroll. */
+function stubHighlightsMovesOnCollapse() {
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+    const section = screen.queryByRole("region", { name: "Highlights" });
+    if (this !== section) return originalRect.call(this);
+    const top = document.querySelector(".palette-groups__paints") ? 300 : 100;
+    return {
+      x: 0,
+      y: top,
+      top,
+      left: 0,
+      right: 320,
+      bottom: top + 44,
+      width: 320,
+      height: 44,
+      toJSON: () => ({}),
+    };
+  });
+}
+
+/** The drag overlay wrapper's inline top and translate y; together they are its on-screen top. */
+function overlayPosition() {
+  const wrapper = document.querySelector(".drag-preview")?.parentElement;
+  if (!wrapper) throw new Error("No drag overlay rendered");
+  const translate = /translate3d\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px/.exec(wrapper.style.transform);
+  return {
+    top: Number.parseFloat(wrapper.style.top),
+    translateY: translate ? Number.parseFloat(translate[2]) : 0,
+  };
+}
+
 function mockMutations(handlers: Record<string, (...args: never[]) => Promise<unknown>>) {
   vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
     const fn = handlers[nameOf(ref)] ?? vi.fn(() => Promise.resolve(null));
@@ -513,6 +547,51 @@ describe("Arrange mode", () => {
 
     await waitFor(() => expect(handle.closest("li")).toHaveAttribute("data-dragging"));
     expect(document.activeElement).toBe(move);
+  });
+
+  it("keeps the grab point under the pointer when a group drag moves the heading", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    stubHighlightsMovesOnCollapse();
+
+    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 310 });
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    // The first move past the activation distance only starts the drag; the second one moves it.
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 316 });
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 330 });
+
+    await waitFor(() => {
+      const { top, translateY } = overlayPosition();
+      expect(top + translateY).toBe(320);
+    });
+  });
+
+  it("places a keyboard group drag preview at the heading", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    stubHighlightsMovesOnCollapse();
+
+    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    handle.focus();
+    fireEvent.keyDown(handle, { code: "Space", key: " " });
+
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    await waitFor(() => expect(overlayPosition().translateY).toBe(0));
   });
 
   it("sends every drop to its mutation and shows it at once", async () => {
