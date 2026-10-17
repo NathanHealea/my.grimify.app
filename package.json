@@ -55,6 +55,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:all": "trap 'kill 0' EXIT; convex dev & vite",
     "build": "npm run catalog:build && tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . && stylelint \"src/**/*.css\"",
