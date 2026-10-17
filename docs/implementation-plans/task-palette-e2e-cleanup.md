@@ -1,13 +1,13 @@
 ---
 type: task
 slug: palette-e2e-cleanup
-status: in-progress
+status: staged
 branch: task/palette-e2e-cleanup
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/task-palette-e2e-cleanup
 created: 2026-10-17
 approved: 2026-10-17
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.19.6
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
@@ -78,3 +78,5 @@ The shared E2E user is `grimify-e2e+clerk_test@example.com` (DECISIONS 032), cre
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Started on branch task/palette-e2e-cleanup from origin/dev.
 - 2026-10-17 — T1 passed: forced failure after Create, palette gone after the run; all 10 palette journeys pass
+- 2026-10-17 — Review: hook returns on the signed-out screen; T1 re-run passes (no leftover)
+- 2026-10-17 — Staged: verification passed; version 0.19.5 → 0.19.6; no changelog file.
