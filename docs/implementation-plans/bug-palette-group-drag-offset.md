@@ -17,76 +17,87 @@ tag:                 # set by `wi release`; the tag sits on the branch's last co
 
 ## Summary
 
-Dragging a group in arrange mode picks its drop spot from a point well below the pointer once the groups collapse to their headings, so the group shifts and lands away from where it was grabbed. dnd-kit measures the whole group section at pick-up, before the collapse, and sizes the drag overlay and its collision center from that tall rect. The heading row becomes the sortable node instead, so the measured rect, the overlay and the collision center are one heading row. Fixes GitHub issue #23.
+Dragging a group in arrange mode can leave the drag preview well away from where it was grabbed. Picking up a group collapses every group to its heading, which can shorten the page by hundreds of pixels; the browser clamps the scroll position, so dnd-kit's one-time layout-shift compensation can't put the heading back under the pointer, and the preview (placed at the heading's new position) ends up 60–130px off. The preview now keeps the grab point under the pointer or finger for the whole drag; drop targets already followed the pointer. Fixes GitHub issue #23.
 
 ## Context
 
-Issue: #23, reported on v0.19.3. Follows `docs/implementation-plans/palettes/bug-palette-group-drag-gap.md` (the collapse) and `docs/implementation-plans/bug-palette-drag-focus-loss.md`.
+Issue: #23, reported on v0.19.3. Follows `docs/implementation-plans/palettes/bug-palette-group-drag-gap.md` (the collapse; its plan listed "content jump under the pointer" as a risk to check) and `docs/implementation-plans/bug-palette-drag-focus-loss.md`.
 
-**Reproduce:** open a palette with three or more groups, one holding several paints. Tap Arrange. Drag that group by its handle over the other headings.
+**Reproduce:** open a palette with three groups, two holding four paints each. Tap Arrange. Scroll to the bottom and drag the first group by its handle, or drag the last group from anywhere the page can't scroll up far enough.
 
-**Observed:** the shift and the drop target don't follow the pointer; they act as if the pointer were lower by about half the dragged group's full (expanded) height.
+**Measured (Playwright probe against the dev server, v0.19.3 code, 2026-10-16):**
 
-**Expected:** the group lands on the heading under the pointer, by mouse, touch or keyboard.
+| Profile | Drag | Scroll max before → after pick-up | Heading moved | Preview off the grab point |
+|---|---|---|---|---|
+| iPhone 15 (WebKit) | first group, page at bottom | 649 → 81 | 136px | 88px |
+| iPhone 15 | last group | 649 → 81 | 64px | 64px |
+| iPhone 15 | middle group, page mid-way | 649 → 81 | 0 | 0 |
+| Desktop Chrome | first group, page at bottom | 508 → 0 | 126px | 126px |
 
-**Cause (from `node_modules/@dnd-kit/core/dist/core.esm.js`, 6.3.1):** `ArrangeGroup` in `src/features/palettes/palette-groups.tsx` passes `setNodeRef` from `useSortable` to the `<section>`. At pick-up `useInitialRect` measures that node during render, before the collapse commits. `DragOverlay` positions `PositionedOverlay` with `useInitialValue(activeNodeRect)`, setting its `width`/`height` from that rect, and `dragOverlay.rect` (the collision rect) keeps that size. `closestCenter` then compares the centre of a full-group-height box with heading rects that were re-measured at one row each after the collapse. For a group of five paints the centre sits roughly two and a half rows below the grab point.
+The preview was always the heading row's height (44px), so the drag node's size is not the cause.
+
+**Cause (`@dnd-kit/core` 6.3.1, `node_modules/@dnd-kit/core/dist/core.esm.js`):** `DragOverlay` positions the preview at the active node's first measured rect (`useInitialValue(activeNodeRect)`), and `useRect` first measures in a layout effect after the collapse commits, so the preview starts where the heading is after the collapse. `useLayoutShiftScrollCompensation` scrolls once by the heading's movement to put it back, but when the collapse shortens the page below the current scroll position the scroll is clamped and the rest of the shift is left in. The sensor's transform is the pointer's movement since the press, so the preview stays offset by that leftover for the whole drag, and `closestCenter` picks targets from the offset preview.
 
 ## Scope
 
 **In scope**
 
-- Making the group heading row the sortable node for group drags, so the active rect, overlay size and collision rect are one heading row.
-- Keeping the shift transform and `data-dragging` placeholder styling on the section.
+- Keeping the grab point under the pointer for mouse and touch group drags, for the preview and for collision detection.
 
 **Out of scope**
 
-- The collapse itself and the focus handling from #22.
-- Paint drags and the `zone:` droppable (unchanged).
-- Layout-shift scroll compensation when groups above the dragged one collapse; dnd-kit already scrolls to keep the dragged node in place where the page can scroll.
+- Keyboard group drags: there is no pointer, and keyboard moves step between heading rects.
+- Paint drags: nothing collapses, so nothing shifts.
+- Stopping the page itself from jumping when groups collapse; the list may still move under the finger, but the preview and the drop target follow the finger.
+- The collapse and the #22 focus handling.
 
 ## Requirements
 
-- **R1** — During a group drag, the drag overlay is the size of the group's heading row, not the expanded group.
-- **R2** — During a group drag, the group lands on the heading nearest the dragged heading, by mouse, touch or keyboard.
-- **R3** — The dragged group's section still shows the dashed placeholder (`data-dragging`) and still shifts with the sorting transform.
-- **R4** — Group reordering results (which group ends where) and announcements are unchanged.
+- **R1** — During a mouse or touch group drag, the drag preview keeps the point where the group was grabbed under the pointer, within 2px, including when picking up the group shortens the page.
+- **R2** — During a mouse or touch group drag, the group lands on the heading nearest the preview.
+- **R3** — Keyboard group drags and paint drags position the preview as before.
+- **R4** — Group reorder results, focus handling and announcements are unchanged.
 
 ## Acceptance criteria
 
-- **AC1** (R1) — Given a group whose section is 240px tall with a 48px heading row, when the user picks it up, then the overlay is 48px tall.
-- **AC2** (R2) — Given three groups on a phone, when the user drags a five-paint group by its handle onto the third heading, then it lands third.
-- **AC3** (R3) — Given a group drag in progress, then the dragged group's section has `data-dragging`.
-- **AC4** (R4) — Given a keyboard group drag of Trim down one place, when dropped, then `moveGroup` is called with Trim and `toIndex` 1 and the existing announcements play.
+- **AC1** (R1) — Given the page scrolled to the bottom, when the user mouse-drags the first group's handle, then the preview's top is the pointer's y minus the grab offset in the heading, within 2px.
+- **AC2** (R2) — Given AC1, when the user moves the pointer over the last group's heading and releases, then the dragged group is last.
+- **AC3** (R3) — Given a keyboard group drag, then the preview sits at the dragged heading, as before.
+- **AC4** (R4) — Existing arrange unit and e2e tests pass unchanged.
 
 ## Test plan
 
-Vitest + Testing Library in `src/features/palettes/palette-arrange.test.tsx`. jsdom has no layout, so T1 stubs `getBoundingClientRect` for the test: elements with class `palette-groups__group` report 240px tall, `palette-groups__heading` 48px, everything else falls through to jsdom's zeros. dnd-kit's overlay wrapper is the parent element of `.drag-preview`, and gets an inline `height` from the measured rect.
+Unit tests in `src/features/palettes/palette-arrange.test.tsx` (Vitest + Testing Library), and one Playwright journey in `tests/e2e/palettes.spec.ts`, which runs against the production build with real layout (TESTING §2). jsdom has no layout, so the unit test stubs `getBoundingClientRect`: a group section reports `top: 300` while its group still renders paint rows and `top: 100` once collapsed, 44px tall, so picking it up "moves" it 200px like a clamped scroll. The dnd-kit overlay wrapper is the parent of `.drag-preview`; its on-screen top is its inline `top` plus the `translate3d` y in its inline `transform`.
 
 | ID | Covers | Test | File | Asserts |
 |----|--------|------|------|---------|
-| T1 | R1 | `sizes the group drag overlay to the heading row` | `src/features/palettes/palette-arrange.test.tsx` | Regression: with the stubbed rects, after Space on "Drag group Trim", the `.drag-preview` parent's `style.height` is `48px`. Fails on current code (`240px`). |
-| T2 | R3 | (existing) `collapses every group to its heading while a group is dragged` | `src/features/palettes/palette-arrange.test.tsx` | Still passes: Trim's section gets `data-dragging` during the drag. |
-| T3 | R4 | (existing) group keyboard reorder and announcement tests | `src/features/palettes/palette-arrange.test.tsx` | Still pass unchanged. |
+| T1 | R1 | `keeps the grab point under the pointer when a group drag moves the heading` | `src/features/palettes/palette-arrange.test.tsx` | Regression: with the stubbed rects, mouse down on "Drag group Highlights" at y 310 (grab offset 10), move to y 330; the overlay wrapper's top + translate y is 320. Fails on current code (120). |
+| T2 | R3 | `places a keyboard group drag preview at the heading` | `src/features/palettes/palette-arrange.test.tsx` | Same stubbed rects; Space on "Drag group Highlights"; the overlay wrapper's translate y is 0 (no grab-point shift for the keyboard). |
+| T3 | R4 | (existing) arrange tests | `src/features/palettes/palette-arrange.test.tsx` | Still pass unchanged. |
+| T4 | R1, R2 | `keeps a dragged group under the pointer when picking it up shortens the page` | `tests/e2e/palettes.spec.ts` | Palette with three groups, two holding paints; Arrange; scroll to the bottom; mouse-drag the first group's handle: the `.drag-preview` top is within 2px of pointer y minus the grab offset; move over the last heading and release; group headings read the dragged group last. Fails on current code (88–126px off). |
 
-**Not unit testable:** R2 needs real layout and collision. Verify by hand on an iPhone (installed PWA) and desktop Chrome: with three groups, one of five or more paints, drag that group by mouse, touch hold and keyboard over each heading and confirm the shift and the drop follow the pointer; repeat with the page scrolled.
+**Not unit testable:** touch-hold drags on a real iPhone (installed PWA): scroll to the bottom of a palette with full groups, hold and drag the first group, and confirm the preview stays under the finger and lands where it's dropped.
 
 ## Implementation plan
 
-1. [x] Make the heading row the sortable node: in `ArrangeGroup`, move `setNodeRef` from the `<section>` to `.palette-groups__heading`, keeping `data-dragging` and the `--drag-*` transform variables on the section — touches `src/features/palettes/palette-groups.tsx`, `src/features/palettes/palette-arrange.test.tsx` — tests T1, T2, T3
-2. [x] Docs: note that the heading row is the group's sortable node and why — touches `docs/features/palettes.md` — tests none
+1. [x] Keep the grab point under the pointer: in `PaletteArrange`, record in `onDragStart` (before the collapse renders) the pointer's offset from the top of the dragged group's sortable node, for mouse and touch group drags only, and pass `DragOverlay` a modifier that shifts the preview's transform by `pressY - grabOffset - activeNodeRect.top` so the preview keeps that offset under the pointer; clear it on drop and cancel — touches `src/features/palettes/palette-arrange.tsx`, `src/features/palettes/palette-arrange.test.tsx` — tests T1, T2, T3
+2. [x] E2E journey for the clamped-scroll case — touches `tests/e2e/palettes.spec.ts` — tests T4
+3. [x] Docs: note the grab-point modifier and why — touches `docs/features/palettes.md` — tests none
 
-**Must not change:** sortable IDs; `planDrop` and announcements; the `zone:` droppable around each group; Convex functions and schema; the collapse and #22 focus handling.
+**Must not change:** sortable IDs and which element is the sortable node; `planDrop` and announcements; collision detection rules (groups only on headings); Convex functions and schema; the collapse and #22 focus handling.
 
 **High-risk steps:** None.
 
 ## Risks and open questions
 
-- **Diagnosis is from the library source.** Not yet reproduced in a browser. T1 proves the overlay size; the manual check proves the drop follows the pointer.
-- **Shift distances.** `verticalListSortingStrategy` computes shifts from the sortable nodes' rects and the gaps between them. With headings as nodes, the gap includes the section's padding and border, so shifts still equal the distance between collapsed sections. Check by hand that neighbours shift by exactly one section.
-- **Drop animation.** dnd-kit animates the overlay to the active node on drop, now the heading row, which is where the group ends up. Check it looks right.
+- **Modifier and scroll during the drag.** The sensor transform is in viewport coordinates and the preview is `position: fixed`, so the shift is a constant for the drag. If the page auto-scrolls mid-drag, dnd-kit adjusts collisions for scroll separately; T4 covers a drop after the collapse, and the manual check covers auto-scroll on a long palette.
+- **Collision box follows the modifier.** Resolved: a `DndContext` modifier also moves `collisionRect`, and T4 showed groups then dropped short by the clamp. dnd-kit already counts the clamp as a scroll for targets, so the modifier is on `DragOverlay` only. It reads `activeNodeRect`, not `draggingNodeRect`: dnd-kit measures the overlay including its transform, which already holds the shift.
+- **E2E runs a preview server.** `npm run test:e2e` builds and serves the app on port 4173 for the length of the run (playwright.config.ts `webServer`), against the Convex deployment in `.env.local`.
 
 ## Progress log
 
 - 2026-10-16 — Planned.
 - 2026-10-16 — Plan approved.
 - 2026-10-16 — Started on branch bug/palette-group-drag-offset from origin/dev.
+- 2026-10-16 — Re-planned: browser probe showed the overlay was already heading-sized; real cause is clamped scroll after the collapse defeating dnd-kit's layout-shift compensation. Reverted the heading-node change (3c03d34); new plan keeps the grab point under the pointer with a DndContext modifier
+- 2026-10-16 — Step 1 revised after T4: modifier moved from DndContext to DragOverlay (26c9654); on DndContext it shifted drop targets by the clamp. Existing 'arranges a palette by keyboard and mouse' e2e fails on origin/dev code too (pre-existing, filed separately)
