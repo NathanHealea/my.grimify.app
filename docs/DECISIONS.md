@@ -1237,7 +1237,8 @@ Alternatives:
 - Store the email: simplest matching, but copies personal data about people who haven't joined into Convex
 
 Consequences:
-Positive: the export and staged data can't be matched to a person without the key.
+Positive: without the key, the export and staged data aren't linked to an email address.
+Limits: this is pseudonymous, not anonymous. Anyone with the key and a candidate address can test whether that person had an old account, and palette and group names are text people wrote. So only production holds the real key and real data; dev and stage use a made-up export with their own key.
 Trade-off: the same key must be set in the export run and every Convex deployment that claims; losing it means exporting again. A user whose new account uses a different address can't claim.
 
 ---
@@ -1253,8 +1254,8 @@ The old app's paints are UUID rows whose `brand_paint_id` is the legacy JSON `id
 Decision:
 - `npm run legacy:export` maps every old paint to its catalog ID with the same derivation as the catalog import (`legacyPaintId`), accepting only IDs in the current catalog; unmapped paints are left out and listed in `report.json`.
 - Palettes are fitted to this app's rules in the export (names trimmed and cut to 60, "Untitled" when empty, repeats collapsed, 200 paints, 30 groups), so loading and claiming never repair data. The 50-palette cap waits for claim time, when the user's own palettes are known.
-- The old project is read through PostgREST with `fetch` (no Supabase package), paged by `Range`.
-- The command refuses an output directory inside the repository, writes files only its user can read, and never overwrites an earlier export. The owner deletes the export after the production load.
+- The old project is read through PostgREST with `fetch` (no Supabase package), paged by `Range`. Emails come from Supabase Auth's admin API, confirmed addresses only: `profiles.email` is a copy each user could overwrite.
+- The command refuses an output directory inside the repository, writes files only its user can read, and never overwrites an earlier export. The owner deletes the export and `.env.legacy.local` after the production load.
 
 Alternatives:
 - Map at load or claim time in Convex: Convex would need the legacy JSON and the mapping code

@@ -10,7 +10,9 @@
 - Each old user becomes one record keyed by **`emailHash`**, an **HMAC-SHA256 of the normalized email** with `LEGACY_IMPORT_HASH_KEY`. The output holds **no email and no old UUID**.
 - Old paints map to catalog IDs with **the same derivation as the catalog import**. Paints that don't map are **left out and listed in the report**.
 - Palettes are **fitted to this app's limits** in the export: 60-character names, 200 paints, 30 groups, no repeated paints.
-- The output directory **must be outside the repository**. Delete the export after the production load.
+- Emails come from **Supabase Auth's admin API, confirmed addresses only**, not from `profiles.email`, which any old user could edit on their own row.
+- The output directory **must be outside the repository**. **Only production gets real data**: dev and stage get a made-up export hashed with their own key.
+- After the production load, **delete the export and `.env.legacy.local`** (or rotate the old project's secret key). Unclaimed staged data is purged 180 days after loading.
 
 ## Where the code lives
 
@@ -18,7 +20,7 @@
 |---|---|
 | `scripts/legacy-export.ts` | The CLI: config check, reads the tables, writes the files |
 | `scripts/legacy/export-config.ts` | `readConfig`: env vars, hash key length, output directory outside the repo |
-| `scripts/legacy/supabase.ts` | `fetchAll`: pages a PostgREST table with `Range` |
+| `scripts/legacy/supabase.ts` | `fetchAll`: pages a PostgREST table with `Range`; `fetchAuthUsers`: pages Supabase Auth's admin users |
 | `scripts/legacy/paint-map.ts` | `buildPaintMap`: old paint UUID → catalog ID or an unmapped reason |
 | `scripts/legacy/hash.ts` | `normalizeEmail`, `hashEmail` |
 | `scripts/legacy/transform.ts` | `transform`: old rows → export records and report |
@@ -32,7 +34,7 @@ Prerequisites: the old hosted project is running (free Supabase projects pause w
 npm run legacy:export -- /tmp/grimify-legacy ../grimify.app/scripts/data
 ```
 
-The command stops with exit code 2, **before reading anything**, when a variable is missing, the hash key is under 32 characters, the output directory is inside the repository, or `export.json` or `report.json` already exists there. It prints row counts per table and a one-line summary with no personal data. Both files are written with mode `600`.
+The command stops with exit code 2, **before reading anything**, when a variable is missing, the URL isn't `https://`, the secret key has spaces or control characters, the hash key is under 32 characters, the output directory is inside the repository, or `export.json` or `report.json` already exists there. It prints row counts per table and a one-line summary with no personal data. Both files are written with mode `600`.
 
 ## How paints map
 
@@ -59,7 +61,7 @@ The command stops with exit code 2, **before reading anything**, when a variable
 }
 ```
 
-- Profiles are grouped by trimmed, lowercased email, so two old accounts with one address become one record. Profiles without an email are skipped and counted.
+- Users come from Supabase Auth (`/auth/v1/admin/users`); an address counts only when `email_confirmed_at` is set. Users are grouped by trimmed, lowercased email, so two old accounts with one address become one record. Users without a confirmed email are skipped and counted.
 - `ownedPaintIds` are the mapped owned paints, unique and sorted.
 - Palettes are oldest first. Paints and groups keep their old position order.
 - An email with no mapped owned paint and no palette isn't exported; it's counted as "no data".
