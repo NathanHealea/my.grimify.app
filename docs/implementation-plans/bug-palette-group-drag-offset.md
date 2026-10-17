@@ -72,8 +72,8 @@ Vitest + Testing Library in `src/features/palettes/palette-arrange.test.tsx`. js
 
 ## Implementation plan
 
-1. [ ] Make the heading row the sortable node: in `ArrangeGroup`, move `setNodeRef` from the `<section>` to `.palette-groups__heading`, keeping `data-dragging` and the `--drag-*` transform variables on the section — touches `src/features/palettes/palette-groups.tsx`, `src/features/palettes/palette-arrange.test.tsx` — tests T1, T2, T3
-2. [ ] Docs: note that the heading row is the group's sortable node and why — touches `docs/features/palettes.md` — tests none
+1. [x] Make the heading row the sortable node: in `ArrangeGroup`, move `setNodeRef` from the `<section>` to `.palette-groups__heading`, keeping `data-dragging` and the `--drag-*` transform variables on the section — touches `src/features/palettes/palette-groups.tsx`, `src/features/palettes/palette-arrange.test.tsx` — tests T1, T2, T3
+2. [x] Docs: note that the heading row is the group's sortable node and why — touches `docs/features/palettes.md` — tests none
 
 **Must not change:** sortable IDs; `planDrop` and announcements; the `zone:` droppable around each group; Convex functions and schema; the collapse and #22 focus handling.
 
