@@ -323,7 +323,7 @@ Failure:
 - Import or Discard finds the data already gone (`LEGACY_IMPORT_NOT_FOUND`: another tab or device resolved it first) → the result step with "Your old data was already brought over or discarded." and **Done**
 
 Loading State:
-While Import or Discard runs, the buttons are disabled and the sheet can't be closed.
+While Import or Discard runs, the buttons are disabled, and Close and Escape are ignored until it finishes (Close still looks enabled), so the outcome isn't lost.
 
 Signed Out:
 Nothing is shown, and the server isn't asked.
