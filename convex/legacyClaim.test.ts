@@ -16,15 +16,18 @@ const MACRAGGE_BLUE = "citadel-base-macragge-blue";
 const RED = "citadel-base-mephiston-red";
 
 type T = TestConvex<typeof schema>;
-type Address = { email_address: string; verification: { status: string } | null };
+type Address = {
+  email_address: string;
+  verification: { status: string; strategy: string } | null;
+};
 type Staged = Omit<Doc<"legacyImports">, "_id" | "_creationTime" | "emailHash">;
 
 function verified(email: string): Address {
-  return { email_address: email, verification: { status: "verified" } };
+  return { email_address: email, verification: { status: "verified", strategy: "email_code" } };
 }
 
 function unverified(email: string): Address {
-  return { email_address: email, verification: { status: "unverified" } };
+  return { email_address: email, verification: { status: "unverified", strategy: "email_code" } };
 }
 
 function requestUrl(input: Parameters<typeof fetch>[0]): string {
