@@ -71,6 +71,17 @@ function twoGroups() {
   };
 }
 
+/** Presses `handle` and moves past the mouse sensor's 5px activation distance. */
+function startMouseDrag(handle: HTMLElement) {
+  fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
+  // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
+  onTestFinished(async () => {
+    fireEvent.mouseUp(document);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+  fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+}
+
 function mockMutations(handlers: Record<string, (...args: never[]) => Promise<unknown>>) {
   vi.mocked(useMutation).mockImplementation(((ref: unknown) => {
     const fn = handlers[nameOf(ref)] ?? vi.fn(() => Promise.resolve(null));
@@ -429,13 +440,7 @@ describe("Arrange mode", () => {
 
     within(trim()).getByRole("button", { name: "Drag Mephiston Red" }).focus();
     const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
-    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
-    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
-    onTestFinished(async () => {
-      fireEvent.mouseUp(document);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
-    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+    startMouseDrag(handle);
 
     await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
     expect(document.activeElement).toBe(
@@ -455,13 +460,7 @@ describe("Arrange mode", () => {
 
     within(trim()).getByRole("button", { name: "Drag Mephiston Red" }).focus();
     const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
-    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
-    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
-    onTestFinished(async () => {
-      fireEvent.mouseUp(document);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
-    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+    startMouseDrag(handle);
     await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
     fireEvent.mouseUp(document, { clientX: 10, clientY: 30 });
 
@@ -483,13 +482,7 @@ describe("Arrange mode", () => {
     const done = screen.getByRole("button", { name: "Done" });
     done.focus();
     const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
-    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
-    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
-    onTestFinished(async () => {
-      fireEvent.mouseUp(document);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
-    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+    startMouseDrag(handle);
 
     await waitFor(() => expect(trim()).toHaveAttribute("data-dragging"));
     expect(document.activeElement).toBe(done);
@@ -507,13 +500,7 @@ describe("Arrange mode", () => {
     const move = within(trim()).getByRole("button", { name: "Move Blood Red" });
     move.focus();
     const handle = within(trim()).getByRole("button", { name: "Drag Mephiston Red" });
-    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
-    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
-    onTestFinished(async () => {
-      fireEvent.mouseUp(document);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
-    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+    startMouseDrag(handle);
 
     await waitFor(() => expect(handle.closest("li")).toHaveAttribute("data-dragging"));
     expect(document.activeElement).toBe(move);
