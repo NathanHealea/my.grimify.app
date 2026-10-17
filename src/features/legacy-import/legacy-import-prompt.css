@@ -1,0 +1,4 @@
+/* Three buttons don't fit one row at 320px with 200% text, so they wrap rather than scroll sideways. */
+.legacy-import-prompt__footer {
+  flex-wrap: wrap;
+}
