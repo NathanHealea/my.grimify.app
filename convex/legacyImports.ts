@@ -162,7 +162,11 @@ export const claim = internalMutation({
       if (row?.owned) continue;
       paintsAdded += 1;
       if (row) {
-        await ctx.db.patch("userPaints", row._id, { owned: true, updatedAt: now });
+        // The server clock can trail a device's (DECISIONS 010, 059); never move a row backwards.
+        await ctx.db.patch("userPaints", row._id, {
+          owned: true,
+          updatedAt: Math.max(row.updatedAt, now),
+        });
       } else {
         await ctx.db.insert("userPaints", {
           userId: user._id,

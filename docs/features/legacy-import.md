@@ -106,7 +106,7 @@ Prerequisites on the deployment: the staged data from its own export, `LEGACY_IM
 3. `legacyImports.summaryForHashes` returns the counts for the first **complete** staged row matching a hash, or null. Unverified addresses, incomplete loads and users without a `users` row get null.
 4. The sheet shows the counts (palettes include those the export counted as omitted). Import or Discard calls `legacyClaim.resolveMine`, which repeats the lookup and runs `legacyImports.claim` in one transaction:
    - Deletes the staged row and inserts the hash into `legacyImportClaims`, so a second call from any account fails with `LEGACY_IMPORT_NOT_FOUND` and a later load skips it.
-   - Import: each staged paint becomes `owned: true` with `updatedAt` at the claim time, keeping `wishlisted` and `favorite`; paints already owned are left alone. Staged palettes are added oldest first, with new group IDs, until the user has 50; the rest, plus `palettesOmitted`, come back as `palettesSkipped`.
+   - Import: each staged paint becomes `owned: true` with `updatedAt` at the claim time (an existing row with a later `updatedAt` keeps it), keeping `wishlisted` and `favorite`; paints already owned are left alone. Staged palettes are added oldest first, with new group IDs, until the user has 50; the rest, plus `palettesOmitted`, come back as `palettesSkipped`.
    - Discard: nothing is written to the user's data.
 
 If an account has several verified addresses with staged data, one is offered per session, in Clerk's order. A user whose new account uses a different address can't claim. Nothing about the email is stored or logged; a failed Clerk call throws with its HTTP status only.

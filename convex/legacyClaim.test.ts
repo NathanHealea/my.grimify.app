@@ -327,6 +327,35 @@ describe("legacyClaim.resolveMine", () => {
     ]);
   });
 
+  it("resolveMine import keeps a later updatedAt on an existing row", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    const t = convexTest(schema, modules);
+    stubClerk({ user_a: [verified("a@example.com")] });
+    const { as, userId } = await signedIn(t, "user_a");
+    await t.run((ctx) =>
+      ctx.db.insert("userPaints", {
+        userId,
+        paintId: MACRAGGE_BLUE,
+        owned: false,
+        wishlisted: true,
+        favorite: false,
+        updatedAt: 50_000,
+      }),
+    );
+    await stage(t, "a@example.com", { ownedPaintIds: [MACRAGGE_BLUE, RED] });
+
+    await as.action(api.legacyClaim.resolveMine, { choice: "import" });
+
+    const rows = await table(t, "userPaints");
+    expect(rows.find((r) => r.paintId === MACRAGGE_BLUE)).toMatchObject({
+      owned: true,
+      wishlisted: true,
+      updatedAt: 50_000,
+    });
+    expect(rows.find((r) => r.paintId === RED)).toMatchObject({ owned: true, updatedAt: 10_000 });
+  });
+
   it("resolveMine import counts only paints the caller didn't already own", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);

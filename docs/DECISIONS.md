@@ -1305,6 +1305,7 @@ Decision:
 - The first complete staged row matching any verified address, in Clerk's order, is the one offered and claimed.
 - Without `LEGACY_IMPORT_HASH_KEY` the feature is off: `findMine` returns null and `resolveMine` throws `LEGACY_IMPORT_NOT_FOUND`. With the hash key but no `CLERK_SECRET_KEY`, both throw, because that's a broken setup rather than a choice.
 - The app calls `findMine` once per signed-in session, after the `users` row exists.
+- A claimed paint's `updatedAt` is the server's claim time, or the row's own `updatedAt` when that's later, so a claim never moves a row backwards and lets an older queued device write win. Trade-off: every other write is stamped by the device's clock (010) and the claim by the server's, so a device whose clock runs ahead can still stamp an edit made before the claim later than the claim; that edit wins, and the paint may stay unowned until the user marks it.
 
 Alternatives:
 - Add `email` and a verified flag to the Clerk session token (Sessions page shortcodes): no outbound call, but a dashboard change on every Clerk instance that the repo can't record or test, and every Convex call would carry the email

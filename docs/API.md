@@ -277,7 +277,7 @@ Args: `{ choice: "import" | "discard" }`
 Behavior:
 - Signed out, or no `users` row → `UNAUTHENTICATED`. Hash key unset, or no complete staged row for a verified address → `LEGACY_IMPORT_NOT_FOUND`. Clerk is called as in `findMine`
 - Runs `legacyImports.claim` in one transaction: deletes the staged row and records its hash in `legacyImportClaims`, so neither this nor any other account can claim it again, and loading the export again skips it
-- `import`: every staged owned paint becomes `owned: true` with `updatedAt` = claim time; an existing row keeps `wishlisted` and `favorite`, and one already owned is left as it is. Staged palettes are added oldest first as new palettes (new group IDs, `updatedAt` = claim time) until the caller has 50. Existing palettes are never changed
+- `import`: every staged owned paint becomes `owned: true` with `updatedAt` = claim time, or the row's own `updatedAt` when that's later; an existing row keeps `wishlisted` and `favorite`, and one already owned is left as it is. Staged palettes are added oldest first as new palettes (new group IDs, `updatedAt` = claim time) until the caller has 50. Existing palettes are never changed
 - `discard`: writes nothing to `userPaints` or `palettes`
 Returns: `{ paintsAdded: number; palettesAdded: number; palettesSkipped: number }`. `paintsAdded` counts paints that weren't owned before; `palettesSkipped` is the staged palettes past the cap plus `palettesOmitted`. Discard returns zeros.
 
