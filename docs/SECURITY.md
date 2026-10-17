@@ -70,7 +70,7 @@ Public (in the browser bundle):
 Private:
 - `CONVEX_DEPLOY_KEY` (CI only)
 - `CLERK_JWT_ISSUER_DOMAIN` (Convex env)
-- `CLERK_SECRET_KEY` (Convex env): Clerk Backend API key, used only by `convex/lib/clerk.ts` to read a user's verified addresses. It can read and change every Clerk user, so it's set with `npx convex env set` and never logged; a failed lookup throws with the HTTP status only
+- `CLERK_SECRET_KEY` (Convex env): Clerk Backend API key, used only by `convex/lib/clerk.ts` to read a user's verified addresses. It can read and change every Clerk user, so it's set only on the production deployment (never on develop or stage, whose key would be the production `sk_live_` key; ENVIRONMENT.md), with `npx convex env set`, and never logged; a failed lookup throws with the HTTP status only
 - `LEGACY_IMPORT_HASH_KEY` (Convex env): HMAC key for old users' email hashes (DECISIONS 056)
 
 ---

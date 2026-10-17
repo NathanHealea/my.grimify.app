@@ -1313,4 +1313,4 @@ Alternatives:
 
 Consequences:
 Positive: verification comes from Clerk's own record; no Clerk dashboard change.
-Trade-off: each deployment holds `CLERK_SECRET_KEY`, which can read and change every Clerk user, and each new session of a signed-in user makes one call to Clerk. A Clerk outage only means no prompt that session.
+Trade-off: the deployment holds `CLERK_SECRET_KEY`, which can read and change every Clerk user. So it and `LEGACY_IMPORT_HASH_KEY` are set only on the production deployment: develop and stage sign in with the production Clerk instance, so their key would be the production `sk_live_` key, too broad for non-production. The feature is off there, and the prompt is tested end to end on a personal `npx convex dev` deployment with the Clerk dev instance and a made-up export. Each new session of a signed-in user makes one call to Clerk. A Clerk outage only means no prompt that session.

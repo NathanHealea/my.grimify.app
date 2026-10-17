@@ -99,7 +99,7 @@ To debug a failure, load the same record from a made-up export into dev, or run 
 
 ## Claiming on sign-in
 
-Prerequisites on the deployment: the staged data from its own export, `LEGACY_IMPORT_HASH_KEY` set to the key that export was hashed with, and `CLERK_SECRET_KEY` set to the secret key of the Clerk instance its users sign in with (ENVIRONMENT.md). Without the hash key the feature is off and nobody sees a prompt, so the code can ship ahead of the data.
+Prerequisites on the deployment: the staged data from its own export, `LEGACY_IMPORT_HASH_KEY` set to the key that export was hashed with, and `CLERK_SECRET_KEY` set to the secret key of the Clerk instance its users sign in with (ENVIRONMENT.md). **Both are set only on production.** Develop and stage leave them unset, so the feature is off there: they sign in with the production Clerk instance, and its `sk_live_` key can read and change every production user, which is too broad for a non-production deployment. Without the hash key nobody sees a prompt, so the code can ship ahead of the data.
 
 1. Once per signed-in session, after `users.me` is non-null, the app calls `legacyClaim.findMine`.
 2. The action takes the Clerk user ID from the session (`identity.subject`), reads `GET https://api.clerk.com/v1/users/{id}`, keeps addresses whose `verification.status` is `verified` by `email_code` or `email_link` (`verification.strategy`; an OAuth or SAML provider's address doesn't count), and hashes them like the export (`hashEmail`, Web Crypto).
@@ -112,7 +112,7 @@ Prerequisites on the deployment: the staged data from its own export, `LEGACY_IM
 
 If an account has several verified addresses with staged data, one is offered per session, in Clerk's order. A user whose new account uses a different address can't claim. Nothing about the email is stored or logged; a failed Clerk call throws with its HTTP status only.
 
-To try it on a deployment, load a made-up export whose record is hashed from an address you can sign in with, using that deployment's own hash key.
+To try it end to end, use a personal `npx convex dev` deployment signed in through the Clerk dev instance: set its `CLERK_SECRET_KEY` to the dev instance's `sk_test_` key and its own `LEGACY_IMPORT_HASH_KEY`, and stage a made-up export whose record is hashed from an address you can sign in with.
 
 ## Relations to other features
 

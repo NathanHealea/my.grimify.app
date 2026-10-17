@@ -22,14 +22,17 @@ CLERK_JWT_ISSUER_DOMAIN=      # Clerk Frontend API URL, shown when you activate 
                               # Keep a copy in .env.local for reference; Convex reads only the deployment's value.
                               # Symptom if the Convex integration isn't active: Clerk signs in, but
                               # .../tokens/convex returns 404 and Convex treats everyone as signed out.
-CLERK_SECRET_KEY=             # The secret key of the Clerk instance this deployment's users sign in with: sk_test_… (dev
-                              # instance) on a personal dev deployment, sk_live_… (production instance) on develop, stage
-                              # and production. Read by convex/legacyClaim.ts to look up a user's verified email
-                              # addresses (DECISIONS 059). It can read and change every Clerk user: set it only with
-                              # `npx convex env set`, never in a file that's committed or in a VITE_ variable.
+CLERK_SECRET_KEY=             # Set ONLY on the production Convex deployment (sk_live_…, production Clerk instance), and on
+                              # a personal `npx convex dev` deployment (sk_test_…, Clerk dev instance) for testing.
+                              # Leave it unset on develop and stage: they sign in with the production Clerk instance, so
+                              # their key would be the sk_live_ key, which can read and change every production user.
+                              # Read by convex/legacyClaim.ts to look up a user's verified email addresses
+                              # (DECISIONS 059). Set it only with `npx convex env set`, never in a committed file or a
+                              # VITE_ variable.
 LEGACY_IMPORT_HASH_KEY=       # The key the legacy export for this deployment was hashed with (features/legacy-import.md).
-                              # Production gets the real key; develop and stage each get their own key for made-up data.
-                              # Unset → the old-data prompt is off. Set without CLERK_SECRET_KEY → the claim throws.
+                              # Set ONLY on production (the real key) and on a personal dev deployment (its own key, for
+                              # a made-up export). Unset on develop and stage, so the old-data prompt is off there.
+                              # Unset → the prompt is off. Set without CLERK_SECRET_KEY → the claim throws.
 ```
 
 ### Deploy settings (local only, one file per environment)
@@ -46,7 +49,7 @@ The deploy refuses a missing file or variable, a `pk_test_` key, or a deploy key
 ```bash
 LEGACY_SUPABASE_URL=          # the old hosted project's URL, https://<ref>.supabase.co (not the local one in ../grimify.app/.env)
 LEGACY_SUPABASE_SECRET_KEY=   # the old project's secret (service-role) key; it bypasses row-level security, so never commit or share it
-LEGACY_IMPORT_HASH_KEY=       # at least 32 characters, e.g. `openssl rand -hex 32`; the production key goes only on the prod Convex deployment, and dev and stage each get their own key for made-up test data
+LEGACY_IMPORT_HASH_KEY=       # at least 32 characters, e.g. `openssl rand -hex 32`; the production key goes only on the prod Convex deployment; a made-up export gets its own key
                               # needs the same value, and losing it means exporting again
 ```
 The command refuses a missing variable or a shorter hash key.
