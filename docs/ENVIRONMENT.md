@@ -33,6 +33,16 @@ VITE_CLERK_PUBLISHABLE_KEY=   # pk_live_… from the Clerk production instance; 
 ```
 The deploy refuses a missing file or variable, a `pk_test_` key, or a deploy key for any deployment other than the one `scripts/deploy.ts` records for that environment.
 
+### Legacy export (local only, one-time)
+`npm run legacy:export` reads `.env.legacy.local` when it exists (git-ignored by `.env.*`), otherwise the shell environment. See [features/legacy-import.md](features/legacy-import.md).
+```bash
+LEGACY_SUPABASE_URL=          # the old hosted project's URL, https://<ref>.supabase.co (not the local one in ../grimify.app/.env)
+LEGACY_SUPABASE_SECRET_KEY=   # the old project's secret (service-role) key; it bypasses row-level security, so never commit or share it
+LEGACY_IMPORT_HASH_KEY=       # at least 32 characters, e.g. `openssl rand -hex 32`; every Convex deployment that claims imports
+                              # needs the same value, and losing it means exporting again
+```
+The command refuses a missing variable or a shorter hash key.
+
 ### Local only, and CI secrets
 ```bash
 CLERK_SECRET_KEY=             # sk_test_… from the Clerk dev instance; Playwright's signed-in E2E only.

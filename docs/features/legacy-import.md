@@ -1,0 +1,74 @@
+# Legacy Import
+
+> Covers bringing old Grimify (the Supabase app in `../grimify.app`) owned paints and palettes into this app.
+> Plan: [epic-legacy-import.md](../implementation-plans/legacy-import/epic-legacy-import.md). Env vars: [ENVIRONMENT.md](../ENVIRONMENT.md). Rationale: [DECISIONS 056, 057](../DECISIONS.md).
+
+## TL;DR
+
+- Built so far: **the export only**. Loading into Convex and claiming on sign-in are later work items.
+- `npm run legacy:export -- <output-dir> <grimify>/scripts/data` reads the old project **read-only** and writes **`export.json`** and **`report.json`**.
+- Each old user becomes one record keyed by **`emailHash`**, an **HMAC-SHA256 of the normalized email** with `LEGACY_IMPORT_HASH_KEY`. The output holds **no email and no old UUID**.
+- Old paints map to catalog IDs with **the same derivation as the catalog import**. Paints that don't map are **left out and listed in the report**.
+- Palettes are **fitted to this app's limits** in the export: 60-character names, 200 paints, 30 groups, no repeated paints.
+- The output directory **must be outside the repository**. Delete the export after the production load.
+
+## Where the code lives
+
+| Path | Role |
+|---|---|
+| `scripts/legacy-export.ts` | The CLI: config check, reads the tables, writes the files |
+| `scripts/legacy/export-config.ts` | `readConfig`: env vars, hash key length, output directory outside the repo |
+| `scripts/legacy/supabase.ts` | `fetchAll`: pages a PostgREST table with `Range` |
+| `scripts/legacy/paint-map.ts` | `buildPaintMap`: old paint UUID → catalog ID or an unmapped reason |
+| `scripts/legacy/hash.ts` | `normalizeEmail`, `hashEmail` |
+| `scripts/legacy/transform.ts` | `transform`: old rows → export records and report |
+| `scripts/catalog/import-legacy.ts` | `legacyPaintId`, shared with `convertBrand` |
+
+## Running the export
+
+Prerequisites: the old hosted project is running (free Supabase projects pause when idle), its URL and secret key are at hand, and you have a hash key. Put the three variables in `.env.legacy.local` (ENVIRONMENT.md).
+
+```bash
+npm run legacy:export -- /tmp/grimify-legacy ../grimify.app/scripts/data
+```
+
+The command stops with exit code 2, **before reading anything**, when a variable is missing, the hash key is under 32 characters, the output directory is inside the repository, or `export.json` or `report.json` already exists there. It prints row counts per table and a one-line summary with no personal data. Both files are written with mode `600`.
+
+## How paints map
+
+`buildPaintMap` follows paint → product line → brand to get the old brand slug, which equals this catalog's brand ID. It then finds the paint's `brand_paint_id` in that brand's legacy JSON file and runs `legacyPaintId`, the derivation `convertBrand` uses, so merged duplicate paints map to the kept ID. An ID is accepted only when it's in `data/catalog/*.json`.
+
+| Reason in the report | Meaning |
+|---|---|
+| `unknown-brand` | The old brand isn't one the catalog import converted |
+| `not-in-legacy-file` | The paint was added in the old admin UI, not from the JSON |
+| `excluded-line` | Its line was excluded by the catalog import (AK Interactive Abteilung 502) |
+| `not-in-catalog` | The derived ID isn't in the current catalog |
+
+## What the export holds
+
+`export.json` is an array of records, sorted by `emailHash`:
+
+```json
+{
+  "emailHash": "a048681d…",
+  "ownedPaintIds": ["citadel-base-abaddon-black"],
+  "palettes": [
+    { "name": "My palette", "paintIds": ["citadel-base-abaddon-black"], "groups": [] }
+  ]
+}
+```
+
+- Profiles are grouped by trimmed, lowercased email, so two old accounts with one address become one record. Profiles without an email are skipped and counted.
+- `ownedPaintIds` are the mapped owned paints, unique and sorted.
+- Palettes are oldest first. Paints and groups keep their old position order.
+- An email with no mapped owned paint and no palette isn't exported; it's counted as "no data".
+
+Palette fitting, in order: unmapped paints are dropped; a repeated catalog ID keeps its first position; the list is cut to 200; groups past the 30th are dropped. A group member resolves through its palette paint to a catalog ID, so a member pointing at a collapsed repeat resolves to the kept paint. Members cut by the 200 cap, or repeated in a group, are dropped. Names are trimmed, cut to 60 characters, and an empty name becomes "Untitled". The 50-palette cap is applied at claim time.
+
+`report.json` holds `totals` (users exported, skipped without an email, with no data, owned paints, palettes, and `removed`: duplicate paints, paints over the cap, groups over the cap, group paints dropped, names shortened, names set to "Untitled") and `unmapped`: one entry per unmapped old paint with its brand, `brand_paint_id`, name, reason, and how many owned and palette rows referenced it.
+
+## Relations to other features
+
+- **Catalog**: reads `data/catalog/*.json` for valid IDs and shares the ID derivation with the catalog import ([catalog/data-pipeline.md](catalog/data-pipeline.md)).
+- **Palettes**: the caps match `convex/palettes.ts` ([palettes.md](palettes.md)).

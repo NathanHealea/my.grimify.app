@@ -30,6 +30,7 @@
 | Settings | [settings.md](settings.md) | `src/features/settings/` |
 | App shell and shared UI | [app-shell-ui.md](app-shell-ui.md) | `src/components/`, `src/routes/`, `src/features/feedback/` |
 | Hosting and deploys | [hosting.md](hosting.md) | `wrangler.json`, `scripts/deploy.ts`, `public/_headers` |
+| Legacy import (old Grimify data) | [legacy-import.md](legacy-import.md) | `scripts/legacy-export.ts`, `scripts/legacy/` |
 
 ## Architecture
 
