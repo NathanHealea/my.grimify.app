@@ -214,6 +214,28 @@ describe("legacyImports.stageChunk", () => {
       [
         {
           ...base,
+          palettes: [
+            palette("Ultramarines", ["citadel-a"], [{ name: "Armor", paintIds: ["citadel-b"] }]),
+          ],
+        },
+        "GROUP_PAINT_NOT_IN_PALETTE",
+      ],
+      [
+        {
+          ...base,
+          palettes: [
+            palette(
+              "Ultramarines",
+              ["citadel-a"],
+              [{ name: "Armor", paintIds: ["citadel-a", "citadel-a"] }],
+            ),
+          ],
+        },
+        "GROUP_PAINT_NOT_IN_PALETTE",
+      ],
+      [
+        {
+          ...base,
           palettes: [palette("Ultramarines", [], [{ name: "Armour", paintIds: ["Bad ID"] }])],
         },
         "INVALID_PAINT_ID",

@@ -22,6 +22,14 @@ function cleanPalette(palette: LegacyPalette): LegacyPalette {
     paintIds: palette.paintIds,
     groups: palette.groups.map((group) => {
       requirePaintIds(group.paintIds);
+      // A group only references its palette's paints, as in palettes.ts; this also bounds the row size.
+      const inPalette = new Set(palette.paintIds);
+      if (
+        new Set(group.paintIds).size !== group.paintIds.length ||
+        !group.paintIds.every((id) => inPalette.has(id))
+      ) {
+        throw new ConvexError("GROUP_PAINT_NOT_IN_PALETTE");
+      }
       return { name: cleanName(group.name, "GROUP_NAME_INVALID"), paintIds: group.paintIds };
     }),
   };
