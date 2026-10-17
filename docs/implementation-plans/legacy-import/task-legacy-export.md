@@ -84,12 +84,12 @@ Adds an admin-run script, `npm run legacy:export`, that reads every old Grimify 
 
 ## Implementation plan
 
-1. [ ] Export `legacyPaintId` from the catalog import and use it in `convertBrand` — touches `scripts/catalog/import-legacy.ts`, `scripts/catalog/import-legacy.test.ts` — tests T1
-2. [ ] Add the paint map and email hash — touches `scripts/legacy/paint-map.ts`, `scripts/legacy/paint-map.test.ts`, `scripts/legacy/hash.ts`, `scripts/legacy/hash.test.ts` — tests T2, T7
-3. [ ] Add the transform from old rows to export records and report — touches `scripts/legacy/transform.ts`, `scripts/legacy/transform.test.ts` — tests T3, T4, T5, T6, T8
-4. [ ] Add the PostgREST reader and config checks — touches `scripts/legacy/supabase.ts`, `scripts/legacy/supabase.test.ts`, `scripts/legacy/export-config.ts`, `scripts/legacy/export-config.test.ts` — tests T9, T10
-5. [ ] Add the `legacy:export` CLI and npm script — touches `scripts/legacy-export.ts`, `package.json` — tests none (wiring only)
-6. [ ] Document the export — touches `docs/ENVIRONMENT.md`, `docs/DECISIONS.md`, `docs/features/legacy-import.md`, `docs/features/overview.md` — tests none (docs only)
+1. [x] Export `legacyPaintId` from the catalog import and use it in `convertBrand` — touches `scripts/catalog/import-legacy.ts`, `scripts/catalog/import-legacy.test.ts` — tests T1
+2. [x] Add the paint map and email hash — touches `scripts/legacy/paint-map.ts`, `scripts/legacy/paint-map.test.ts`, `scripts/legacy/hash.ts`, `scripts/legacy/hash.test.ts` — tests T2, T7
+3. [x] Add the transform from old rows to export records and report — touches `scripts/legacy/transform.ts`, `scripts/legacy/transform.test.ts` — tests T3, T4, T5, T6, T8
+4. [x] Add the PostgREST reader and config checks — touches `scripts/legacy/supabase.ts`, `scripts/legacy/supabase.test.ts`, `scripts/legacy/export-config.ts`, `scripts/legacy/export-config.test.ts` — tests T9, T10
+5. [x] Add the `legacy:export` CLI and npm script — touches `scripts/legacy-export.ts`, `package.json` — tests none (wiring only)
+6. [x] Document the export — touches `docs/ENVIRONMENT.md`, `docs/DECISIONS.md`, `docs/features/legacy-import.md`, `docs/features/overview.md` — tests none (docs only)
 
 **Must not change:** `convertBrand`'s output for any input (T1 compares against it); the catalog files; Convex schema and functions.
 
@@ -109,3 +109,5 @@ Adds an admin-run script, `npm run legacy:export`, that reads every old Grimify 
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Approved under the owner's autonomous-delivery instruction for the legacy-import epic (2026-10-17)
 - 2026-10-17 — Started on branch task/legacy-export from origin/dev.
+- 2026-10-17 — Implemented steps 1-6. Deviations: added unmapped reason not-in-legacy-file (paints added in the old admin UI) with a T2 assertion; CLI takes the legacy JSON dir as a second argument and reads .env.legacy.local if present; refuses to overwrite an existing export; files written mode 600. Baseline build needs VITE_CONVEX_URL in the worktree (no .env.local); verified with a placeholder URL.
+- 2026-10-17 — Unverified: whether Supabase's new sb_secret_ keys accept Authorization: Bearer alongside apikey (T9 requires both headers); the legacy service-role JWT is sent the same way. Confirm on the first real run.
