@@ -81,11 +81,11 @@ After signing in, a person who used the old Grimify is offered their old owned p
 
 ## Implementation plan
 
-1. [ ] Add the Web Crypto email hash and the Clerk verified-email lookup — touches `convex/lib/emailHash.ts`, `convex/lib/emailHash.test.ts`, `convex/lib/clerk.ts`, `convex/lib/clerk.test.ts` — tests T1, T2
-2. [ ] Add `summaryForHashes`, `claim`, and the `findMine` / `resolveMine` actions — touches `convex/legacyImports.ts`, `convex/legacyClaim.ts`, `convex/legacyClaim.test.ts` — tests T3, T4, T5, T6
-3. [ ] Add the claim prompt sheet and mount it — touches `src/features/legacy-import/legacy-import-prompt.tsx`, `src/features/legacy-import/legacy-import-prompt.css`, `src/features/legacy-import/legacy-import-prompt.test.tsx`, `src/app-providers.tsx` — tests T7, T8, T9
-4. [ ] Document the claim flow — touches `docs/PRD.md`, `docs/UX_FLOWS.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/ENVIRONMENT.md`, `docs/DECISIONS.md`, `docs/features/legacy-import.md` — tests none (docs only)
-5. [ ] Set `CLERK_SECRET_KEY` and a generated dev-only `LEGACY_IMPORT_HASH_KEY` on the dev Convex deployment (dev holds only made-up data) — touches no files — tests none (configuration)
+1. [x] Add the Web Crypto email hash and the Clerk verified-email lookup — touches `convex/lib/emailHash.ts`, `convex/lib/emailHash.test.ts`, `convex/lib/clerk.ts`, `convex/lib/clerk.test.ts` — tests T1, T2
+2. [x] Add `summaryForHashes`, `claim`, and the `findMine` / `resolveMine` actions — touches `convex/legacyImports.ts`, `convex/legacyClaim.ts`, `convex/legacyClaim.test.ts` — tests T3, T4, T5, T6
+3. [x] Add the claim prompt sheet and mount it — touches `src/features/legacy-import/legacy-import-prompt.tsx`, `src/features/legacy-import/legacy-import-prompt.css`, `src/features/legacy-import/legacy-import-prompt.test.tsx`, `src/app-providers.tsx` — tests T7, T8, T9
+4. [x] Document the claim flow — touches `docs/PRD.md`, `docs/UX_FLOWS.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/ENVIRONMENT.md`, `docs/DECISIONS.md`, `docs/features/legacy-import.md` — tests none (docs only)
+5. [x] Deferred to the owner: set `CLERK_SECRET_KEY` and `LEGACY_IMPORT_HASH_KEY` on the dev Convex deployment. The `develop` deployment signs in with the production Clerk instance, so its secret is the production `sk_live_` key; whether it goes on dev is the owner's decision. Until then the feature is off on dev (`findMine` returns null) — touches no files — tests none (configuration)
 
 **Must not change:** existing public function contracts (`users.*`, `userPaints.*`, `palettes.*`); the `users` table (still only `tokenIdentifier`, DECISIONS 028); the sign-in flow.
 
@@ -104,3 +104,6 @@ After signing in, a person who used the old Grimify is offered their old owned p
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Approved under the owner's autonomous-delivery instruction for the legacy-import epic (2026-10-17)
 - 2026-10-17 — Started on branch story/legacy-claim from origin/dev.
+- 2026-10-17 — Steps 1-2 done: hash, Clerk lookup, claim functions. Step 2 also touched convex/palettes.ts (newGroupId exported, takes the group list) and convex/_generated/api.d.ts (hand-added module lines; codegen needs network).
+- 2026-10-17 — Steps 1-4 done. Step 3 also touched src/test/setup.ts (global convex/react mock gains useAction since AppProviders mounts the prompt). Step 5 (Convex env vars on develop) left for the orchestrator; develop signs in with the production Clerk instance, so its CLERK_SECRET_KEY is the sk_live key.
+- 2026-10-17 — Step 5 deferred to the owner: dev uses the production Clerk instance, so it would need the sk_live_ secret on the develop deployment
