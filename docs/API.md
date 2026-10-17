@@ -289,6 +289,14 @@ Args: `{ tokenIdentifier: string; emailHashes: string[]; choice: "import" | "dis
 
 ---
 
+### legacyImports.purgeExpired — internal mutation
+Authentication: none; internal. Run once a day by the `purge expired legacy imports` cron (`convex/crons.ts`, `crons.interval` every 24 hours).
+Args: `{}`
+Behavior:
+- Deletes `legacyImports` rows whose `loadedAt` is more than 180 days before now, complete or not, then `legacyImportClaims` rows whose `claimedAt` is more than 180 days before now. A row exactly 180 days old is kept
+- Deletes at most `DELETE_BATCH` (500) rows per transaction across both tables; after a full batch it schedules itself again (`runAfter(0)`) until none are left
+Returns: `null`
+
 ## 2b. Offline Outbox (client)
 
 Every Own/Want/Favorite change goes through the outbox, online or not (DECISIONS 010, 036). Code: `src/features/collection/` (`outbox.ts` pure logic, `device-store.ts` storage, `collection-provider.tsx` wiring).
