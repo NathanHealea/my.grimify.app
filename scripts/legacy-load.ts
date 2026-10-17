@@ -29,7 +29,12 @@ function run(argv: string[], env: Record<string, string>): Promise<RunResult> {
     const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "ignore"] });
     let stdout = "";
     child.stdout.setEncoding("utf8").on("data", (data: string) => (stdout += data));
-    child.on("error", reject).on("close", (code) => resolve({ code: code ?? 1, stdout }));
+    // The spawn error's spawnargs would print the chunk; report only the code.
+    child
+      .on("error", (error: NodeJS.ErrnoException) =>
+        reject(new Error(`Couldn't start convex run: ${error.code ?? "unknown error"}`)),
+      )
+      .on("close", (code) => resolve({ code: code ?? 1, stdout }));
   });
 }
 

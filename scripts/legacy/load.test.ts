@@ -92,6 +92,22 @@ describe("legacy load", () => {
     ).toThrow();
   });
 
+  it("chunkRecord counts shell escaping of apostrophes toward the limit", () => {
+    const quoted = "'".repeat(60);
+    const palettes = Array.from({ length: 50 }, () => ({
+      name: quoted,
+      paintIds: [],
+      groups: Array.from({ length: 30 }, () => ({ name: quoted, paintIds: [] })),
+    }));
+
+    const chunks = chunkRecord({ emailHash: HASH_A, ownedPaintIds: [], palettes });
+
+    for (const chunk of chunks) {
+      const json = JSON.stringify(chunk);
+      expect(Buffer.byteLength(json) + 3 * (json.split("'").length - 1)).toBeLessThan(100_000);
+    }
+  });
+
   it("loadExport runs one convex call per chunk with the deploy key in the environment", async () => {
     const env = loaderEnv("happy-otter-123", DEPLOY_KEY, {
       PATH: "/usr/bin",
@@ -193,7 +209,8 @@ describe("legacy load", () => {
     const good = [smallRecord(HASH_A), smallRecord(HASH_B)];
     expect(readExport(JSON.stringify(good))).toEqual(good);
 
-    expect(() => readExport("not json")).toThrow();
+    expect(() => readExport("not json")).toThrow("The export file isn't valid JSON");
+    expect(() => readExport('{"emailHash": SECRET')).toThrow(/^(?!.*SECRET)/s);
     expect(() => readExport("{}")).toThrow();
     expect(() => readExport(JSON.stringify({ records: good }))).toThrow();
 

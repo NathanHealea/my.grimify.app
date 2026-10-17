@@ -33,7 +33,13 @@ const recordSchema = z.strictObject({
 
 /** The records of an export.json written by `legacy:export`; throws naming the first bad record. */
 export function readExport(text: string): ExportRecord[] {
-  const parsed: unknown = JSON.parse(text);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // JSON.parse quotes part of the input in its message; keep export data off the terminal.
+    throw new Error("The export file isn't valid JSON");
+  }
   if (!Array.isArray(parsed)) throw new Error("The export file must be a JSON array of records");
   return parsed.map((item, index) => {
     const result = recordSchema.safeParse(item);
@@ -45,8 +51,10 @@ export function readExport(text: string): ExportRecord[] {
   });
 }
 
+// npx passes the argument through `sh -c`, which turns each ' into '\'' (3 extra bytes).
 function jsonBytes(value: unknown): number {
-  return Buffer.byteLength(JSON.stringify(value));
+  const json = JSON.stringify(value);
+  return Buffer.byteLength(json) + 3 * (json.split("'").length - 1);
 }
 
 /** Splits a record into stageChunk calls in order, each under `maxBytes` of JSON; a palette is never split. */
