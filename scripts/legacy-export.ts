@@ -8,7 +8,7 @@ import { BRANDS, type LegacyPaint } from "./catalog/import-legacy.ts";
 import { LEDGER_FILE } from "./catalog/validate.ts";
 import { type ExportConfig, readConfig } from "./legacy/export-config.ts";
 import { buildPaintMap } from "./legacy/paint-map.ts";
-import { fetchAll, type FetchLike } from "./legacy/supabase.ts";
+import { fetchAll, fetchAuthUsers, type FetchLike } from "./legacy/supabase.ts";
 import { type OldData, transform } from "./legacy/transform.ts";
 
 // One-time export of the old Grimify (Supabase) data for the legacy import (docs/features/legacy-import.md).
@@ -57,12 +57,6 @@ const tables = {
       product_line_id: z.number(),
     }),
   },
-  profiles: {
-    table: "profiles",
-    select: "id,email",
-    order: "id",
-    row: z.object({ id: z.string(), email: z.string().nullable() }),
-  },
   userPaints: {
     table: "user_paints",
     select: "user_id,paint_id",
@@ -109,6 +103,22 @@ const tables = {
     row: z.object({ group_id: z.string(), palette_paint_id: z.string(), position: z.number() }),
   },
 };
+
+const authUserSchema = z.object({
+  id: z.string(),
+  email: z.string().nullish(),
+  email_confirmed_at: z.string().nullish(),
+});
+
+/** Old users with only a confirmed email kept; `profiles.id` is the auth user's ID. */
+async function readUsers(source: Source): Promise<OldData["profiles"]> {
+  const users = z.array(authUserSchema).parse(await fetchAuthUsers(source));
+  console.log(`Read ${users.length} auth users`);
+  return users.map((user) => ({
+    id: user.id,
+    email: user.email && user.email_confirmed_at ? user.email : null,
+  }));
+}
 
 async function readLegacyFiles(legacyDir: string): Promise<Record<string, LegacyPaint[]>> {
   const files: Record<string, LegacyPaint[]> = {};
@@ -174,7 +184,7 @@ async function main(args: string[]): Promise<number> {
     catalogIds,
   );
   const data: OldData = {
-    profiles: await readTable(source, tables.profiles),
+    profiles: await readUsers(source),
     userPaints: await readTable(source, tables.userPaints),
     palettes: await readTable(source, tables.palettes),
     palettePaints: await readTable(source, tables.palettePaints),
