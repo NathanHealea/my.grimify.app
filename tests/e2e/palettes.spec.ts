@@ -3,9 +3,32 @@ import { expect, test } from "@playwright/test";
 
 import { E2E_EMAIL } from "./global-setup";
 
+// A failed journey skips its own delete step, and the shared test user is capped at 50 palettes (#25).
+let created: string | null = null;
+const track = (name: string) => (created = name);
+
+test.afterEach(async ({ page }, info) => {
+  const name = created;
+  created = null;
+  if (name === null || info.status === info.expectedStatus) return;
+  const main = page.getByRole("main");
+  await page.goto("/palettes");
+  await expect(main.getByRole("link").or(main.getByText("No palettes yet")).first()).toBeVisible();
+  const row = main.getByRole("link", { name: new RegExp(`^${name}`) });
+  if ((await row.count()) === 0) return;
+  await row.click();
+  await main.getByRole("button", { name: "Palette actions" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete palette" }).click();
+  await page
+    .getByRole("dialog", { name: /^Delete ".*"\?$/ })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/palettes$/);
+});
+
 test("creates, renames and deletes a palette", async ({ page }, info) => {
   // The device profiles run in parallel on one shared user, so each journey names its own palette.
-  const name = `E2E ${info.project.name} ${Date.now()}`;
+  const name = track(`E2E ${info.project.name} ${Date.now()}`);
   const renamed = `${name} renamed`;
   const main = page.getByRole("main");
 
@@ -47,7 +70,7 @@ test("creates, renames and deletes a palette", async ({ page }, info) => {
 });
 
 test("adds paints to a palette and removes one", async ({ page }, info) => {
-  const name = `E2E paints ${info.project.name} ${Date.now()}`;
+  const name = track(`E2E paints ${info.project.name} ${Date.now()}`);
   const main = page.getByRole("main");
   const picker = page.getByRole("dialog", { name: "Add to palette" });
   const choose = () => picker.getByRole("button", { name: new RegExp(`^${name}`) }).click();
@@ -103,7 +126,7 @@ test("adds paints to a palette and removes one", async ({ page }, info) => {
 });
 
 test("groups a palette's paints", async ({ page }, info) => {
-  const name = `E2E groups ${info.project.name} ${Date.now()}`;
+  const name = track(`E2E groups ${info.project.name} ${Date.now()}`);
   const main = page.getByRole("main");
   const picker = page.getByRole("dialog", { name: "Add to palette" });
 
@@ -178,7 +201,7 @@ test("groups a palette's paints", async ({ page }, info) => {
 });
 
 test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
-  const name = `E2E arrange ${info.project.name} ${Date.now()}`;
+  const name = track(`E2E arrange ${info.project.name} ${Date.now()}`);
   const main = page.getByRole("main");
   const picker = page.getByRole("dialog", { name: "Add to palette" });
   const choose = () => picker.getByRole("button", { name: new RegExp(`^${name}`) }).click();
@@ -334,7 +357,7 @@ test("arranges a palette by keyboard and mouse", async ({ page }, info) => {
 test("keeps a dragged group under the pointer when picking it up shortens the page", async ({
   page,
 }, info) => {
-  const name = `E2E group drag ${info.project.name} ${Date.now()}`;
+  const name = track(`E2E group drag ${info.project.name} ${Date.now()}`);
   const main = page.getByRole("main");
   const paintNames = ["Mephiston Red", "Evil Sunz Scarlet", "Abaddon Black", "Macragge Blue"];
 
