@@ -241,6 +241,27 @@ Moves send one item and its target position, never the whole order, so an add fr
 
 Palette errors are thrown as `ConvexError` with the code string as data: `UNAUTHENTICATED`, `PALETTE_NAME_INVALID`, `PALETTE_LIMIT`, `NOT_FOUND`, `INVALID_PAINT_ID`, `PALETTE_FULL`, `GROUP_NAME_INVALID`, `GROUP_LIMIT`, `GROUP_NOT_FOUND`, `PAINT_NOT_IN_PALETTE`, `INVALID_INDEX`. The name sheet shows "Give the palette a name" for `PALETTE_NAME_INVALID`, "You can have up to 50 palettes" for `PALETTE_LIMIT`, and "Couldn't save the palette. Check your connection and try again." for anything else. The Add to palette sheet shows "This palette is full (200 paints)" for `PALETTE_FULL` and "Couldn't add to the palette. Check your connection and try again." for anything else. A failed remove toasts "Couldn't remove <name>. Check your connection and try again." In group mode the name sheet shows "Give the group a name" for `GROUP_NAME_INVALID`, "A palette can have up to 30 groups" for `GROUP_LIMIT`, and "Couldn't save the group. Check your connection and try again." for anything else. Inline rename shows "Give the group a name" for `GROUP_NAME_INVALID` and "Couldn't rename the group. Check your connection and try again." for anything else. A paint's group actions sheet shows "This paint is no longer in the palette." for `PAINT_NOT_IN_PALETTE` and "Couldn't move <name>…", "Couldn't copy <name>…" or "Couldn't remove <name>…" (each ending "Check your connection and try again.") for anything else. The Groups sheet shows "Couldn't update <group>. Check your connection and try again." for any error, and a failed group delete shows "Couldn't delete the group. Check your connection and try again." A failed drag or Move-sheet move toasts "Couldn't move <name>. Check your connection and try again." (or "group <name>"), after the optimistic update rolls back.
 
+### legacyImports.stageChunk — internal mutation
+Authentication: none; internal, so only the deployment's admin (`npx convex run` with a deploy key) can call it. Run by `npm run legacy:load` (DECISIONS 058).
+Args:
+```ts
+{
+  emailHash: string;        // 64 lowercase hex characters
+  reset: boolean;           // first chunk of a record: replace any staged row for the hash
+  done: boolean;            // last chunk: mark the row complete
+  ownedPaintIds: string[];
+  palettes: { name: string; paintIds: string[]; groups: { name: string; paintIds: string[] }[] }[];
+}
+```
+Behavior:
+- Validates everything before reading or writing, so a rejected call changes nothing: `INVALID_EMAIL_HASH`, `INVALID_PAINT_ID` (owned, palette or group paint), `PALETTE_NAME_INVALID` / `GROUP_NAME_INVALID` (empty or over 60 characters after trimming), `PALETTE_FULL` (over 200 paints), `GROUP_LIMIT` (over 30 groups)
+- A hash in `legacyImportClaims` → returns `"claimed"` and writes nothing
+- `reset` → deletes the hash's staged row, if any, and inserts a new one with this chunk, `palettesOmitted` 0 plus any overflow, `loadedAt = now`
+- Not `reset` → appends to the staged row; no row → `NOT_STAGED`. Owned IDs already stored are skipped; `loadedAt` is kept
+- Palettes past the 50th are counted in `palettesOmitted` and not stored
+- `complete = done`
+Returns: `"staged" | "claimed"`
+
 ---
 
 ## 2b. Offline Outbox (client)
@@ -266,13 +287,15 @@ The client reads the code from `error.data` (`src/features/collection/outbox.ts`
 | code | Thrown by | Meaning |
 |---|---|---|
 | `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`) | No signed-in user, or no `users` row yet |
-| `INVALID_PAINT_ID` | `userPaints.set`, `palettes.addPaints`, `palettes.removePaint`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup`, `palettes.movePaint`, `palettes.moveGroupPaint` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
+| `INVALID_PAINT_ID` | `userPaints.set`, `legacyImports.stageChunk`, `palettes.addPaints`, `palettes.removePaint`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup`, `palettes.movePaint`, `palettes.moveGroupPaint` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
 | `NO_FLAGS` | `userPaints.set` | None of `owned` / `wishlisted` / `favorite` given |
 | `CLOCK_IN_FUTURE` | `userPaints.set` | `clientUpdatedAt` more than 5 minutes ahead |
-| `GROUP_NAME_INVALID` | `palettes.createGroup`, `palettes.renameGroup` | A group name is empty or over 60 characters after trimming |
-| `GROUP_LIMIT` | `palettes.createGroup` | The palette already has 30 groups |
+| `GROUP_NAME_INVALID` | `palettes.createGroup`, `palettes.renameGroup`, `legacyImports.stageChunk` | A group name is empty or over 60 characters after trimming |
+| `GROUP_LIMIT` | `palettes.createGroup`, `legacyImports.stageChunk` | The palette already has 30 groups, or a staged palette has more than 30 |
 | `GROUP_NOT_FOUND` | `palettes.renameGroup`, `palettes.removeGroup`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup`, `palettes.moveGroupPaint`, `palettes.moveGroup` | No group with that ID in the palette |
 | `PAINT_NOT_IN_PALETTE` | `palettes.addPaintToGroup` | The paint isn't in the palette's main list |
+| `INVALID_EMAIL_HASH` | `legacyImports.stageChunk` | `emailHash` isn't 64 lowercase hex characters |
+| `NOT_STAGED` | `legacyImports.stageChunk` | An append (`reset: false`) for a hash with no staged row |
 | `INVALID_INDEX` | `palettes.movePaint`, `palettes.moveGroupPaint`, `palettes.moveGroup`, `palettes.addPaintToGroup`, `palettes.movePaintToGroup` | `toIndex` isn't a whole number ≥ 0 |
 
 The outbox drops an entry on `INVALID_PAINT_ID`, `NO_FLAGS` or `CLOCK_IN_FUTURE` and toasts "Couldn't save that change." Any other error keeps the entry (§2b).

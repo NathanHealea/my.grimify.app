@@ -1,6 +1,12 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+export const legacyPaletteValidator = v.object({
+  name: v.string(),
+  paintIds: v.array(v.string()),
+  groups: v.array(v.object({ name: v.string(), paintIds: v.array(v.string()) })),
+});
+
 export default defineSchema({
   // Only the Clerk identity: email and name stay in Clerk and are read on the device (DECISIONS 028).
   users: defineTable({
@@ -28,4 +34,21 @@ export default defineSchema({
     groups: v.array(v.object({ id: v.string(), name: v.string(), paintIds: v.array(v.string()) })),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
+
+  // An old Grimify user's mapped data, keyed by the HMAC of their email until they claim it
+  // (DECISIONS 056, 058). Rows with complete false are a load that stopped partway.
+  legacyImports: defineTable({
+    emailHash: v.string(),
+    ownedPaintIds: v.array(v.string()),
+    palettes: v.array(legacyPaletteValidator),
+    palettesOmitted: v.number(),
+    complete: v.boolean(),
+    loadedAt: v.number(),
+  }).index("by_emailHash", ["emailHash"]),
+
+  // Hashes already claimed or discarded, so loading the export again can't bring them back.
+  legacyImportClaims: defineTable({
+    emailHash: v.string(),
+    claimedAt: v.number(),
+  }).index("by_emailHash", ["emailHash"]),
 });

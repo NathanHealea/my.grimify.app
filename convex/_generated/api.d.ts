@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as legacyImports from "../legacyImports.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as palettes from "../palettes.js";
 import type * as userPaints from "../userPaints.js";
@@ -20,6 +21,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  legacyImports: typeof legacyImports;
   "lib/auth": typeof lib_auth;
   palettes: typeof palettes;
   userPaints: typeof userPaints;

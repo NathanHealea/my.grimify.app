@@ -43,6 +43,9 @@ LEGACY_IMPORT_HASH_KEY=       # at least 32 characters, e.g. `openssl rand -hex 
 ```
 The command refuses a missing variable or a shorter hash key.
 
+### Legacy load (local only, one-time per environment)
+`npm run legacy:load -- <dev|stage|prod> <export.json>` reads `CONVEX_DEPLOY_KEY` from that environment's deploy settings file (`.env.deploy.<env>.local`, above) and needs no other variable. It refuses a missing file or key, or a key for any deployment other than the one `scripts/deploy.ts` records for that environment. See [features/legacy-import.md](features/legacy-import.md).
+
 ### Local only, and CI secrets
 ```bash
 CLERK_SECRET_KEY=             # sk_test_… from the Clerk dev instance; Playwright's signed-in E2E only.
