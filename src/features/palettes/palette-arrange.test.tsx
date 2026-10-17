@@ -428,25 +428,28 @@ describe("Arrange mode", () => {
     );
   });
 
-  it("moves focus to the dragged group's handle when a pointer group drag hides the focused paint row", async () => {
-    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
-    signedInWith(twoGroups());
-    renderRoute(`/palettes/${PALETTE_ID}`);
-    const list = await screen.findByRole("list", { name: "Paints in this palette" });
-    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
-    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
-    const trim = () => screen.getByRole("region", { name: "Trim" });
-    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+  it.each(["Drag Mephiston Red", "Move Mephiston Red"])(
+    "moves focus to the dragged group's handle when a pointer group drag hides the focused paint row (%s)",
+    async (focusedName) => {
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+      signedInWith(twoGroups());
+      renderRoute(`/palettes/${PALETTE_ID}`);
+      const list = await screen.findByRole("list", { name: "Paints in this palette" });
+      await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+      fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+      const trim = () => screen.getByRole("region", { name: "Trim" });
+      const highlights = () => screen.getByRole("region", { name: "Highlights" });
 
-    within(trim()).getByRole("button", { name: "Drag Mephiston Red" }).focus();
-    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
-    startMouseDrag(handle);
+      within(trim()).getByRole("button", { name: focusedName }).focus();
+      const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+      startMouseDrag(handle);
 
-    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
-    expect(document.activeElement).toBe(
-      within(highlights()).getByRole("button", { name: "Drag group Highlights" }),
-    );
-  });
+      await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+      expect(document.activeElement).toBe(
+        within(highlights()).getByRole("button", { name: "Drag group Highlights" }),
+      );
+    },
+  );
 
   it("keeps focus on the group handle after a pointer group drag that moved it ends", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
@@ -470,23 +473,29 @@ describe("Arrange mode", () => {
     );
   });
 
-  it("leaves focus alone when a pointer group drag starts with focus outside the group rows", async () => {
-    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
-    signedInWith(twoGroups());
-    renderRoute(`/palettes/${PALETTE_ID}`);
-    const list = await screen.findByRole("list", { name: "Paints in this palette" });
-    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
-    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
-    const trim = () => screen.getByRole("region", { name: "Trim" });
+  it.each(["Done", "All paints Drag Mephiston Red"])(
+    "leaves focus alone when a pointer group drag starts with focus outside the group rows (%s)",
+    async (focusedName) => {
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+      signedInWith(twoGroups());
+      renderRoute(`/palettes/${PALETTE_ID}`);
+      const list = await screen.findByRole("list", { name: "Paints in this palette" });
+      await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+      fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+      const trim = () => screen.getByRole("region", { name: "Trim" });
 
-    const done = screen.getByRole("button", { name: "Done" });
-    done.focus();
-    const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
-    startMouseDrag(handle);
+      const focused =
+        focusedName === "Done"
+          ? screen.getByRole("button", { name: "Done" })
+          : within(list).getByRole("button", { name: "Drag Mephiston Red" });
+      focused.focus();
+      const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
+      startMouseDrag(handle);
 
-    await waitFor(() => expect(trim()).toHaveAttribute("data-dragging"));
-    expect(document.activeElement).toBe(done);
-  });
+      await waitFor(() => expect(trim()).toHaveAttribute("data-dragging"));
+      expect(document.activeElement).toBe(focused);
+    },
+  );
 
   it("leaves focus alone when a pointer paint drag starts", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
