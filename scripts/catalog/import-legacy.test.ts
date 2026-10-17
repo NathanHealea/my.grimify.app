@@ -1,7 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { convertBrand, decodeEntities, type LegacyPaint, slug } from "./import-legacy.ts";
+import {
+  convertBrand,
+  decodeEntities,
+  type LegacyPaint,
+  legacyPaintId,
+  slug,
+} from "./import-legacy.ts";
 
 function legacy(id: string, type: string, name: string, hex = "#9A1115"): LegacyPaint {
   return { id, name, hex, type };
@@ -117,5 +123,38 @@ describe("convertBrand", () => {
       ["Grim Black", "speedpaint"],
       ["Speedpaint Medium", "technical"],
     ]);
+  });
+});
+
+describe("legacyPaintId", () => {
+  it("legacyPaintId derives the catalog ID convertBrand writes", () => {
+    const fixtures: Record<string, LegacyPaint[]> = {
+      citadel: [
+        legacy("cit-1", "Base", "Abaddon Black", "#231F20"),
+        legacy("cit-4", "Base", "Bugmans Glow", "#8C5144"),
+        legacy("cit-309", "Base", "Bugman's Glow", "#8C5144"),
+        legacy("cit-50", "Shade", "Agrax Earthshade", "#5A4A2F"),
+      ],
+      vallejo: [
+        legacy("val-3", "Metal Color", "Aluminium", "#A8A9AD"),
+        legacy("val-9", "Model Color", "Olivgrün Base", "#4B5320"),
+      ],
+      "ak-interactive": [
+        legacy("ak-1", "3rd Gen Acrylics", "White", "#FFFFFF"),
+        legacy("ak-600", "Abteilung 502", "Starship Filth", "#3B2F2F"),
+      ],
+      scale75: [legacy("s-1", "Drop & Paint", "Blood &amp; Guts", "#7A0A0A")],
+    };
+
+    for (const [brandId, paints] of Object.entries(fixtures)) {
+      const catalogIds = convertBrand(brandId, paints).paints.map((paint) => paint.id);
+      for (const paint of paints.filter((paint) => paint.type !== "Abteilung 502")) {
+        expect(catalogIds, `${brandId}/${paint.id}`).toContain(legacyPaintId(brandId, paint));
+      }
+    }
+
+    expect(legacyPaintId("citadel", fixtures.citadel[1])).toBe("citadel-base-bugmans-glow");
+    expect(legacyPaintId("citadel", fixtures.citadel[2])).toBe("citadel-base-bugmans-glow");
+    expect(legacyPaintId("ak-interactive", fixtures["ak-interactive"][1])).toBeNull();
   });
 });
