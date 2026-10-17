@@ -1,7 +1,7 @@
 ---
 type: bug
 slug: palette-drag-focus-loss
-status: staged
+status: released
 branch: bug/palette-drag-focus-loss
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/bug-palette-drag-focus-loss
 created: 2026-10-16
@@ -10,7 +10,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.19.3
 review_approved: 2026-10-16
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.19.3
 ---
 
 # Focus is lost when a pointer group drag collapses the focused paint row
@@ -94,3 +94,4 @@ Vitest + Testing Library in `src/features/palettes/palette-arrange.test.tsx`, us
 - 2026-10-16 — Review: T1 now also covers a focused Move button, and T3 a focused All paints row (main: ID), after mutation audit found both untested
 - 2026-10-16 — Staged: verification passed; version 0.19.2 → 0.19.3; no changelog file.
 - 2026-10-16 — Review approved.
+- 2026-10-16 — Released 0.19.3 as v0.19.3.
