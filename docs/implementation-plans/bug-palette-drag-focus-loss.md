@@ -73,8 +73,8 @@ Vitest + Testing Library in `src/features/palettes/palette-arrange.test.tsx`, us
 
 ## Implementation plan
 
-1. [ ] Move focus at group drag start: in `PaletteArrange`'s `onDragStart`, when the active item is a group and `document.activeElement` has a `data-drag-handle` or `data-move-button` starting with `group:`, focus `[data-drag-handle="heading:<groupId>"]` — touches `src/features/palettes/palette-arrange.tsx`, `src/features/palettes/palette-arrange.test.tsx` — tests T1, T2, T3, T4
-2. [ ] Docs: note the focus move in the Arrange mode paragraph — touches `docs/features/palettes.md` — tests none
+1. [x] Move focus at group drag start: in `PaletteArrange`'s `onDragStart`, when the active item is a group and `document.activeElement` has a `data-drag-handle` or `data-move-button` starting with `group:`, focus `[data-drag-handle="heading:<groupId>"]` — touches `src/features/palettes/palette-arrange.tsx`, `src/features/palettes/palette-arrange.test.tsx` — tests T1, T2, T3, T4
+2. [x] Docs: note the focus move in the Arrange mode paragraph — touches `docs/features/palettes.md` — tests none
 
 **Must not change:** Convex functions and schema; `planDrop` and announcement texts; keyboard drop/cancel focus handling (`focusAfterDrop`); sortable IDs; the collapse itself.
 
