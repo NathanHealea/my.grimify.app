@@ -87,8 +87,6 @@ export function PaletteGroups({
   const focusAfterRename = useRef<string | null>(null);
   // Convex holds a mutation until the connection returns, so offline a pending delete mustn't trap the user.
   const locked = deleting && online;
-  // Groups vary in height and the sorting strategy shifts by the dragged one's, so a group drag shows headings only.
-  const collapsed = (useDndContext().active?.data.current as DragData | undefined)?.type === "group";
 
   const actionsFor = (groupId: string) => () => actionButtons.current.get(groupId) ?? null;
   // A ref whose target is worked out when the name sheet closes, by which time a new group has rendered.
@@ -237,7 +235,6 @@ export function PaletteGroups({
               paints={paints}
               brands={brands}
               online={online}
-              collapsed={collapsed}
             />
           ))}
         </div>
@@ -551,14 +548,12 @@ function ArrangeGroup({
   paints,
   brands,
   online,
-  collapsed,
 }: {
   group: Group;
   headingId: string;
   paints: Map<string, Catalog["paints"][number]>;
   brands: Map<string, string>;
   online: boolean;
-  collapsed: boolean;
 }) {
   const data: DragData = { type: "group", groupId: group.id };
   const id = sortableIdOf(data);
@@ -579,6 +574,8 @@ function ArrangeGroup({
   const { active, over } = useDndContext();
   const from = active?.data.current as DragData | undefined;
   const target = over?.data.current as DragData | undefined;
+  // Groups vary in height and the sorting strategy shifts by the dragged one's, so a group drag shows headings only.
+  const collapsed = from?.type === "group";
   // Marks the group a paint from another list would land in, unless it's already there.
   const dropTarget =
     from?.type === "paint" &&
