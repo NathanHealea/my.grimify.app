@@ -71,16 +71,16 @@ Adds the Convex side of the old-data import: a `legacyImports` table that holds 
 | T5 | R4 | `stageChunk keeps at most 50 palettes` | `convex/legacyImports.test.ts` | 60 palettes over two chunks → 50 stored, `palettesOmitted` 10. |
 | T6 | R5 | `chunkRecord keeps every chunk under the size limit` | `scripts/legacy/load.test.ts` | A record with 2,837 owned IDs and 60 large palettes → chunks each serialize under 100 KB, first has `reset`, last has `done`, concatenation equals the input. A record with no data yields one chunk with `reset` and `done`. |
 | T7 | R5 | `loadExport runs one convex call per chunk with the deploy key in the environment` | `scripts/legacy/load.test.ts` | With a stub runner: argv is `npx --no convex run legacyImports:stageChunk <json>`; env has `CONVEX_DEPLOY_KEY` and no `CONVEX_DEPLOYMENT`; counts staged/claimed/failed from the results; a failed chunk stops that record and is counted. |
-| T8 | R5 | `readExport rejects a malformed export file` | `scripts/legacy/load.test.ts` | Missing `records`, a bad hash, or an unknown field fails with the record index. |
+| T8 | R5 | `readExport rejects a malformed export file` | `scripts/legacy/load.test.ts` | A top level that isn't an array of records (export.json is a bare array), a bad hash, or an unknown field fails; record errors name the record index. |
 
 **Not unit testable:** None. A load into the dev deployment with a fixture export is the manual end-to-end check (Risks).
 
 ## Implementation plan
 
-1. [ ] Add the `legacyImports` and `legacyImportClaims` tables and `stageChunk` — touches `convex/schema.ts`, `convex/legacyImports.ts`, `convex/legacyImports.test.ts` — tests T1, T2, T3, T4, T5
-2. [ ] Add export reading, chunking and the loader runner — touches `scripts/legacy/load.ts`, `scripts/legacy/load.test.ts` — tests T6, T7, T8
-3. [ ] Add the `legacy:load` CLI and npm script — touches `scripts/legacy-load.ts`, `package.json` — tests none (wiring only)
-4. [ ] Document the staging tables and loader — touches `docs/DATABASE.md`, `docs/API.md`, `docs/DECISIONS.md`, `docs/ENVIRONMENT.md`, `docs/features/legacy-import.md` — tests none (docs only)
+1. [x] Add the `legacyImports` and `legacyImportClaims` tables and `stageChunk` — touches `convex/schema.ts`, `convex/legacyImports.ts`, `convex/legacyImports.test.ts` — tests T1, T2, T3, T4, T5
+2. [x] Add export reading, chunking and the loader runner — touches `scripts/legacy/load.ts`, `scripts/legacy/load.test.ts` — tests T6, T7, T8
+3. [x] Add the `legacy:load` CLI and npm script — touches `scripts/legacy-load.ts`, `package.json` — tests none (wiring only)
+4. [x] Document the staging tables and loader — touches `docs/DATABASE.md`, `docs/API.md`, `docs/DECISIONS.md`, `docs/ENVIRONMENT.md`, `docs/features/legacy-import.md` — tests none (docs only)
 
 **Must not change:** existing tables, indexes and public functions; `scripts/deploy.ts` behavior (its helpers may be imported, not changed).
 
@@ -88,7 +88,7 @@ Adds the Convex side of the old-data import: a `legacyImports` table that holds 
 
 ## Risks and open questions
 
-- **Deploy key with `convex run`.** The CLI is expected to honor `CONVEX_DEPLOY_KEY` from the environment for `run` as it does for `deploy`; confirm against the dev deployment with a fixture export before relying on it for production.
+- **Deploy key with `convex run`.** Checked in the installed CLI source (convex 1.46.0, `lib/deploymentSelection.js`): a `CONVEX_DEPLOY_KEY` in the environment selects the deployment ahead of `CONVEX_DEPLOYMENT` from `.env.local`, and piped output is `JSON.stringify` of the return value. Still to confirm live: The CLI is expected to honor `CONVEX_DEPLOY_KEY` from the environment for `run` as it does for `deploy`; confirm against the dev deployment with a fixture export before relying on it for production.
 - **Call count.** One `convex run` per chunk takes about a second; a few hundred users is minutes. Acceptable for a one-off.
 - **Half-loaded rows.** A load interrupted mid-record leaves `complete: false`; the claim flow must ignore incomplete rows, and a re-run replaces them.
 - **Claim tombstones hold only the hash and a time.** They let a re-load skip claimed users; `legacy-purge` removes them with the staged rows at the retention limit.
@@ -99,3 +99,5 @@ Adds the Convex side of the old-data import: a `legacyImports` table that holds 
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Approved under the owner's autonomous-delivery instruction for the legacy-import epic (2026-10-17)
 - 2026-10-17 — Started on branch task/legacy-staging from origin/dev.
+- 2026-10-17 — T8 corrected: export.json is a bare array (legacy-export), so 'missing records' became 'top level not an array'. T7 fixture lengthened so the owned list alone is over 130 KB (AC5); 2,837 31-char IDs were only 96 KB, one chunk.
+- 2026-10-17 — Steps 1-4 done. api.d.ts updated by hand with the two module lines codegen emits (convex codegen needs network); chunkRecord fails a record whose single palette exceeds 100 KB; loader hides Convex stderr because argument errors echo values.
