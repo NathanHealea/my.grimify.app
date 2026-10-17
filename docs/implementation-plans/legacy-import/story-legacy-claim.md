@@ -9,7 +9,7 @@ created: 2026-10-17
 approved: 2026-10-17
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.20.0
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-17
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -113,3 +113,4 @@ After signing in, a person who used the old Grimify is offered their old owned p
 - 2026-10-17 — Review cycle 2: Done button described by the outcome (VoiceOver drops the live region on focus move); security fixes confirmed
 - 2026-10-17 — Test audit: 6 tests added; 8 surviving mutants killed (incl. user scoping of the userPaints scan)
 - 2026-10-17 — Staged: verification passed; version 0.19.8 → 0.20.0; no changelog file.
+- 2026-10-17 — Review approved.
