@@ -85,12 +85,15 @@ function startMouseDrag(handle: HTMLElement) {
 const originalRect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect")
   ?.value as (this: Element) => DOMRect;
 
-/** Highlights' section sits at 300 while any group shows paint rows and at 100 once they collapse, like a clamped scroll. */
-function stubHighlightsMovesOnCollapse() {
+/**
+ * Highlights' section sits at 300 while any group shows paint rows and at `collapsed.top` (100 by default) once
+ * they collapse, like a clamped scroll. Change `collapsed.top` mid-test to move it again.
+ */
+function stubHighlightsMovesOnCollapse(collapsed = { top: 100 }) {
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
     const section = screen.queryByRole("region", { name: "Highlights" });
     if (this !== section) return originalRect.call(this);
-    const top = document.querySelector(".palette-groups__paints") ? 300 : 100;
+    const top = document.querySelector(".palette-groups__paints") ? 300 : collapsed.top;
     return {
       x: 0,
       y: top,
@@ -573,6 +576,117 @@ describe("Arrange mode", () => {
     await waitFor(() => {
       const { top, translateY } = overlayPosition();
       expect(top + translateY).toBe(320);
+    });
+  });
+
+  it("keeps the grab point under a finger when a touch group drag moves the heading", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    stubHighlightsMovesOnCollapse();
+
+    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    fireEvent.touchStart(handle, { touches: [{ clientX: 10, clientY: 310 }] });
+    onTestFinished(async () => {
+      fireEvent.touchEnd(handle, { touches: [], changedTouches: [{ clientX: 10, clientY: 330 }] });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    // The touch sensor starts the drag after a 150ms hold.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    // Touch events keep targeting the element the touch started on, so the sensor listens there.
+    fireEvent.touchMove(handle, { touches: [{ clientX: 10, clientY: 330 }] });
+
+    await waitFor(() => {
+      const { top, translateY } = overlayPosition();
+      expect(top + translateY).toBe(320);
+    });
+  });
+
+  it("keeps the group drag shift when the heading is re-measured mid-drag", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    const collapsed = { top: 100 };
+    stubHighlightsMovesOnCollapse(collapsed);
+
+    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 310 });
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 316 });
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 330 });
+    await waitFor(() => {
+      const { top, translateY } = overlayPosition();
+      expect(top + translateY).toBe(320);
+    });
+
+    // As if the page scrolled 50px; dnd-kit re-measures the dragged node on a child list change around it.
+    collapsed.top = 50;
+    const parent = highlights().parentElement;
+    if (!parent) throw new Error("Highlights has no parent");
+    parent.append(document.createElement("div"));
+    parent.lastElementChild?.remove();
+    // Lets the MutationObserver callback and its re-render finish before the next move.
+    await act(() => Promise.resolve());
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 340 });
+
+    await waitFor(() => {
+      const { top, translateY } = overlayPosition();
+      expect(top + translateY).toBe(330);
+    });
+  });
+
+  it("places each group drag's preview at its own grab point", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+    const handle = () =>
+      within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    const collapsed = { top: 100 };
+    stubHighlightsMovesOnCollapse(collapsed);
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    fireEvent.mouseDown(handle(), { button: 0, clientX: 10, clientY: 310 });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 316 });
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 330 });
+    await waitFor(() => {
+      const { top, translateY } = overlayPosition();
+      expect(top + translateY).toBe(320);
+    });
+    fireEvent.mouseUp(document, { clientX: 10, clientY: 330 });
+    await waitFor(() => expect(highlights()).not.toHaveAttribute("data-dragging"));
+    await within(list).findByRole("button", { name: "Drag Mephiston Red" });
+
+    // Grabbed 20px into the heading this time, and the collapse moves it to 150.
+    collapsed.top = 150;
+    fireEvent.mouseDown(handle(), { button: 0, clientX: 10, clientY: 320 });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 326 });
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 360 });
+
+    await waitFor(() => {
+      const { top, translateY } = overlayPosition();
+      expect(top + translateY).toBe(340);
     });
   });
 
