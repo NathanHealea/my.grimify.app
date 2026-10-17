@@ -1,13 +1,13 @@
 ---
 type: bug
 slug: palette-group-drag-offset
-status: in-progress
+status: staged
 branch: bug/palette-group-drag-offset
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/bug-palette-group-drag-offset
 created: 2026-10-16
 approved: 2026-10-16
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.19.4
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
@@ -91,7 +91,7 @@ Unit tests in `src/features/palettes/palette-arrange.test.tsx` (Vitest + Testing
 ## Risks and open questions
 
 - **Modifier and scroll during the drag.** The sensor transform is in viewport coordinates and the preview is `position: fixed`, so the shift is a constant for the drag. If the page auto-scrolls mid-drag, dnd-kit adjusts collisions for scroll separately; T4 covers a drop after the collapse, and the manual check covers auto-scroll on a long palette.
-- **Collision box follows the modifier.** Resolved: a `DndContext` modifier also moves `collisionRect`, and T4 showed groups then dropped short by the clamp. dnd-kit already counts the clamp as a scroll for targets, so the modifier is on `DragOverlay` only. It reads `activeNodeRect`, not `draggingNodeRect`: dnd-kit measures the overlay including its transform, which already holds the shift.
+- **Collision box follows the modifier.** Resolved: a `DndContext` modifier also moves `collisionRect`, and T4 showed groups then dropped short by the clamp. dnd-kit measures the overlay, shift included, for its collision box, so targets follow the corrected preview and the modifier goes on `DragOverlay` only; the shift is fixed at the first measure because `activeNodeRect` can be re-measured mid-drag. It reads `activeNodeRect`, not `draggingNodeRect`: dnd-kit measures the overlay including its transform, which already holds the shift.
 - **E2E runs a preview server.** `npm run test:e2e` builds and serves the app on port 4173 for the length of the run (playwright.config.ts `webServer`), against the Convex deployment in `.env.local`.
 
 ## Progress log
@@ -101,3 +101,6 @@ Unit tests in `src/features/palettes/palette-arrange.test.tsx` (Vitest + Testing
 - 2026-10-16 — Started on branch bug/palette-group-drag-offset from origin/dev.
 - 2026-10-16 — Re-planned: browser probe showed the overlay was already heading-sized; real cause is clamped scroll after the collapse defeating dnd-kit's layout-shift compensation. Reverted the heading-node change (3c03d34); new plan keeps the grab point under the pointer with a DndContext modifier
 - 2026-10-16 — Step 1 revised after T4: modifier moved from DndContext to DragOverlay (26c9654); on DndContext it shifted drop targets by the clamp. Existing 'arranges a palette by keyboard and mouse' e2e fails on origin/dev code too (pre-existing, filed separately)
+- 2026-10-16 — Review: shift fixed at first measure; comment/docs corrected (targets follow via the measured overlay, not a scroll adjustment); T4 asserts the page shortened below the scroll position (WebKit doesn't move the heading, so a heading-moved guard failed there)
+- 2026-10-16 — Test audit: added touch, mid-drag re-measure and two-drags tests; each kills its mutant. Remaining survivors (paint drags without the group check, a single reset removed) behave the same as the real code
+- 2026-10-16 — Staged: verification passed; version 0.19.3 → 0.19.4; no changelog file.
