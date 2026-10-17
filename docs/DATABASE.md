@@ -328,6 +328,9 @@ Protection:
 - `tokenIdentifier` is never returned to clients (`users.me` returns only `_id`)
 - Not logged
 - Deleted when the account is deleted (see SECURITY.md)
+- `legacyImports` and `legacyImportClaims` are internal only: no public function returns them, and the loader prints counts, never hashes or names
+- A staged row is deleted when its user imports or discards it; unclaimed rows and claim records are purged 180 days after loading (`legacy-purge`, DECISIONS 058)
+- Dev and stage hold only made-up legacy data, hashed with their own key
 
 ---
 
