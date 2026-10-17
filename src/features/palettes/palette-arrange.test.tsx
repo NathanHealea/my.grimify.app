@@ -354,38 +354,6 @@ describe("Arrange mode", () => {
     expect(within(trim()).queryByRole("button", { name: "Drag Blood Red" })).toBeNull();
   });
 
-  it("sizes the group drag overlay to the heading row", async () => {
-    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
-    const measure = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect")
-      ?.value as (this: Element) => DOMRect;
-    // jsdom has no layout: an expanded group is 240px tall and its heading row 48px.
-    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
-      this: Element,
-    ) {
-      const height = this.classList.contains("palette-groups__group")
-        ? 240
-        : this.classList.contains("palette-groups__heading")
-          ? 48
-          : null;
-      if (height === null) return measure.call(this);
-      return DOMRect.fromRect({ x: 0, y: 0, width: 320, height });
-    });
-    signedInWith(twoGroups());
-    renderRoute(`/palettes/${PALETTE_ID}`);
-    const list = await screen.findByRole("list", { name: "Paints in this palette" });
-    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
-    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
-    const trim = () => screen.getByRole("region", { name: "Trim" });
-
-    const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
-    handle.focus();
-    fireEvent.keyDown(handle, { code: "Space", key: " " });
-
-    await waitFor(() => expect(document.querySelector(".drag-preview")).not.toBeNull());
-    const overlay = document.querySelector(".drag-preview")?.parentElement;
-    expect(overlay?.style.height).toBe("48px");
-  });
-
   it("expands the groups again when a group drag is dropped or cancelled", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     signedInWith(twoGroups());

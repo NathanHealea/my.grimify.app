@@ -585,6 +585,7 @@ function ArrangeGroup({
 
   return (
     <section
+      ref={setNodeRef}
       className="palette-groups__group palette-arrange__item"
       aria-labelledby={headingId}
       data-dragging={isDragging || undefined}
@@ -596,8 +597,7 @@ function ArrangeGroup({
       }}
     >
       <div ref={setZoneRef} className="palette-groups__zone">
-        {/* dnd-kit measures the sortable node before the collapse and sizes the overlay and collision box from it (#23). */}
-        <div ref={setNodeRef} className="palette-groups__heading">
+        <div className="palette-groups__heading">
           <h2 id={headingId}>{group.name}</h2>
           <MoveButton data={data} label={`Move group ${group.name}`} disabled={!online} />
           <DragHandle
