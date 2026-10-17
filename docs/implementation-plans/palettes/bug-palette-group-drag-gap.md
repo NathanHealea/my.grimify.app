@@ -9,7 +9,7 @@ created: 2026-10-14
 approved: 2026-10-14
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
 version: 0.19.2
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-16
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
 ---
@@ -101,3 +101,4 @@ Vitest + Testing Library, in the existing palette arrange tests. jsdom doesn't l
 - 2026-10-14 — Step 1: no CSS needed, so no data-collapsed attribute; T4 asserts today's over announcement since jsdom overwrites the pick-up text in the same render
 - 2026-10-14 — Step 2: no code. dnd-kit 6.3.1 sets status Initialized in an effect after the collapsed render commits, and its useDroppableMeasuring re-measures every droppable on that change (and again when the unmounted paint rows unregister), so heading rects are already one row. Not yet checked in a browser; R2 stays a manual phone check
 - 2026-10-16 — Staged: verification passed; version 0.19.1 → 0.19.2; no changelog file.
+- 2026-10-16 — Review approved.
