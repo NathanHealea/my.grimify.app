@@ -320,6 +320,7 @@ After Import or Discard the old data is gone from the server: no account sees th
 Failure:
 - The lookup fails (offline, Clerk down) → no sheet; the error is logged and the app works as before
 - Import or Discard fails → the sheet shows "Couldn't import your old data. Try again." or "Couldn't discard your old data. Try again." above its buttons; the buttons stay and the data stays staged
+- Import or Discard finds the data already gone (`LEGACY_IMPORT_NOT_FOUND`: another tab or device resolved it first) → the result step with "Your old data was already brought over or discarded." and **Done**
 
 Loading State:
 While Import or Discard runs, the buttons are disabled and the sheet can't be closed.

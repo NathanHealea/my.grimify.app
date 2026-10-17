@@ -1,6 +1,7 @@
 import "./legacy-import-prompt.css";
 
 import { useAction, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ const FAILURE: Record<Choice, string> = {
 };
 
 type Step = "offer" | "confirm" | "done";
+
+const ALREADY_RESOLVED = "Your old data was already brought over or discarded.";
 
 /** Asks once per signed-in session whether to bring over old Grimify data (UX_FLOWS Flow 11). */
 export function LegacyImportPrompt() {
@@ -103,6 +106,12 @@ export function LegacyImportPrompt() {
         showStep("done");
       })
       .catch((cause: unknown) => {
+        // Another tab or device resolved it first; retrying can't help.
+        if (cause instanceof ConvexError && cause.data === "LEGACY_IMPORT_NOT_FOUND") {
+          setStatus(ALREADY_RESOLVED);
+          showStep("done");
+          return;
+        }
         console.error(`Resolving old Grimify data (${choice}) failed`, cause);
         setStatus(FAILURE[choice]);
       })

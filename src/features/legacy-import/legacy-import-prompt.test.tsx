@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useAction, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
+import { ConvexError } from "convex/values";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/features/feedback/toast-provider";
@@ -214,6 +215,30 @@ describe("LegacyImportPrompt", () => {
     expect(resolveMine).toHaveBeenCalledExactlyOnceWith({ choice: "discard" });
     expect(consoleError).toHaveBeenCalled();
   });
+
+  it.each(["Import", "Discard"])(
+    "shows the result step when %s finds the data already resolved",
+    async (choice) => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      resolveMine.mockRejectedValue(new ConvexError("LEGACY_IMPORT_NOT_FOUND"));
+      renderPrompt();
+      let dialog = await findPrompt();
+
+      fireEvent.click(within(dialog).getByRole("button", { name: choice }));
+      if (choice === "Discard") {
+        fireEvent.click(within(dialog).getByRole("button", { name: "Discard for good" }));
+      }
+
+      dialog = await screen.findByRole("dialog", { name: "Your old Grimify data" });
+      expect(within(dialog).getByRole("status")).toHaveTextContent(
+        "Your old data was already brought over or discarded.",
+      );
+      await waitFor(() =>
+        expect(within(dialog).getByRole("button", { name: "Done" })).toHaveFocus(),
+      );
+      expect(consoleError).not.toHaveBeenCalled();
+    },
+  );
 
   it("prompt is keyboard operable and labelled", async () => {
     const rerender = renderPrompt();
