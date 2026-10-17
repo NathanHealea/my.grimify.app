@@ -8,7 +8,7 @@ created: 2026-10-17
 approved: 2026-10-17
 commit_type:         # optional override for the release subject type (default: story=feat, bug=fix, task=chore)
 version: 0.19.5
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-17
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the branch's last commit
 ---
@@ -86,3 +86,4 @@ With a 500ms pause before ArrowDown and a wait for the drop to settle, the journ
 - 2026-10-17 — Passes 4/4 on each project serially; Move sheet click also guarded after a 1-in-6 swallowed click (drop to another group skips the animation)
 - 2026-10-17 — Review: guards bounded (<=2 presses/clicks, 5s); Enter wouldn't avoid the click block (it dispatches a click); doc softened to 'unlikely, recoverable'. 6/6 passes after
 - 2026-10-17 — Staged: verification passed; version 0.19.4 → 0.19.5; no changelog file.
+- 2026-10-17 — Review approved.
