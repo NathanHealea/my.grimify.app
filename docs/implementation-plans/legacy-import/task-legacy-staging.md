@@ -2,13 +2,13 @@
 type: task
 epic: legacy-import    # removed by `wi new` when there is no parent epic
 slug: legacy-staging
-status: in-progress
+status: staged
 branch: task/legacy-staging
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/task-legacy-staging
 created: 2026-10-17
 approved: 2026-10-17
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.19.8
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -101,3 +101,6 @@ Adds the Convex side of the old-data import: a `legacyImports` table that holds 
 - 2026-10-17 — Started on branch task/legacy-staging from origin/dev.
 - 2026-10-17 — T8 corrected: export.json is a bare array (legacy-export), so 'missing records' became 'top level not an array'. T7 fixture lengthened so the owned list alone is over 130 KB (AC5); 2,837 31-char IDs were only 96 KB, one chunk.
 - 2026-10-17 — Steps 1-4 done. api.d.ts updated by hand with the two module lines codegen emits (convex codegen needs network); chunkRecord fails a record whose single palette exceeds 100 KB; loader hides Convex stderr because argument errors echo values.
+- 2026-10-17 — Review cycle 1: LOWs only; fixed group subset check, data in loader errors, apostrophe sizing, DATABASE retention
+- 2026-10-17 — Test audit: closed 5 gaps (complete flag, 130 KB chunking, failure counting, exit code, CLI redaction)
+- 2026-10-17 — Staged: verification passed; version 0.19.7 → 0.19.8; no changelog file.
