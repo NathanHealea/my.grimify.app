@@ -2,7 +2,7 @@ import "./legacy-import-prompt.css";
 
 import { useAction, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +56,7 @@ export function LegacyImportPrompt() {
   const cancelButton = useRef<HTMLButtonElement>(null);
   const discardButton = useRef<HTMLButtonElement>(null);
   const doneButton = useRef<HTMLButtonElement>(null);
+  const statusId = useId();
   const stepChanged = useRef(false);
 
   // Switching steps removes the focused button, so focus moves to the new step. The confirm step starts
@@ -147,7 +148,7 @@ export function LegacyImportPrompt() {
                 Your old paints and palettes will be deleted and can't be brought over later.
               </SheetDescription>
             )}
-            <p className="legacy-import-prompt__status" role="status">
+            <p id={statusId} className="legacy-import-prompt__status" role="status">
               {status}
             </p>
           </SheetBody>
@@ -190,7 +191,9 @@ export function LegacyImportPrompt() {
               </>
             )}
             {step === "done" && (
-              <Button ref={doneButton} onClick={close}>
+              // Focus moves here as the status text appears, which can cut off the live region; the
+              // description makes the outcome part of the focus announcement.
+              <Button ref={doneButton} aria-describedby={statusId} onClick={close}>
                 Done
               </Button>
             )}

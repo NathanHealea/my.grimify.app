@@ -129,6 +129,7 @@ describe("LegacyImportPrompt", () => {
     ).toEqual(["Done", ""]);
     const done = within(dialog).getByRole("button", { name: "Done" });
     await waitFor(() => expect(done).toHaveFocus());
+    expect(done).toHaveAccessibleDescription(/^Added /);
     fireEvent.click(done);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
