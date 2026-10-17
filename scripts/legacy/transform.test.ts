@@ -444,4 +444,28 @@ describe("transform", () => {
     expect(report.totals.usersSkippedNoEmail).toBe(2);
     expect(report.totals.usersWithNoData).toBe(1);
   });
+
+  it("transform throws when an old paint is missing from the paint map", () => {
+    const data: OldData = {
+      ...emptyData(),
+      profiles: [{ id: "profile-1", email: "painter@example.com" }],
+      userPaints: [{ user_id: "profile-1", paint_id: "old-paint-unknown" }],
+    };
+
+    expect(() => transform(data, new Map(), HASH_KEY)).toThrow("old-paint-unknown");
+  });
+
+  it("transform throws when a group member points at a missing palette paint", () => {
+    const data: OldData = {
+      ...emptyData(),
+      profiles: [{ id: "profile-1", email: "painter@example.com" }],
+      palettes: [
+        { id: "palette-1", user_id: "profile-1", name: "One", created_at: "2025-01-01T00:00:00Z" },
+      ],
+      paletteGroups: [{ id: "group-1", palette_id: "palette-1", name: "Group", position: 0 }],
+      paletteGroupPaints: [{ group_id: "group-1", palette_paint_id: "pp-gone", position: 0 }],
+    };
+
+    expect(() => transform(data, new Map(), HASH_KEY)).toThrow("group-1");
+  });
 });

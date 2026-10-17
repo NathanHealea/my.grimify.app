@@ -119,6 +119,15 @@ describe("fetchAll pages through PostgREST", () => {
     await expect(read).rejects.toThrow(/user_paints/);
     await expect(read).rejects.toThrow(/401/);
   });
+
+  it("throws with the table name when the body is not an array", async () => {
+    const fetch: FetchLike = () =>
+      Promise.resolve(new Response(JSON.stringify({ message: "oops" }), { status: 200 }));
+
+    await expect(
+      fetchAll({ url: SUPABASE_URL, secretKey: SECRET_KEY, fetch }, "user_paints", "*", "id"),
+    ).rejects.toThrow("Reading user_paints returned a non-array body");
+  });
 });
 
 describe("fetchAuthUsers pages through the auth admin API", () => {
@@ -158,5 +167,13 @@ describe("fetchAuthUsers pages through the auth admin API", () => {
     await expect(
       fetchAuthUsers({ url: SUPABASE_URL, secretKey: SECRET_KEY, fetch }),
     ).rejects.toThrow("HTTP 401");
+  });
+
+  it("throws when the body has no users array", async () => {
+    const fetch: FetchLike = () =>
+      Promise.resolve(new Response(JSON.stringify({ message: "oops" }), { status: 200 }));
+    await expect(
+      fetchAuthUsers({ url: SUPABASE_URL, secretKey: SECRET_KEY, fetch }),
+    ).rejects.toThrow("no users array");
   });
 });

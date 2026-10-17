@@ -75,4 +75,20 @@ describe("buildPaintMap", () => {
     });
     expect(map.size).toBe(5);
   });
+
+  it("buildPaintMap throws on a paint whose product line is unknown", () => {
+    const paints = [paint("00000000-0000-4000-8000-000000000001", "cit-1", "Abaddon Black", 99)];
+
+    expect(() => buildPaintMap({ paints, productLines, brands }, legacyFiles, catalogIds)).toThrow(
+      "unknown product line 99",
+    );
+  });
+
+  it("buildPaintMap throws when a known brand has no legacy file", () => {
+    const paints = [paint("00000000-0000-4000-8000-000000000001", "cit-1", "Abaddon Black", 10)];
+
+    expect(() => buildPaintMap({ paints, productLines, brands }, {}, catalogIds)).toThrow(
+      'No legacy paint file for brand "citadel"',
+    );
+  });
 });

@@ -55,7 +55,7 @@ describe("readConfig validates the environment", () => {
   });
 
   it("throws a usage error when no output dir is given", () => {
-    expect(() => readConfig(validEnv(), undefined, REPO_ROOT)).toThrow();
+    expect(() => readConfig(validEnv(), undefined, REPO_ROOT)).toThrow("usage:");
   });
 
   it("rejects an output dir inside the repo", () => {
