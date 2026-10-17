@@ -2,7 +2,7 @@
 type: task
 epic: legacy-import    # removed by `wi new` when there is no parent epic
 slug: legacy-purge
-status: staged
+status: released
 branch: task/legacy-purge
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/task-legacy-purge
 created: 2026-10-17
@@ -11,7 +11,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.20.1
 review_approved: 2026-10-17
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.20.1
 ---
 
 # Purge unclaimed imports after the retention period
@@ -85,3 +85,4 @@ Adds a daily Convex cron that deletes staged old-Grimify imports and claim recor
 - 2026-10-17 — Reviews: LOW docs only (API layout, DECISIONS 058 retention trade-offs) fixed; test audit 11/13 killed, 2 harmless survivors
 - 2026-10-17 — Staged: verification passed; version 0.20.0 → 0.20.1; no changelog file.
 - 2026-10-17 — Review approved.
+- 2026-10-17 — Released 0.20.1 as v0.20.1.
