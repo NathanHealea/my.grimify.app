@@ -2,7 +2,7 @@
 type: task
 epic: legacy-import    # removed by `wi new` when there is no parent epic
 slug: legacy-export
-status: staged
+status: released
 branch: task/legacy-export
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/task-legacy-export
 created: 2026-10-17
@@ -11,7 +11,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.19.7
 review_approved: 2026-10-17
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.19.7
 ---
 
 # Export and map old Supabase data to a hashed import file
@@ -115,3 +115,4 @@ Adds an admin-run script, `npm run legacy:export`, that reads every old Grimify 
 - 2026-10-17 — Review cycle 2 clean apart from LOWs; test audit: 6 tests added, auth mapping extracted and tested
 - 2026-10-17 — Staged: verification passed; version 0.19.6 → 0.19.7; no changelog file.
 - 2026-10-17 — Review approved.
+- 2026-10-17 — Released 0.19.7 as v0.19.7.
