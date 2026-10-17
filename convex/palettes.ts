@@ -5,13 +5,13 @@ import { mutation, type MutationCtx, query } from "./_generated/server";
 import { requireUser } from "./lib/auth";
 import { PAINT_ID } from "./userPaints";
 
-const MAX_PALETTES = 50;
+export const MAX_PALETTES = 50;
 const MAX_NAME_LENGTH = 60;
 const PREVIEW_COUNT = 5;
-const MAX_PAINTS = 200;
-const MAX_GROUPS = 30;
+export const MAX_PAINTS = 200;
+export const MAX_GROUPS = 30;
 
-function cleanName(name: string, error = "PALETTE_NAME_INVALID"): string {
+export function cleanName(name: string, error = "PALETTE_NAME_INVALID"): string {
   const trimmed = name.trim();
   if (trimmed.length === 0 || trimmed.length > MAX_NAME_LENGTH) {
     throw new ConvexError(error);
