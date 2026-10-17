@@ -262,6 +262,31 @@ Behavior:
 - `complete = done`
 Returns: `"staged" | "claimed"`
 
+### legacyClaim.findMine — action
+Authentication: optional; signed out returns `null` without calling Clerk (DECISIONS 059).
+Args: `{}`
+Behavior:
+- `LEGACY_IMPORT_HASH_KEY` unset on the deployment → `null` (the import is off); set but `CLERK_SECRET_KEY` unset → throws
+- Reads the caller's addresses from Clerk's Backend API (`GET /v1/users/{identity.subject}`) and hashes only those with `verification.status === "verified"`; a non-2xx answer from Clerk throws
+- Passes the hashes and the caller's `tokenIdentifier` to `legacyImports.summaryForHashes`: `null` when the caller has no `users` row or no complete staged row matches
+Returns: `{ ownedCount: number; paletteCount: number } | null`. `paletteCount` includes the palettes the export counted in `palettesOmitted`.
+
+### legacyClaim.resolveMine — action
+Authentication: required.
+Args: `{ choice: "import" | "discard" }`
+Behavior:
+- Signed out, or no `users` row → `UNAUTHENTICATED`. Hash key unset, or no complete staged row for a verified address → `LEGACY_IMPORT_NOT_FOUND`. Clerk is called as in `findMine`
+- Runs `legacyImports.claim` in one transaction: deletes the staged row and records its hash in `legacyImportClaims`, so neither this nor any other account can claim it again, and loading the export again skips it
+- `import`: every staged owned paint becomes `owned: true` with `updatedAt` = claim time; an existing row keeps `wishlisted` and `favorite`, and one already owned is left as it is. Staged palettes are added oldest first as new palettes (new group IDs, `updatedAt` = claim time) until the caller has 50. Existing palettes are never changed
+- `discard`: writes nothing to `userPaints` or `palettes`
+Returns: `{ paintsAdded: number; palettesAdded: number; palettesSkipped: number }`. `paintsAdded` counts paints that weren't owned before; `palettesSkipped` is the staged palettes past the cap plus `palettesOmitted`. Discard returns zeros.
+
+### legacyImports.summaryForHashes — internal query
+Args: `{ tokenIdentifier: string; emailHashes: string[] }`. Called only by `legacyClaim.findMine`. Returns the counts for the first complete staged row among `emailHashes`, or `null` when there is none or the `users` row is missing.
+
+### legacyImports.claim — internal mutation
+Args: `{ tokenIdentifier: string; emailHashes: string[]; choice: "import" | "discard" }`. Called only by `legacyClaim.resolveMine`, which derives both from the session and Clerk. Behavior and errors as in `resolveMine`.
+
 ---
 
 ## 2b. Offline Outbox (client)
@@ -286,7 +311,7 @@ The client reads the code from `error.data` (`src/features/collection/outbox.ts`
 
 | code | Thrown by | Meaning |
 |---|---|---|
-| `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`) | No signed-in user, or no `users` row yet |
+| `UNAUTHENTICATED` | `requireIdentity`, `requireUser` (`convex/lib/auth.ts`), `legacyClaim.resolveMine` | No signed-in user, or no `users` row yet |
 | `INVALID_PAINT_ID` | `userPaints.set`, `legacyImports.stageChunk`, `palettes.addPaints`, `palettes.removePaint`, `palettes.addPaintToGroup`, `palettes.removePaintFromGroup`, `palettes.movePaintToGroup`, `palettes.movePaint`, `palettes.moveGroupPaint` | A paint ID doesn't match `^[a-z0-9-]{3,100}$` |
 | `NO_FLAGS` | `userPaints.set` | None of `owned` / `wishlisted` / `favorite` given |
 | `CLOCK_IN_FUTURE` | `userPaints.set` | `clientUpdatedAt` more than 5 minutes ahead |
@@ -296,6 +321,7 @@ The client reads the code from `error.data` (`src/features/collection/outbox.ts`
 | `PAINT_NOT_IN_PALETTE` | `palettes.addPaintToGroup` | The paint isn't in the palette's main list |
 | `INVALID_EMAIL_HASH` | `legacyImports.stageChunk` | `emailHash` isn't 64 lowercase hex characters |
 | `NOT_STAGED` | `legacyImports.stageChunk` | An append (`reset: false`) for a hash with no staged row |
+| `LEGACY_IMPORT_NOT_FOUND` | `legacyClaim.resolveMine` | No complete staged import for the caller's verified addresses: never staged, already claimed or discarded, or the import is off on this deployment |
 | `INVALID_INDEX` | `palettes.movePaint`, `palettes.moveGroupPaint`, `palettes.moveGroup`, `palettes.addPaintToGroup`, `palettes.movePaintToGroup` | `toIndex` isn't a whole number ≥ 0 |
 
 The outbox drops an entry on `INVALID_PAINT_ID`, `NO_FLAGS` or `CLOCK_IN_FUTURE` and toasts "Couldn't save that change." Any other error keeps the entry (§2b).

@@ -22,6 +22,14 @@ CLERK_JWT_ISSUER_DOMAIN=      # Clerk Frontend API URL, shown when you activate 
                               # Keep a copy in .env.local for reference; Convex reads only the deployment's value.
                               # Symptom if the Convex integration isn't active: Clerk signs in, but
                               # .../tokens/convex returns 404 and Convex treats everyone as signed out.
+CLERK_SECRET_KEY=             # The secret key of the Clerk instance this deployment's users sign in with: sk_test_… (dev
+                              # instance) on a personal dev deployment, sk_live_… (production instance) on develop, stage
+                              # and production. Read by convex/legacyClaim.ts to look up a user's verified email
+                              # addresses (DECISIONS 059). It can read and change every Clerk user: set it only with
+                              # `npx convex env set`, never in a file that's committed or in a VITE_ variable.
+LEGACY_IMPORT_HASH_KEY=       # The key the legacy export for this deployment was hashed with (features/legacy-import.md).
+                              # Production gets the real key; develop and stage each get their own key for made-up data.
+                              # Unset → the old-data prompt is off. Set without CLERK_SECRET_KEY → the claim throws.
 ```
 
 ### Deploy settings (local only, one file per environment)

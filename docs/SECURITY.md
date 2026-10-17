@@ -33,6 +33,7 @@ Permissions:
 - Read, create, update and delete **their own** `userPaints`
 - Read, create, rename and delete **their own** `palettes`, and add paints to and remove paints from them. Another user's palette behaves exactly like a missing one: `palettes.get` returns `null`, mutations throw `NOT_FOUND` (DECISIONS 048)
 - Read and delete **their own** `users` row
+- See, import or discard the staged old Grimify data whose `emailHash` matches one of **their own verified** email addresses (`legacyClaim.*`, DECISIONS 059). The server reads the addresses from Clerk; the client sends only the choice. A claimed or discarded import is deleted and can't be claimed by any account again
 
 ### Anonymous
 - Read the public catalog only
@@ -69,6 +70,8 @@ Public (in the browser bundle):
 Private:
 - `CONVEX_DEPLOY_KEY` (CI only)
 - `CLERK_JWT_ISSUER_DOMAIN` (Convex env)
+- `CLERK_SECRET_KEY` (Convex env): Clerk Backend API key, used only by `convex/lib/clerk.ts` to read a user's verified addresses. It can read and change every Clerk user, so it's set with `npx convex env set` and never logged; a failed lookup throws with the HTTP status only
+- `LEGACY_IMPORT_HASH_KEY` (Convex env): HMAC key for old users' email hashes (DECISIONS 056)
 
 ---
 
@@ -88,6 +91,9 @@ Required for all user-data functions.
 
 Authorization:
 Ownership is checked by deriving `userId` from the identity (see §2).
+
+Outbound calls:
+`legacyClaim.findMine` and `legacyClaim.resolveMine` call `https://api.clerk.com/v1/users/{subject}` with `CLERK_SECRET_KEY`, where `subject` comes from the verified session token, never from arguments. The answer's addresses are hashed in memory and never stored, logged or returned. The app calls `findMine` once per signed-in session.
 
 Headers (`public/_headers`, applied by the Cloudflare Worker to every static response, including the single-page-app fallback; `scripts/static-files.test.ts` pins them):
 - `Content-Security-Policy`: `'self'` plus the build's own Convex deployment (`https` and `wss`; the build fills `{{CONVEX_HOST}}` from `VITE_CONVEX_URL` and fails on anything but `https://<name>.convex.cloud`, and the deploy checks it names that environment's deployment), Clerk's Frontend API (`clerk.grimify.app`) and the hosts in [Clerk's CSP list](https://clerk.com/docs/guides/secure/best-practices/csp-headers) (Turnstile, `*.protect.clerk.com`, `img.clerk.com`). No `'unsafe-eval'` or inline scripts; `style-src 'unsafe-inline'` because Clerk injects styles at runtime. `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`.

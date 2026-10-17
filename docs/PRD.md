@@ -184,6 +184,7 @@ Acceptance Criteria:
 - Email one-time code sign-in (via Clerk) works inside the installed iOS PWA
 - Browsing the catalog does **not** require an account
 - Email code only for MVP; OAuth revisited after the beta (DECISIONS 027)
+- Someone who used the old Grimify and signs in with the same verified email is offered their old owned paints and palettes once per session: Import adds them without changing anything already there, Discard deletes them, Not now asks again next session (UX_FLOWS Flow 11, DECISIONS 059)
 
 ### Feature 6 — Color Palettes
 
