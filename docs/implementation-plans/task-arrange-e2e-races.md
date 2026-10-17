@@ -1,7 +1,7 @@
 ---
 type: task
 slug: arrange-e2e-races
-status: staged
+status: released
 branch: task/arrange-e2e-races
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/task-arrange-e2e-races
 created: 2026-10-17
@@ -10,7 +10,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.19.5
 review_approved: 2026-10-17
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.19.5
 ---
 
 # Fix races in the palette arrange e2e journey
@@ -87,3 +87,4 @@ With a 500ms pause before ArrowDown and a wait for the drop to settle, the journ
 - 2026-10-17 — Review: guards bounded (<=2 presses/clicks, 5s); Enter wouldn't avoid the click block (it dispatches a click); doc softened to 'unlikely, recoverable'. 6/6 passes after
 - 2026-10-17 — Staged: verification passed; version 0.19.4 → 0.19.5; no changelog file.
 - 2026-10-17 — Review approved.
+- 2026-10-17 — Released 0.19.5 as v0.19.5.
