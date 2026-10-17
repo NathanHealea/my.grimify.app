@@ -13,7 +13,12 @@ test.afterEach(async ({ page }, info) => {
   if (name === null || info.status === info.expectedStatus) return;
   const main = page.getByRole("main");
   await page.goto("/palettes");
-  await expect(main.getByRole("link").or(main.getByText("No palettes yet")).first()).toBeVisible();
+  const signedOut = main.getByText(/^Sign in to keep color palettes/);
+  await expect(
+    main.getByRole("link").or(main.getByText("No palettes yet")).or(signedOut).first(),
+  ).toBeVisible();
+  // A journey that failed before sign-in finished never created its palette.
+  if (await signedOut.isVisible()) return;
   const row = main.getByRole("link", { name: new RegExp(`^${name}`) });
   if ((await row.count()) === 0) return;
   await row.click();
