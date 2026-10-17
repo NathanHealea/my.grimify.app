@@ -62,9 +62,9 @@ Adds a daily Convex cron that deletes staged old-Grimify imports and claim recor
 
 ## Implementation plan
 
-1. [ ] Add retention indexes and `purgeExpired` — touches `convex/schema.ts`, `convex/legacyImports.ts`, `convex/legacyImports.test.ts` — tests T1, T2
-2. [ ] Schedule the daily purge — touches `convex/crons.ts`, `convex/crons.test.ts` — tests T3
-3. [ ] Document retention — touches `docs/DATABASE.md`, `docs/API.md`, `docs/features/legacy-import.md` — tests none (docs only)
+1. [x] Add retention indexes and `purgeExpired` — touches `convex/schema.ts`, `convex/legacyImports.ts`, `convex/legacyImports.test.ts` — tests T1, T2
+2. [x] Schedule the daily purge — touches `convex/crons.ts`, `convex/crons.test.ts` — tests T3
+3. [x] Document retention — touches `docs/DATABASE.md`, `docs/API.md`, `docs/features/legacy-import.md` — tests none (docs only)
 
 **Must not change:** `stageChunk`, `claim` and the claim actions; other tables.
 
@@ -81,3 +81,4 @@ Adds a daily Convex cron that deletes staged old-Grimify imports and claim recor
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Approved under the owner's autonomous-delivery instruction for the legacy-import epic (2026-10-17)
 - 2026-10-17 — Started on branch task/legacy-purge from origin/dev.
+- 2026-10-17 — T3 asserted cron args as {}; convex stores interval args as [args], so the assertion was corrected to [{}]. api.d.ts gained the crons module by hand (codegen needs network).
