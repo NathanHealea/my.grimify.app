@@ -207,6 +207,27 @@ describe("transform", () => {
     });
   });
 
+  it("transform doesn't split an emoji when cutting a name", () => {
+    const data: OldData = {
+      ...emptyData(),
+      profiles: [{ id: "profile-1", email: "painter@example.com" }],
+      palettes: [
+        {
+          id: "palette-1",
+          user_id: "profile-1",
+          name: `${"a".repeat(59)}🎨 and more`,
+          created_at: "2025-01-01T00:00:00Z",
+        },
+      ],
+    };
+
+    const { records } = transform(data, new Map(), HASH_KEY);
+
+    const name = records[0]?.palettes[0]?.name ?? "";
+    expect(name).toBe("a".repeat(59));
+    expect(name.length).toBeLessThanOrEqual(60);
+  });
+
   it("transform drops unmapped paints and reports them once", () => {
     const paintMap = new Map<string, PaintMapping>([
       ["old-paint-mapped", { catalogId: "citadel-base-abaddon-black" }],

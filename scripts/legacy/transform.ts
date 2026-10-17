@@ -87,7 +87,11 @@ function byPosition<T extends { position: number }>(rows: T[]): T[] {
 function fitName(name: string, removed: Removed): string {
   let fitted = name.trim();
   if (fitted.length > PALETTE_NAME_MAX) {
-    fitted = fitted.slice(0, PALETTE_NAME_MAX).trimEnd();
+    // Don't keep half of a surrogate pair (an emoji) at the cut.
+    fitted = fitted
+      .slice(0, PALETTE_NAME_MAX)
+      .replace(/[\uD800-\uDBFF]$/, "")
+      .trimEnd();
     removed.namesShortened += 1;
   }
   if (fitted === "") {
