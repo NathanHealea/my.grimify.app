@@ -2,7 +2,7 @@
 type: task
 epic: legacy-import    # removed by `wi new` when there is no parent epic
 slug: legacy-staging
-status: staged
+status: released
 branch: task/legacy-staging
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/task-legacy-staging
 created: 2026-10-17
@@ -11,7 +11,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.19.8
 review_approved: 2026-10-17
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.19.8
 ---
 
 # Stage the import in Convex with an admin loader
@@ -105,3 +105,4 @@ Adds the Convex side of the old-data import: a `legacyImports` table that holds 
 - 2026-10-17 — Test audit: closed 5 gaps (complete flag, 130 KB chunking, failure counting, exit code, CLI redaction)
 - 2026-10-17 — Staged: verification passed; version 0.19.7 → 0.19.8; no changelog file.
 - 2026-10-17 — Review approved.
+- 2026-10-17 — Released 0.19.8 as v0.19.8.
