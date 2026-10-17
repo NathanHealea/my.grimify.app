@@ -1,7 +1,7 @@
 {
   "name": "grimify",
   "private": true,
-  "version": "0.19.6",
+  "version": "0.19.7",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -69,7 +69,8 @@
     "catalog:ids": "node scripts/build-catalog.ts --record-ids",
     "deploy:dev": "node scripts/deploy.ts dev",
     "deploy:stage": "node scripts/deploy.ts stage",
-    "deploy:prod": "node scripts/deploy.ts prod"
+    "deploy:prod": "node scripts/deploy.ts prod",
+    "legacy:export": "node --env-file-if-exists=.env.legacy.local scripts/legacy-export.ts"
   },
   "allowScripts": {
     "fsevents@2.3.3": true

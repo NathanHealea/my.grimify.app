@@ -153,23 +153,47 @@ export function slug(text: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function convertBrand(brandId: string, legacyPaints: LegacyPaint[]): BrandFile {
+function brandConfig(brandId: string): BrandConfig {
   const config = BRANDS[brandId];
   if (!config) throw new Error(`No conversion rules for brand "${brandId}"`);
+  return config;
+}
+
+function lineRule(brandId: string, config: BrandConfig, legacy: LegacyPaint): LineRule {
+  const rule = config.lines[legacy.type];
+  if (rule === undefined) throw new Error(`Unmapped line "${legacy.type}" for ${brandId}`);
+  return rule;
+}
+
+function lineIdFor(brandId: string, legacy: LegacyPaint): string {
+  return `${brandId}-${slug(legacy.type)}`;
+}
+
+function paintName(legacy: LegacyPaint): string {
+  return decodeEntities(legacy.name).trim();
+}
+
+/** The catalog ID `convertBrand` gives this legacy paint, or null when its line is excluded. */
+export function legacyPaintId(brandId: string, legacy: LegacyPaint): string | null {
+  if (lineRule(brandId, brandConfig(brandId), legacy) === "exclude") return null;
+  return `${lineIdFor(brandId, legacy)}-${slug(paintName(legacy))}`;
+}
+
+export function convertBrand(brandId: string, legacyPaints: LegacyPaint[]): BrandFile {
+  const config = brandConfig(brandId);
 
   const lines = new Map<string, Line>();
   const paints = new Map<string, { paint: Paint; sourceId: string }>();
 
   for (const legacy of legacyPaints) {
-    const rule = config.lines[legacy.type];
-    if (rule === undefined) throw new Error(`Unmapped line "${legacy.type}" for ${brandId}`);
-    if (rule === "exclude") continue;
+    const rule = lineRule(brandId, config, legacy);
+    const id = legacyPaintId(brandId, legacy);
+    if (rule === "exclude" || id === null) continue;
 
-    const lineId = `${brandId}-${slug(legacy.type)}`;
+    const lineId = lineIdFor(brandId, legacy);
     if (!lines.has(lineId)) lines.set(lineId, { id: lineId, name: legacy.type });
 
-    const name = decodeEntities(legacy.name).trim();
-    const id = `${lineId}-${slug(name)}`;
+    const name = paintName(legacy);
     const existing = paints.get(id);
 
     if (existing) {

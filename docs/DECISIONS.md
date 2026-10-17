@@ -1216,3 +1216,51 @@ Alternatives:
 Consequences:
 Positive: after promoting, `dev`, `stage` and `main` are the same commit, so a version tag names the same code on every branch, and no branch collects merge commits of its own.
 Trade-off: git no longer records when a batch reached stage or production; deploy output and tags are the record. `main` can sit past the latest tag when a promotion carries commits after the last release. Undoing a promotion takes a revert per change. After a hotfix, stage to production refuses until dev has been promoted to stage, so a batch being checked on stage waits for everything newer on `dev` and is checked again with it; back-merging into `stage` as well would avoid that, at the cost of a merge commit on `stage`. A hotfix that isn't merged back into `dev` makes the next promotion refuse; that's the safe failure, fixed by doing the back-merge and promoting again.
+
+---
+
+## Decision 056 — Identify old Grimify users by a keyed hash of their email
+
+Date: 2026-10-17
+Status: Accepted (epic `legacy-import`)
+
+Context:
+Old Grimify users' owned paints and palettes are exported once and claimed later by whoever signs in here with the same verified email (sign-in is email code only, 027). The export and the staged import must not hold email addresses or old Supabase user IDs, and Convex keeps no profile data (028). A plain SHA-256 of an email can be reversed by hashing a list of known addresses.
+
+Decision:
+- Each old user is identified by `emailHash`: the lowercase hex HMAC-SHA256 of the trimmed, lowercased email, keyed with `LEGACY_IMPORT_HASH_KEY` (32+ characters, held only in environment variables).
+- Old accounts sharing one normalized email are merged into one record.
+- The export holds no email, no old user, palette, group or palette-paint UUID.
+
+Alternatives:
+- Plain SHA-256: no key to manage, but guessable from a list of addresses
+- Store the email: simplest matching, but copies personal data about people who haven't joined into Convex
+
+Consequences:
+Positive: without the key, the export and staged data aren't linked to an email address.
+Limits: this is pseudonymous, not anonymous. Anyone with the key and a candidate address can test whether that person had an old account, and palette and group names are text people wrote. So only production holds the real key and real data; dev and stage use a made-up export with their own key.
+Trade-off: the same key must be set in the export run and every Convex deployment that claims; losing it means exporting again. A user whose new account uses a different address can't claim.
+
+---
+
+## Decision 057 — Map legacy data at export time and keep the export outside the repo
+
+Date: 2026-10-17
+Status: Accepted (epic `legacy-import`)
+
+Context:
+The old app's paints are UUID rows whose `brand_paint_id` is the legacy JSON `id` this catalog was built from (015, 018). Its palettes allowed 80-character names, any number of paints and groups, and repeated paints. The export holds hashed emails and people's collections.
+
+Decision:
+- `npm run legacy:export` maps every old paint to its catalog ID with the same derivation as the catalog import (`legacyPaintId`), accepting only IDs in the current catalog; unmapped paints are left out and listed in `report.json`.
+- Palettes are fitted to this app's rules in the export (names trimmed and cut to 60, "Untitled" when empty, repeats collapsed, 200 paints, 30 groups), so loading and claiming never repair data. The 50-palette cap waits for claim time, when the user's own palettes are known.
+- The old project is read through PostgREST with `fetch` (no Supabase package), paged by `Range`. Emails come from Supabase Auth's admin API, confirmed addresses only: `profiles.email` is a copy each user could overwrite.
+- The command refuses an output directory inside the repository, writes files only its user can read, and never overwrites an earlier export. The owner deletes the export and `.env.legacy.local` after the production load.
+
+Alternatives:
+- Map at load or claim time in Convex: Convex would need the legacy JSON and the mapping code
+- Write the export into the repo (git-ignored): one mistake away from committing personal data
+
+Consequences:
+Positive: the report measures what won't import before anything is deployed; later steps take plain catalog IDs.
+Trade-off: a catalog change after the export isn't reflected until the export runs again.
