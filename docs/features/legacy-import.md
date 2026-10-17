@@ -1,16 +1,17 @@
 # Legacy Import
 
 > Covers bringing old Grimify (the Supabase app in `../grimify.app`) owned paints and palettes into this app.
-> Plan: [epic-legacy-import.md](../implementation-plans/legacy-import/epic-legacy-import.md). Env vars: [ENVIRONMENT.md](../ENVIRONMENT.md). Rationale: [DECISIONS 056, 057](../DECISIONS.md).
+> Plan: [epic-legacy-import.md](../implementation-plans/legacy-import/epic-legacy-import.md). Env vars: [ENVIRONMENT.md](../ENVIRONMENT.md). Rationale: [DECISIONS 056, 057, 058](../DECISIONS.md).
 
 ## TL;DR
 
-- Built so far: **the export only**. Loading into Convex and claiming on sign-in are later work items.
+- Built so far: **the export and the loader**. Claiming on sign-in and the purge are later work items.
 - `npm run legacy:export -- <output-dir> <grimify>/scripts/data` reads the old project **read-only** and writes **`export.json`** and **`report.json`**.
 - Each old user becomes one record keyed by **`emailHash`**, an **HMAC-SHA256 of the normalized email** with `LEGACY_IMPORT_HASH_KEY`. The output holds **no email and no old UUID**.
 - Old paints map to catalog IDs with **the same derivation as the catalog import**. Paints that don't map are **left out and listed in the report**.
 - Palettes are **fitted to this app's limits** in the export: 60-character names, 200 paints, 30 groups, no repeated paints.
 - Emails come from **Supabase Auth's admin API, confirmed addresses only**, not from `profiles.email`, which any old user could edit on their own row.
+- `npm run legacy:load -- <env> <export.json>` stages the export in that environment's Convex deployment, in **`legacyImports`**, one row per `emailHash`. Loading again gives the same rows and **skips hashes already claimed**.
 - The output directory **must be outside the repository**. **Only production gets real data**: dev and stage get a made-up export hashed with their own key.
 - After the production load, **delete the export and `.env.legacy.local`** (or rotate the old project's secret key). Unclaimed staged data is purged 180 days after loading.
 
@@ -24,6 +25,9 @@
 | `scripts/legacy/paint-map.ts` | `buildPaintMap`: old paint UUID → catalog ID or an unmapped reason |
 | `scripts/legacy/hash.ts` | `normalizeEmail`, `hashEmail` |
 | `scripts/legacy/transform.ts` | `transform`: old rows → export records and report |
+| `scripts/legacy-load.ts` | The loader CLI: environment, deploy key, runs `npx convex run` |
+| `scripts/legacy/load.ts` | `readExport`, `chunkRecord` (under 100 KB per call), `loaderEnv`, `loadExport` |
+| `convex/legacyImports.ts` | `stageChunk`: the internal mutation each chunk is sent to |
 | `scripts/catalog/import-legacy.ts` | `legacyPaintId`, shared with `convertBrand` |
 
 ## Running the export
@@ -69,6 +73,24 @@ The command stops with exit code 2, **before reading anything**, when a variable
 Palette fitting, in order: unmapped paints are dropped; a repeated catalog ID keeps its first position; the list is cut to 200; groups past the 30th are dropped. A group member resolves through its palette paint to a catalog ID, so a member pointing at a collapsed repeat resolves to the kept paint. Members cut by the 200 cap, or repeated in a group, are dropped. Names are trimmed, cut to 60 characters, and an empty name becomes "Untitled". The 50-palette cap is applied at claim time.
 
 `report.json` holds `totals` (users exported, skipped without an email, with no data, owned paints, palettes, and `removed`: duplicate paints, paints over the cap, groups over the cap, group paints dropped, names shortened, names set to "Untitled") and `unmapped`: one entry per unmapped old paint with its brand, `brand_paint_id`, name, reason, and how many owned and palette rows referenced it.
+
+## Loading into Convex
+
+Prerequisites: the deployment has the code from this work item (deploy it first), `.env.deploy.<env>.local` holds that environment's `CONVEX_DEPLOY_KEY` (ENVIRONMENT.md), and `npm ci` has run. Production gets the real export; dev and stage get a made-up export hashed with their own key.
+
+```bash
+npm run legacy:load -- dev /tmp/grimify-legacy-fixture/export.json
+```
+
+The command stops with exit code 2, before any call, when the environment is unknown, the settings file or key is missing, the key belongs to another deployment, or the export file isn't an array of valid records (the message names the first bad record by its position). It then:
+
+1. Splits each record into chunks whose JSON stays under 100 KB: owned IDs first, then palettes, never splitting a palette. A palette too big for a chunk on its own fails that record.
+2. Calls `npx --no convex run legacyImports:stageChunk '<chunk>'` per chunk, with the deploy key in the child's environment and `CONVEX_DEPLOYMENT` removed. The first chunk replaces the hash's staged row; later chunks append; the last sets `complete`.
+3. Prints `Staged N, already claimed N, failed N`. A failed record is named only by its position and chunk number; Convex's own error output is hidden because it echoes the values sent. Exit code 1 when any record failed.
+
+`stageChunk` checks every value again: hash format, paint IDs, names of 1–60 characters, 200 paints and 30 groups per palette. It stores at most 50 palettes per user and counts the rest in `palettesOmitted`. A hash in `legacyImportClaims` returns `claimed` and stages nothing. A load stopped partway leaves a row with `complete: false`; running it again replaces it.
+
+To debug a failure, load the same record from a made-up export into dev, or run `stageChunk` from the Convex dashboard on dev.
 
 ## Relations to other features
 

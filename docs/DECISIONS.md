@@ -1264,3 +1264,28 @@ Alternatives:
 Consequences:
 Positive: the report measures what won't import before anything is deployed; later steps take plain catalog IDs.
 Trade-off: a catalog change after the export isn't reflected until the export runs again.
+
+---
+
+## Decision 058 — Stage old users' data in Convex by email hash, loaded with convex run
+
+Date: 2026-10-17
+Status: Accepted (epic `legacy-import`)
+
+Context:
+Old users claim their data after signing in (056), so it has to sit somewhere the claim can read it. Convex keeps no profile data (028). The owner loads the export from a laptop, once per environment, and one user's record can be bigger than one `npx convex run` argument: Linux caps an argument at 128 KiB, and someone owning the whole catalog is about 130 KB of IDs.
+
+Decision:
+- Staged data lives in Convex, in `legacyImports`, one row per `emailHash`, with no email and no old user ID. A second table, `legacyImportClaims`, keeps only the hash and a time for each claimed or discarded import, so loading the export again skips it.
+- `npm run legacy:load <env> <export.json>` calls the internal mutation `legacyImports.stageChunk` through `npx --no convex run`, one call per chunk of under 100 KB. The first chunk replaces any staged row for the hash, the last marks it complete, so a re-run gives the same rows.
+- The deploy key comes from the same `.env.deploy.<env>.local` the deploy uses and reaches only the child process environment, with `CONVEX_DEPLOYMENT` removed; the key must belong to that environment's deployment. The command prints record numbers and counts only, and hides Convex's stderr because argument errors echo the values.
+- A staged row keeps at most 50 palettes, the per-user cap; the rest are counted, not stored.
+
+Alternatives:
+- An HTTP action that takes the whole export: one request, but a public endpoint guarded by a shared secret, for a one-off job
+- Keep the staged data outside Convex (a file the claim fetches): the claim would need a second store and its credentials
+- Use a deployment environment variable or file storage to hold the export: no index by hash, and the claim would read everything
+
+Consequences:
+Positive: no public surface; the loader uses the deploy access the owner already has.
+Trade-off: Convex now holds pseudonymous data about people who haven't joined, until they claim or the purge runs (180 days). A load takes about a second per chunk.

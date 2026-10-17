@@ -181,6 +181,34 @@ Fields:
 
 Limits: 50 palettes per user, names of 1–60 characters and 200 paints per palette, enforced in the mutations (`palettes.addPaints` throws `PALETTE_FULL`). 30 groups per palette (`palettes.createGroup` throws `GROUP_LIMIT`) and group names of 1–60 characters (`createGroup` and `renameGroup`). No cap per group (DECISIONS 048, 051, 052).
 
+### legacyImports
+Purpose:
+An old Grimify user's owned paints and palettes, waiting to be claimed by whoever signs in with the matching verified email (DECISIONS 056, 058). Written only by `npm run legacy:load` through the internal `legacyImports.stageChunk`; no public function reads it yet.
+
+Fields:
+- `_id`
+- `emailHash: string` — 64 lowercase hex characters: HMAC-SHA256 of the normalized email with the deployment's `LEGACY_IMPORT_HASH_KEY`. One row per hash
+- `ownedPaintIds: string[]` — catalog paint IDs, unique, in export order
+- `palettes: { name: string; paintIds: string[]; groups: { name: string; paintIds: string[] }[] }[]` — oldest first, at most 50. Groups have no `id` yet; the claim gives them one
+- `palettesOmitted: number` — palettes past the 50th, counted and not stored, since a user can never hold more
+- `complete: boolean` — `false` while a load is partway through a record (or stopped there); the claim must ignore incomplete rows
+- `loadedAt: number` — server time the record's first chunk was staged; the purge counts retention from it
+- `_creationTime`
+
+Limits: same per-palette rules as `palettes` (names 1–60 characters after trimming, 200 paints, 30 groups) and paint IDs matching `^[a-z0-9-]{3,100}$`. The whole row must stay under Convex's 1 MiB document limit; a real record is far below it (2,837 owned IDs is about 100 KB).
+
+### legacyImportClaims
+Purpose:
+Hashes whose staged import was already claimed or discarded, so loading the export again can't stage them a second time.
+
+Fields:
+- `_id`
+- `emailHash: string`
+- `claimedAt: number` — server time of the claim or discard
+- `_creationTime`
+
+Written by the claim flow (`legacy-claim`); removed with the staged rows by the purge (`legacy-purge`).
+
 ### Convex schema (reference)
 ```ts
 // convex/schema.ts
@@ -209,6 +237,20 @@ export default defineSchema({
     groups: v.array(v.object({ id: v.string(), name: v.string(), paintIds: v.array(v.string()) })),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
+
+  legacyImports: defineTable({
+    emailHash: v.string(),
+    ownedPaintIds: v.array(v.string()),
+    palettes: v.array(legacyPaletteValidator), // { name, paintIds, groups: { name, paintIds }[] }
+    palettesOmitted: v.number(),
+    complete: v.boolean(),
+    loadedAt: v.number(),
+  }).index("by_emailHash", ["emailHash"]),
+
+  legacyImportClaims: defineTable({
+    emailHash: v.string(),
+    claimedAt: v.number(),
+  }).index("by_emailHash", ["emailHash"]),
 });
 ```
 
@@ -248,6 +290,8 @@ Foreign Keys:
 | Index | Reason |
 |---|---|
 | `users.by_tokenIdentifier` | Resolve the current user from the auth identity (index names list every field, per the Convex guidelines) |
+| `legacyImports.by_emailHash` | Find a hash's staged row to replace or append to, and (later) the signed-in user's row at claim time |
+| `legacyImportClaims.by_emailHash` | Skip a hash already claimed or discarded when the export is loaded again |
 | `palettes.by_userId` | List the caller's palettes and count them against the 50 cap. Reads are bounded at 50; the list is sorted by `updatedAt` in code |
 | `userPaints.by_userId_and_paintId` | Upsert/toggle a single paint, and load the whole collection by its `userId` prefix (no separate `by_userId` index needed). Lists are bounded at 5,000 rows, above the catalog's 2,837 paints |
 
@@ -277,7 +321,8 @@ Not needed for MVP. `_creationTime` and `updatedAt` are enough. Catalog history 
 ## 11. Sensitive Data
 
 Sensitive fields:
-- None stored in Convex. `users` holds only `tokenIdentifier`; email and name live in Clerk (DECISIONS 028)
+- No email or name: `users` holds only `tokenIdentifier`; email and name live in Clerk (DECISIONS 028)
+- `legacyImports` and `legacyImportClaims` hold email hashes, and `legacyImports` holds old users' collections and the palette and group names they wrote. Pseudonymous, not anonymous: anyone with the deployment's hash key can test a candidate address (DECISIONS 056). Real data goes only into production; nothing reads these tables from a client
 
 Protection:
 - `tokenIdentifier` is never returned to clients (`users.me` returns only `_id`)
