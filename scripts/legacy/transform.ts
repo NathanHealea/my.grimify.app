@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { hashEmail, normalizeEmail } from "./hash.ts";
 import type { PaintMapping } from "./paint-map.ts";
 
@@ -232,4 +234,27 @@ export function transform(
       unmapped,
     },
   };
+}
+
+const authUserSchema = z.object({
+  id: z.string(),
+  email: z.string().nullish(),
+  email_confirmed_at: z.string().nullish(),
+});
+
+/**
+ * Supabase Auth users as export profiles: an email is kept only when confirmed. Throws when an ID
+ * repeats, since pages shift if someone signs up or is deleted mid-export.
+ */
+export function profilesFromAuthUsers(rows: unknown[]): OldData["profiles"] {
+  const users = z.array(authUserSchema).parse(rows);
+  if (new Set(users.map((user) => user.id)).size !== users.length) {
+    throw new Error(
+      "An auth user appeared twice while paging; stop sign-ups on the old app and run again",
+    );
+  }
+  return users.map((user) => ({
+    id: user.id,
+    email: user.email && user.email_confirmed_at ? user.email : null,
+  }));
 }

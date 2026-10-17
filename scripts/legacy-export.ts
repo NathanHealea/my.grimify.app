@@ -9,7 +9,7 @@ import { LEDGER_FILE } from "./catalog/validate.ts";
 import { type ExportConfig, readConfig } from "./legacy/export-config.ts";
 import { buildPaintMap } from "./legacy/paint-map.ts";
 import { fetchAll, fetchAuthUsers, type FetchLike } from "./legacy/supabase.ts";
-import { type OldData, transform } from "./legacy/transform.ts";
+import { type OldData, profilesFromAuthUsers, transform } from "./legacy/transform.ts";
 
 // One-time export of the old Grimify (Supabase) data for the legacy import (docs/features/legacy-import.md).
 const USAGE = "usage: npm run legacy:export -- <output-dir> <grimify>/scripts/data";
@@ -104,26 +104,11 @@ const tables = {
   },
 };
 
-const authUserSchema = z.object({
-  id: z.string(),
-  email: z.string().nullish(),
-  email_confirmed_at: z.string().nullish(),
-});
-
 /** Old users with only a confirmed email kept; `profiles.id` is the auth user's ID. */
 async function readUsers(source: Source): Promise<OldData["profiles"]> {
-  const users = z.array(authUserSchema).parse(await fetchAuthUsers(source));
+  const users = await fetchAuthUsers(source);
   console.log(`Read ${users.length} auth users`);
-  // Pages shift if someone signs up or is deleted mid-export; a repeat means the read isn't a snapshot.
-  if (new Set(users.map((user) => user.id)).size !== users.length) {
-    throw new Error(
-      "An auth user appeared twice while paging; stop sign-ups on the old app and run again",
-    );
-  }
-  return users.map((user) => ({
-    id: user.id,
-    email: user.email && user.email_confirmed_at ? user.email : null,
-  }));
+  return profilesFromAuthUsers(users);
 }
 
 async function readLegacyFiles(legacyDir: string): Promise<Record<string, LegacyPaint[]>> {

@@ -4,7 +4,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { PaintMapping } from "./paint-map.ts";
-import { type OldData, transform } from "./transform.ts";
+import { type OldData, profilesFromAuthUsers, transform } from "./transform.ts";
 
 const HASH_KEY = "test-hash-key-0123456789abcdef0123456789";
 
@@ -467,5 +467,30 @@ describe("transform", () => {
     };
 
     expect(() => transform(data, new Map(), HASH_KEY)).toThrow("group-1");
+  });
+});
+
+describe("profilesFromAuthUsers", () => {
+  it("keeps an email only when it is confirmed", () => {
+    expect(
+      profilesFromAuthUsers([
+        { id: "u1", email: "a@example.com", email_confirmed_at: "2025-01-01T00:00:00Z" },
+        { id: "u2", email: "b@example.com", email_confirmed_at: null },
+        { id: "u3", email: null, email_confirmed_at: "2025-01-01T00:00:00Z" },
+      ]),
+    ).toEqual([
+      { id: "u1", email: "a@example.com" },
+      { id: "u2", email: null },
+      { id: "u3", email: null },
+    ]);
+  });
+
+  it("throws when a user appears twice", () => {
+    expect(() =>
+      profilesFromAuthUsers([
+        { id: "u1", email: "a@example.com", email_confirmed_at: "2025-01-01T00:00:00Z" },
+        { id: "u1", email: "a@example.com", email_confirmed_at: "2025-01-01T00:00:00Z" },
+      ]),
+    ).toThrow("appeared twice");
   });
 });
