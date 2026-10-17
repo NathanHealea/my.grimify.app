@@ -1,7 +1,7 @@
 ---
 type: bug
 slug: palette-group-drag-offset
-status: staged
+status: released
 branch: bug/palette-group-drag-offset
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/bug-palette-group-drag-offset
 created: 2026-10-16
@@ -10,7 +10,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.19.4
 review_approved: 2026-10-16
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.19.4
 ---
 
 # Group drag lands away from the pointer once groups collapse
@@ -105,3 +105,4 @@ Unit tests in `src/features/palettes/palette-arrange.test.tsx` (Vitest + Testing
 - 2026-10-16 — Test audit: added touch, mid-drag re-measure and two-drags tests; each kills its mutant. Remaining survivors (paint drags without the group check, a single reset removed) behave the same as the real code
 - 2026-10-16 — Staged: verification passed; version 0.19.3 → 0.19.4; no changelog file.
 - 2026-10-16 — Review approved.
+- 2026-10-16 — Released 0.19.4 as v0.19.4.
