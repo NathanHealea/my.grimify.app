@@ -2,7 +2,7 @@
 type: bug
 epic: palettes    # removed by `wi new` when there is no parent epic
 slug: palette-group-drag-gap
-status: staged
+status: released
 branch: bug/palette-group-drag-gap
 worktree_path: /Users/nhealea/Personal/Development/grimify-v2-worktrees/bug-palette-group-drag-gap
 created: 2026-10-14
@@ -11,7 +11,7 @@ commit_type:         # optional override for the release subject type (default: 
 version: 0.19.2
 review_approved: 2026-10-16
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the branch's last commit
+tag: v0.19.2
 ---
 
 # Group drag leaves a group-sized gap
@@ -102,3 +102,4 @@ Vitest + Testing Library, in the existing palette arrange tests. jsdom doesn't l
 - 2026-10-14 — Step 2: no code. dnd-kit 6.3.1 sets status Initialized in an effect after the collapsed render commits, and its useDroppableMeasuring re-measures every droppable on that change (and again when the unmounted paint rows unregister), so heading rects are already one row. Not yet checked in a browser; R2 stays a manual phone check
 - 2026-10-16 — Staged: verification passed; version 0.19.1 → 0.19.2; no changelog file.
 - 2026-10-16 — Review approved.
+- 2026-10-16 — Released 0.19.2 as v0.19.2.
