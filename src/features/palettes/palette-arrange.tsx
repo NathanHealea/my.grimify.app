@@ -244,8 +244,9 @@ export function PaletteArrange({
   };
   const byKeyboard = useRef(false);
   const focusAfterDrop = useRef<string | null>(null);
-  // Picking up a group collapses the groups, which can shorten the page enough to clamp the scroll; dnd-kit's
-  // one-time scroll compensation then can't put the heading back, so the preview would sit off the grab point (#23).
+  // Picking up a group collapses the groups, which can shorten the page enough to clamp the scroll. dnd-kit counts
+  // the clamp as a scroll for drop targets but not for the preview, which would sit off the grab point (#23), so this
+  // modifier goes on DragOverlay only.
   const grabOffset = useRef<number | null>(null);
   const modifiers = useMemo<Modifier[]>(
     () => [
@@ -356,7 +357,6 @@ export function PaletteArrange({
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
-      modifiers={modifiers}
       accessibility={{
         container: document.body,
         restoreFocus: false,
@@ -378,7 +378,7 @@ export function PaletteArrange({
         returnFocus={moveReturn}
         onMove={(toIndex) => move(reorderPlan(moving, toIndex))}
       />
-      <DragOverlay dropAnimation={prefersReducedMotion() ? null : undefined}>
+      <DragOverlay modifiers={modifiers} dropAnimation={prefersReducedMotion() ? null : undefined}>
         {dragging && preview(dragging)}
       </DragOverlay>
     </DndContext>
