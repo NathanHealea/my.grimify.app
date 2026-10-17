@@ -382,6 +382,7 @@ test("keeps a dragged group under the pointer when picking it up shortens the pa
     window.scrollTo(0, document.documentElement.scrollHeight);
     window.scrollBy(0, Math.min(0, section.getBoundingClientRect().top - headerBottom));
   }, header.y + header.height);
+  const scrolledTo = await page.evaluate(() => window.scrollY);
   const handle = alpha.getByRole("button", { name: "Drag group Alpha" });
   const from = await handle.boundingBox();
   const groupBox = await alpha.boundingBox();
@@ -398,6 +399,16 @@ test("keeps a dragged group under the pointer when picking it up shortens the pa
   await page.mouse.move(x, pointerY, { steps: 2 });
   const preview = page.locator(".drag-preview");
   await expect(preview).toBeVisible();
+  // Unless the collapse shortens the page below the scroll position, dnd-kit's own compensation works and this
+  // journey wouldn't cover #23.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (y) => document.documentElement.scrollHeight - window.innerHeight < y,
+        scrolledTo,
+      ),
+    )
+    .toBe(true);
   await expect
     .poll(async () =>
       Math.abs(((await preview.boundingBox())?.y ?? Infinity) - (pointerY - grabOffset)),
