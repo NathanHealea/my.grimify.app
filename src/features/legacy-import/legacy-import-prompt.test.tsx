@@ -274,4 +274,71 @@ describe("LegacyImportPrompt", () => {
     expect(findMine).toHaveBeenCalledOnce();
     expect(resolveMine).not.toHaveBeenCalled();
   });
+
+  it("does not ask again when users.me returns a new object for the same user", async () => {
+    const rerender = renderPrompt();
+    const dialog = await findPrompt();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Not now" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    me = { _id: "user-1" };
+    rerender();
+    await Promise.resolve();
+
+    expect(findMine).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hides the sheet on sign-out and starts over at the offer on the next sign-in", async () => {
+    const rerender = renderPrompt();
+    const dialog = await findPrompt();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
+    screen.getByRole("dialog", { name: "Discard your old data for good?" });
+
+    me = null;
+    rerender();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    me = { _id: "user-1" };
+    rerender();
+    await findPrompt();
+    expect(resolveMine).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sheet open and the buttons disabled while a choice is in flight", async () => {
+    let finish: (value: Resolved) => void = () => {};
+    resolveMine.mockReturnValue(new Promise<Resolved>((resolve) => (finish = resolve)));
+    renderPrompt();
+    const dialog = await findPrompt();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Import" }));
+    expect(within(dialog).getByRole("button", { name: "Import" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Not now" })).toBeDisabled();
+    fireEvent.keyDown(document.activeElement ?? dialog, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Bring over your old Grimify data?" })).toBe(dialog);
+
+    finish({ paintsAdded: 120, palettesAdded: 5, palettesSkipped: 0 });
+    const result = await screen.findByRole("dialog", { name: "Your old Grimify data" });
+    expect(within(result).getByRole("status")).toHaveTextContent(
+      "Added 120 paints and 5 palettes.",
+    );
+    expect(resolveMine).toHaveBeenCalledOnce();
+  });
+
+  it("treats a ConvexError other than LEGACY_IMPORT_NOT_FOUND as a failure", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    resolveMine.mockRejectedValue(new ConvexError("UNAUTHENTICATED"));
+    renderPrompt();
+    const dialog = await findPrompt();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Import" }));
+
+    await waitFor(() =>
+      expect(within(dialog).getByRole("status")).toHaveTextContent(
+        "Couldn't import your old data. Try again.",
+      ),
+    );
+    expect(within(dialog).getByRole("button", { name: "Import" })).toBeEnabled();
+    expect(consoleError).toHaveBeenCalled();
+  });
 });

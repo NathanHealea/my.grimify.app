@@ -141,6 +141,19 @@ describe("legacyClaim.findMine", () => {
     });
   });
 
+  it("findMine skips an incomplete row and matches a complete one under another verified address", async () => {
+    const t = convexTest(schema, modules);
+    stubClerk({ user_a: [verified("loading@example.com"), verified("a@example.com")] });
+    await stage(t, "loading@example.com", { ownedPaintIds: [RED, MACRAGGE_BLUE], complete: false });
+    await stage(t, "a@example.com", { ownedPaintIds: [RED] });
+    const { as } = await signedIn(t, "user_a");
+
+    expect(await as.action(api.legacyClaim.findMine, {})).toEqual({
+      ownedCount: 1,
+      paletteCount: 0,
+    });
+  });
+
   it("findMine returns null for an incomplete staged row", async () => {
     const t = convexTest(schema, modules);
     stubClerk({ user_a: [verified("a@example.com")] });
@@ -390,6 +403,66 @@ describe("legacyClaim.resolveMine", () => {
       favorite: false,
       updatedAt: 10_000,
     });
+  });
+
+  it("resolveMine import ignores and leaves alone another user's rows for the same paints", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const t = convexTest(schema, modules);
+    stubClerk({ user_a: [verified("a@example.com")] });
+    const { as, userId } = await signedIn(t, "user_a");
+    const { userId: otherId } = await signedIn(t, "user_b");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("userPaints", {
+        userId: otherId,
+        paintId: RED,
+        owned: true,
+        wishlisted: false,
+        favorite: false,
+        updatedAt: 500,
+      });
+      await ctx.db.insert("userPaints", {
+        userId: otherId,
+        paintId: MACRAGGE_BLUE,
+        owned: false,
+        wishlisted: true,
+        favorite: false,
+        updatedAt: 500,
+      });
+    });
+    const otherBefore = await table(t, "userPaints");
+    await stage(t, "a@example.com", { ownedPaintIds: [RED, MACRAGGE_BLUE] });
+
+    vi.setSystemTime(10_000);
+    expect(await as.action(api.legacyClaim.resolveMine, { choice: "import" })).toEqual({
+      paintsAdded: 2,
+      palettesAdded: 0,
+      palettesSkipped: 0,
+    });
+
+    const rows = await table(t, "userPaints");
+    expect(rows.filter((r) => r.userId === otherId)).toEqual(otherBefore);
+    expect(
+      rows
+        .filter((r) => r.userId === userId)
+        .map(({ paintId, owned, wishlisted, favorite, updatedAt }) => ({
+          paintId,
+          owned,
+          wishlisted,
+          favorite,
+          updatedAt,
+        }))
+        .sort((a, b) => a.paintId.localeCompare(b.paintId)),
+    ).toEqual([
+      {
+        paintId: MACRAGGE_BLUE,
+        owned: true,
+        wishlisted: false,
+        favorite: false,
+        updatedAt: 10_000,
+      },
+      { paintId: RED, owned: true, wishlisted: false, favorite: false, updatedAt: 10_000 },
+    ]);
   });
 
   it("resolveMine discard deletes the staged row and changes nothing else", async () => {
