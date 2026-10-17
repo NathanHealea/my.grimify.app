@@ -33,11 +33,11 @@ function requireGroup(
 }
 
 // Convex seeds Math.random per mutation, so this stays deterministic on replay.
-function newGroupId(palette: Doc<"palettes">): string {
+export function newGroupId(groups: { id: string }[]): string {
   let id: string;
   do {
     id = Math.random().toString(36).slice(2, 10);
-  } while (palette.groups.some((g) => g.id === id));
+  } while (groups.some((g) => g.id === id));
   return id;
 }
 
@@ -237,7 +237,7 @@ export const createGroup = mutation({
     const name = cleanName(args.name, "GROUP_NAME_INVALID");
     const palette = await requireOwnPalette(ctx, user._id, args.paletteId);
     if (palette.groups.length >= MAX_GROUPS) throw new ConvexError("GROUP_LIMIT");
-    const id = newGroupId(palette);
+    const id = newGroupId(palette.groups);
     await patchGroups(ctx, palette, [...palette.groups, { id, name, paintIds: [] }]);
     return id;
   },
