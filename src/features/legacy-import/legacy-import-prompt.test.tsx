@@ -142,7 +142,8 @@ describe("LegacyImportPrompt", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
     const confirm = screen.getByRole("dialog", { name: "Discard your old data for good?" });
     expect(resolveMine).not.toHaveBeenCalled();
-    expect(within(confirm).getByRole("button", { name: "Discard" })).toHaveFocus();
+    expect(within(confirm).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    expect(within(confirm).getByRole("button", { name: "Discard for good" })).toBeEnabled();
 
     fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
     dialog = screen.getByRole("dialog", { name: "Bring over your old Grimify data?" });
@@ -153,7 +154,7 @@ describe("LegacyImportPrompt", () => {
     fireEvent.click(
       within(screen.getByRole("dialog", { name: "Discard your old data for good?" })).getByRole(
         "button",
-        { name: "Discard" },
+        { name: "Discard for good" },
       ),
     );
     dialog = await screen.findByRole("dialog", { name: "Your old Grimify data" });
@@ -202,14 +203,14 @@ describe("LegacyImportPrompt", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
     const confirm = screen.getByRole("dialog", { name: "Discard your old data for good?" });
-    fireEvent.click(within(confirm).getByRole("button", { name: "Discard" }));
+    fireEvent.click(within(confirm).getByRole("button", { name: "Discard for good" }));
 
     await waitFor(() =>
       expect(within(confirm).getByRole("status")).toHaveTextContent(
         "Couldn't discard your old data. Try again.",
       ),
     );
-    expect(within(confirm).getByRole("button", { name: "Discard" })).toBeEnabled();
+    expect(within(confirm).getByRole("button", { name: "Discard for good" })).toBeEnabled();
     expect(resolveMine).toHaveBeenCalledExactlyOnceWith({ choice: "discard" });
     expect(consoleError).toHaveBeenCalled();
   });

@@ -50,16 +50,17 @@ export function LegacyImportPrompt() {
   const [step, setStep] = useState<Step>("offer");
   const [status, setStatus] = useState("");
   const [resolving, setResolving] = useState(false);
-  const confirmButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
   const discardButton = useRef<HTMLButtonElement>(null);
   const doneButton = useRef<HTMLButtonElement>(null);
   const stepChanged = useRef(false);
 
-  // Switching steps removes the focused button, so focus goes to the new step's matching control.
+  // Switching steps removes the focused button, so focus moves to the new step. The confirm step starts
+  // on Cancel so a repeated Enter can't discard by accident (WCAG 3.3.4).
   useEffect(() => {
     if (!stepChanged.current) return;
     stepChanged.current = false;
-    const target = { offer: discardButton, confirm: confirmButton, done: doneButton }[step];
+    const target = { offer: discardButton, confirm: cancelButton, done: doneButton }[step];
     target.current?.focus();
   }, [step]);
 
@@ -163,14 +164,18 @@ export function LegacyImportPrompt() {
             {step === "confirm" && (
               <>
                 <Button
-                  ref={confirmButton}
                   variant="destructive"
                   disabled={resolving}
                   onClick={() => resolve("discard")}
                 >
-                  Discard
+                  Discard for good
                 </Button>
-                <Button variant="outline" disabled={resolving} onClick={() => showStep("offer")}>
+                <Button
+                  ref={cancelButton}
+                  variant="outline"
+                  disabled={resolving}
+                  onClick={() => showStep("offer")}
+                >
                   Cancel
                 </Button>
               </>
