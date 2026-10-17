@@ -311,18 +311,21 @@ For people who used the old Grimify (epic `legacy-import`, DECISIONS 059). Code:
 
 1. Once per signed-in session, after the `users` row exists (`users.me` non-null), the app calls `legacyClaim.findMine`. A reload or the next sign-in counts as a new session
 2. When a verified email address of the account matches staged old data, a bottom sheet opens: "Bring over your old Grimify data?", "We found 120 owned paints and 5 palettes from your old Grimify account. Importing adds them to what you have here and changes nothing you already have." Buttons: **Import**, **Not now**, **Discard**, and the sheet's Close. Focus starts on Import
-3. **Import** → the paints are marked owned (wishlist and favorite stay as they are) and the palettes are added as new palettes, oldest first, up to 50. The sheet closes with the toast "Added 120 paints and 5 palettes.", or "Added 120 paints and 2 palettes. 3 palettes didn't fit." when the 50-palette cap was reached
-4. **Discard** → the sheet asks "Discard your old data for good?" ("Your old paints and palettes will be deleted and can't be brought over later.") with **Discard** and **Cancel**; focus moves to Discard. Cancel goes back with focus on Discard. Discard → the sheet closes with the toast "Old Grimify data discarded."
+3. **Import** → the paints are marked owned (wishlist and favorite stay as they are) and the palettes are added as new palettes, oldest first, up to 50. The sheet shows the result step, titled "Your old Grimify data", with "Added 120 paints and 5 palettes.", or "Added 120 paints and 2 palettes. 3 palettes didn't fit." when the 50-palette cap was reached, and one **Done** button, which gets focus and closes the sheet
+4. **Discard** → the sheet asks "Discard your old data for good?" ("Your old paints and palettes will be deleted and can't be brought over later.") with **Discard** and **Cancel**; focus moves to Discard. Cancel goes back with focus on Discard. Discard → the result step with "Old Grimify data discarded." and **Done**
 5. **Not now**, Close or Escape → the sheet closes and nothing changes; it's offered again next session
 
 After Import or Discard the old data is gone from the server: no account sees the prompt for it again.
 
 Failure:
 - The lookup fails (offline, Clerk down) → no sheet; the error is logged and the app works as before
-- Import or Discard fails → toast "Couldn't import your old data. Try again." or "Couldn't discard your old data. Try again."; the sheet stays open and the data stays staged
+- Import or Discard fails → the sheet shows "Couldn't import your old data. Try again." or "Couldn't discard your old data. Try again." above its buttons; the buttons stay and the data stays staged
 
 Loading State:
 While Import or Discard runs, the buttons are disabled and the sheet can't be closed.
 
 Signed Out:
 Nothing is shown, and the server isn't asked.
+
+Accessibility:
+Outcomes and errors are announced from a `role="status"` region inside the sheet that's always mounted, never by toast: while the sheet is open, Radix Dialog hides the rest of the page, toasts included, from assistive tech.

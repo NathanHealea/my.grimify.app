@@ -110,14 +110,27 @@ describe("LegacyImportPrompt", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("import and discard resolve and toast the outcome", async () => {
+  it("import and discard resolve and show the outcome in the sheet", async () => {
     const rerender = renderPrompt();
     let dialog = await findPrompt();
+    const status = within(dialog).getByRole("status");
+    expect(status).toBeEmptyDOMElement();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Import" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    dialog = await screen.findByRole("dialog", { name: "Your old Grimify data" });
     expect(resolveMine).toHaveBeenCalledExactlyOnceWith({ choice: "import" });
-    expect(screen.getByRole("status")).toHaveTextContent("Added 120 paints and 5 palettes.");
+    expect(within(dialog).getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent("Added 120 paints and 5 palettes.");
+    expect(
+      within(dialog)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Done", ""]);
+    const done = within(dialog).getByRole("button", { name: "Done" });
+    await waitFor(() => expect(done).toHaveFocus());
+    fireEvent.click(done);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
 
     me = null;
     rerender();
@@ -136,16 +149,17 @@ describe("LegacyImportPrompt", () => {
     expect(within(dialog).getByRole("button", { name: "Discard" })).toHaveFocus();
     fireEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
 
-    resolveMine.mockResolvedValue(null);
+    resolveMine.mockResolvedValue({ paintsAdded: 0, palettesAdded: 0, palettesSkipped: 0 });
     fireEvent.click(
       within(screen.getByRole("dialog", { name: "Discard your old data for good?" })).getByRole(
         "button",
         { name: "Discard" },
       ),
     );
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    dialog = await screen.findByRole("dialog", { name: "Your old Grimify data" });
     expect(resolveMine).toHaveBeenCalledExactlyOnceWith({ choice: "discard" });
-    expect(screen.getByRole("status")).toHaveTextContent("Old Grimify data discarded.");
+    expect(within(dialog).getByRole("status")).toHaveTextContent("Old Grimify data discarded.");
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Done" })).toHaveFocus());
   });
 
   it("says how many palettes didn't fit", async () => {
@@ -156,13 +170,13 @@ describe("LegacyImportPrompt", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Import" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(within(dialog).getByRole("status")).toHaveTextContent(
         "Added 120 paints and 2 palettes. 3 palettes didn't fit.",
       ),
     );
   });
 
-  it("keeps the sheet open and toasts when import fails", async () => {
+  it("keeps the sheet open and shows the error in it when import fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     resolveMine.mockRejectedValue(new Error("network down"));
     renderPrompt();
@@ -171,15 +185,16 @@ describe("LegacyImportPrompt", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Import" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(within(dialog).getByRole("status")).toHaveTextContent(
         "Couldn't import your old data. Try again.",
       ),
     );
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Bring over your old Grimify data?" })).toBe(dialog);
+    expect(within(dialog).getByRole("button", { name: "Import" })).toBeEnabled();
     expect(consoleError).toHaveBeenCalled();
   });
 
-  it("keeps the sheet open and toasts when discard fails", async () => {
+  it("keeps the sheet open and shows the error in it when discard fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     resolveMine.mockRejectedValue(new Error("network down"));
     renderPrompt();
@@ -190,11 +205,11 @@ describe("LegacyImportPrompt", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Discard" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(within(confirm).getByRole("status")).toHaveTextContent(
         "Couldn't discard your old data. Try again.",
       ),
     );
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(within(confirm).getByRole("button", { name: "Discard" })).toBeEnabled();
     expect(resolveMine).toHaveBeenCalledExactlyOnceWith({ choice: "discard" });
     expect(consoleError).toHaveBeenCalled();
   });
@@ -203,6 +218,7 @@ describe("LegacyImportPrompt", () => {
     const rerender = renderPrompt();
     const dialog = await findPrompt();
 
+    expect(within(dialog).getByRole("status")).toBeEmptyDOMElement();
     const buttons = within(dialog).getAllByRole("button");
     expect(buttons).toHaveLength(4);
     ["Import", "Not now", "Discard", "Close"].forEach((name, index) =>
