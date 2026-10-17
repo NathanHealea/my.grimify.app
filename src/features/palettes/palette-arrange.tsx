@@ -244,17 +244,18 @@ export function PaletteArrange({
   };
   const byKeyboard = useRef(false);
   const focusAfterDrop = useRef<string | null>(null);
-  // Picking up a group collapses the groups, which can shorten the page enough to clamp the scroll. dnd-kit counts
-  // the clamp as a scroll for drop targets but not for the preview, which would sit off the grab point (#23), so this
-  // modifier goes on DragOverlay only.
+  // A group pick-up can clamp the scroll, leaving the preview off the grab point (#23). dnd-kit measures the overlay
+  // with this shift for collisions, so it goes on DragOverlay only; on DndContext it would count twice.
   const grabOffset = useRef<number | null>(null);
+  // Fixed at the first measure, like the overlay's own top; activeNodeRect is re-measured mid-drag in viewport terms.
+  const grabShift = useRef<number | null>(null);
   const modifiers = useMemo<Modifier[]>(
     () => [
-      // activeNodeRect, not draggingNodeRect: dnd-kit measures the overlay with its transform, which includes this shift.
       ({ activatorEvent, activeNodeRect, transform }) => {
         const pressY = pointerYOf(activatorEvent);
         if (grabOffset.current === null || pressY === null || !activeNodeRect) return transform;
-        return { ...transform, y: transform.y + pressY - grabOffset.current - activeNodeRect.top };
+        grabShift.current ??= pressY - grabOffset.current - activeNodeRect.top;
+        return { ...transform, y: transform.y + grabShift.current };
       },
     ],
     [],
@@ -278,6 +279,7 @@ export function PaletteArrange({
     const node = document
       .querySelector(`[data-drag-handle="${String(active.id)}"]`)
       ?.closest(".palette-arrange__item");
+    grabShift.current = null;
     grabOffset.current =
       data?.type === "group" && pressY !== null && node
         ? pressY - node.getBoundingClientRect().top
@@ -296,6 +298,7 @@ export function PaletteArrange({
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     const data = dataOf(active);
     grabOffset.current = null;
+    grabShift.current = null;
     setDragging(null);
     if (!data) return;
     // Edits need a connection (DECISIONS 047); a drag that ends offline changes nothing.
@@ -314,6 +317,7 @@ export function PaletteArrange({
 
   const onDragCancel = () => {
     grabOffset.current = null;
+    grabShift.current = null;
     if (byKeyboard.current && dragging) focusAfterDrop.current = sortableIdOf(dragging);
     setDragging(null);
   };
