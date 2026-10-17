@@ -287,6 +287,14 @@ Args: `{ tokenIdentifier: string; emailHashes: string[] }`. Called only by `lega
 ### legacyImports.claim — internal mutation
 Args: `{ tokenIdentifier: string; emailHashes: string[]; choice: "import" | "discard" }`. Called only by `legacyClaim.resolveMine`, which derives both from the session and Clerk. Behavior and errors as in `resolveMine`.
 
+### legacyImports.purgeExpired — internal mutation
+Authentication: none; internal. Run once a day by the `purge expired legacy imports` cron (`convex/crons.ts`, `crons.interval` every 24 hours).
+Args: `{}`
+Behavior:
+- Deletes `legacyImports` rows whose `loadedAt` is more than 180 days before now, complete or not, then `legacyImportClaims` rows whose `claimedAt` is more than 180 days before now. A row exactly 180 days old is kept
+- Deletes at most `DELETE_BATCH` (500) rows per transaction across both tables; after a full batch it schedules itself again (`runAfter(0)`) until none are left
+Returns: `null`
+
 ---
 
 ## 2b. Offline Outbox (client)

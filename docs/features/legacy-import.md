@@ -5,7 +5,7 @@
 
 ## TL;DR
 
-- Built so far: **the export, the loader and claiming on sign-in**. The purge is a later work item.
+- Built: **the export, the loader, claiming on sign-in and the retention purge**.
 - `npm run legacy:export -- <output-dir> <grimify>/scripts/data` reads the old project **read-only** and writes **`export.json`** and **`report.json`**.
 - Each old user becomes one record keyed by **`emailHash`**, an **HMAC-SHA256 of the normalized email** with `LEGACY_IMPORT_HASH_KEY`. The output holds **no email and no old UUID**.
 - Old paints map to catalog IDs with **the same derivation as the catalog import**. Paints that don't map are **left out and listed in the report**.
@@ -14,7 +14,7 @@
 - `npm run legacy:load -- <env> <export.json>` stages the export in that environment's Convex deployment, in **`legacyImports`**, one row per `emailHash`. Loading again gives the same rows and **skips hashes already claimed**.
 - The output directory **must be outside the repository**. **Only production gets real data**: dev and stage get a made-up export hashed with their own key.
 - After sign-in, a user whose **verified** email hashes to a staged row is offered **Import**, **Not now** or **Discard**. The server reads the addresses from **Clerk's Backend API** (`CLERK_SECRET_KEY`); Import or Discard deletes the row and records the hash, so it **can't be claimed twice**.
-- After the production load, **delete the export and `.env.legacy.local`** (or rotate the old project's secret key). Unclaimed staged data is purged 180 days after loading.
+- After the production load, **delete the export and `.env.legacy.local`** (or rotate the old project's secret key). A daily purge deletes staged rows **180 days after `loadedAt`** (complete or not) and claim records **180 days after `claimedAt`**.
 
 ## Where the code lives
 
@@ -113,6 +113,14 @@ Prerequisites on the deployment: the staged data from its own export, `LEGACY_IM
 If an account has several verified addresses with staged data, one is offered per session, in Clerk's order. A user whose new account uses a different address can't claim. Nothing about the email is stored or logged; a failed Clerk call throws with its HTTP status only.
 
 To try it end to end, use a personal `npx convex dev` deployment signed in through the Clerk dev instance: set its `CLERK_SECRET_KEY` to the dev instance's `sk_test_` key and its own `LEGACY_IMPORT_HASH_KEY`, and stage a made-up export whose record is hashed from an address you can sign in with.
+
+## Retention purge
+
+A cron in `convex/crons.ts` runs the internal mutation `legacyImports.purgeExpired` every 24 hours. It deletes `legacyImports` rows whose `loadedAt` is more than 180 days old, complete or not, and `legacyImportClaims` rows whose `claimedAt` is more than 180 days old, 500 per transaction, scheduling itself again until none are left. The 180 days are a constant in `convex/legacyImports.ts`; changing them is a code change.
+
+Staging a record again with `reset` gives it a new `loadedAt`, so a re-load restarts that row's 180 days. Once a claim record is purged, loading an old export file again could stage that hash again; delete the export after the production load.
+
+To run it by hand on dev, run `legacyImports:purgeExpired` from the Convex dashboard.
 
 ## Relations to other features
 

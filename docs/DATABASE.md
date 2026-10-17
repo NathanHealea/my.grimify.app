@@ -245,12 +245,16 @@ export default defineSchema({
     palettesOmitted: v.number(),
     complete: v.boolean(),
     loadedAt: v.number(),
-  }).index("by_emailHash", ["emailHash"]),
+  })
+    .index("by_emailHash", ["emailHash"])
+    .index("by_loadedAt", ["loadedAt"]),
 
   legacyImportClaims: defineTable({
     emailHash: v.string(),
     claimedAt: v.number(),
-  }).index("by_emailHash", ["emailHash"]),
+  })
+    .index("by_emailHash", ["emailHash"])
+    .index("by_claimedAt", ["claimedAt"]),
 });
 ```
 
@@ -292,6 +296,8 @@ Foreign Keys:
 | `users.by_tokenIdentifier` | Resolve the current user from the auth identity (index names list every field, per the Convex guidelines) |
 | `legacyImports.by_emailHash` | Find a hash's staged row to replace or append to, and (later) the signed-in user's row at claim time |
 | `legacyImportClaims.by_emailHash` | Skip a hash already claimed or discarded when the export is loaded again |
+| `legacyImports.by_loadedAt` | Find staged rows past the 180-day retention for the daily purge |
+| `legacyImportClaims.by_claimedAt` | Find claim records past the 180-day retention for the daily purge |
 | `palettes.by_userId` | List the caller's palettes and count them against the 50 cap. Reads are bounded at 50; the list is sorted by `updatedAt` in code |
 | `userPaints.by_userId_and_paintId` | Upsert/toggle a single paint, and load the whole collection by its `userId` prefix (no separate `by_userId` index needed). Lists are bounded at 5,000 rows, above the catalog's 2,837 paints |
 
@@ -329,7 +335,7 @@ Protection:
 - Not logged
 - Deleted when the account is deleted (see SECURITY.md)
 - `legacyImports` and `legacyImportClaims` are internal only: no public function returns them, and the loader prints counts, never hashes or names
-- A staged row is deleted when its user imports or discards it; unclaimed rows are purged 180 days after loading, and claim records 180 days after the claim (`legacy-purge`, DECISIONS 058)
+- A staged row is deleted when its user imports or discards it; the daily purge (`legacyImports.purgeExpired`) deletes staged rows, complete or not, 180 days after `loadedAt`, and claim records 180 days after `claimedAt` (DECISIONS 058)
 - Dev and stage hold only made-up legacy data, hashed with their own key
 
 ---

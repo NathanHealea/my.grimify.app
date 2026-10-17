@@ -1289,6 +1289,7 @@ Alternatives:
 Consequences:
 Positive: no public surface; the loader uses the deploy access the owner already has.
 Trade-off: Convex now holds pseudonymous data about people who haven't joined, until they claim or the purge runs (180 days). A load takes about a second per chunk.
+Retention: a staged row is purged 180 days after its `loadedAt`, and a claim record 180 days after its `claimedAt` (`legacyImports.purgeExpired`, daily). Loading a record again with `reset` gives it a new `loadedAt`, restarting its 180 days, so the loader runs once per environment. Once a claim record is purged, loading the same export again would re-stage that person's data, including someone who chose Discard; the export file is deleted after the production load so that can't happen by accident.
 
 ---
 

@@ -44,11 +44,15 @@ export default defineSchema({
     palettesOmitted: v.number(),
     complete: v.boolean(),
     loadedAt: v.number(),
-  }).index("by_emailHash", ["emailHash"]),
+  })
+    .index("by_emailHash", ["emailHash"])
+    .index("by_loadedAt", ["loadedAt"]),
 
   // Hashes already claimed or discarded, so loading the export again can't bring them back.
   legacyImportClaims: defineTable({
     emailHash: v.string(),
     claimedAt: v.number(),
-  }).index("by_emailHash", ["emailHash"]),
+  })
+    .index("by_emailHash", ["emailHash"])
+    .index("by_claimedAt", ["claimedAt"]),
 });
