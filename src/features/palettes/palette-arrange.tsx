@@ -246,7 +246,17 @@ export function PaletteArrange({
 
   const onDragStart = ({ active, activatorEvent }: DragStartEvent) => {
     byKeyboard.current = activatorEvent instanceof KeyboardEvent;
-    setDragging(dataOf(active) ?? null);
+    const data = dataOf(active);
+    setDragging(data ?? null);
+    // A group drag unmounts group paint rows, and a pointer press doesn't move focus off them in Safari (#22).
+    const focused = document.activeElement;
+    const focusedId =
+      focused?.getAttribute("data-drag-handle") ?? focused?.getAttribute("data-move-button");
+    if (data?.type === "group" && focusedId?.startsWith("group:")) {
+      document
+        .querySelector<HTMLElement>(`[data-drag-handle="${sortableIdOf(data)}"]`)
+        ?.focus({ preventScroll: true });
+    }
   };
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {

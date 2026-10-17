@@ -2,7 +2,7 @@ import { useUser } from "@clerk/react";
 import { act, fireEvent, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { ToastProvider } from "@/features/feedback/toast-provider";
 import { catalogOf, catalogPaint } from "@/test/catalog-fixture";
@@ -415,6 +415,108 @@ describe("Arrange mode", () => {
     expect(document.querySelector('[id^="DndLiveRegion-"]')).toHaveTextContent(
       "Group Trim is over position 1 of 2.",
     );
+  });
+
+  it("moves focus to the dragged group's handle when a pointer group drag hides the focused paint row", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+
+    within(trim()).getByRole("button", { name: "Drag Mephiston Red" }).focus();
+    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
+    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    expect(document.activeElement).toBe(
+      within(highlights()).getByRole("button", { name: "Drag group Highlights" }),
+    );
+  });
+
+  it("keeps focus on the group handle after a pointer group drag that moved it ends", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+    const highlights = () => screen.getByRole("region", { name: "Highlights" });
+
+    within(trim()).getByRole("button", { name: "Drag Mephiston Red" }).focus();
+    const handle = within(highlights()).getByRole("button", { name: "Drag group Highlights" });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
+    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+    await waitFor(() => expect(highlights()).toHaveAttribute("data-dragging"));
+    fireEvent.mouseUp(document, { clientX: 10, clientY: 30 });
+
+    expect(await within(trim()).findByRole("button", { name: "Drag Mephiston Red" })).toBeVisible();
+    expect(document.activeElement).toBe(
+      within(highlights()).getByRole("button", { name: "Drag group Highlights" }),
+    );
+  });
+
+  it("leaves focus alone when a pointer group drag starts with focus outside the group rows", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+
+    const done = screen.getByRole("button", { name: "Done" });
+    done.focus();
+    const handle = within(trim()).getByRole("button", { name: "Drag group Trim" });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
+    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+
+    await waitFor(() => expect(trim()).toHaveAttribute("data-dragging"));
+    expect(document.activeElement).toBe(done);
+  });
+
+  it("leaves focus alone when a pointer paint drag starts", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    signedInWith(twoGroups());
+    renderRoute(`/palettes/${PALETTE_ID}`);
+    const list = await screen.findByRole("list", { name: "Paints in this palette" });
+    await within(list).findByRole("button", { name: "Remove Mephiston Red from palette" });
+    fireEvent.click(screen.getByRole("button", { name: "Arrange" }));
+    const trim = () => screen.getByRole("region", { name: "Trim" });
+
+    const move = within(trim()).getByRole("button", { name: "Move Blood Red" });
+    move.focus();
+    const handle = within(trim()).getByRole("button", { name: "Drag Mephiston Red" });
+    fireEvent.mouseDown(handle, { button: 0, clientX: 10, clientY: 10 });
+    // dnd-kit blocks clicks on document during a pointer drag and lifts the block 50ms after release; a later test's clicks would be swallowed.
+    onTestFinished(async () => {
+      fireEvent.mouseUp(document);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    fireEvent.mouseMove(document, { clientX: 10, clientY: 30 });
+
+    await waitFor(() => expect(handle.closest("li")).toHaveAttribute("data-dragging"));
+    expect(document.activeElement).toBe(move);
   });
 
   it("sends every drop to its mutation and shows it at once", async () => {
