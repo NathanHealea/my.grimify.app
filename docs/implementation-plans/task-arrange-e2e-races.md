@@ -47,7 +47,7 @@ With a 500ms pause before ArrowDown and a wait for the drop to settle, the journ
 ## Requirements
 
 - **R1** — The arrange journey passes on iPhone 15 and Pixel 7, three runs in a row each, against current `dev` code.
-- **R2** — The journey waits on page signals, not fixed sleeps: the drag preview gone after each drop, and the live region for the keyboard move.
+- **R2** — The journey waits on page signals, not fixed sleeps: the drag preview gone after each drop, the live region for the keyboard move, and the Move sheet for the click after a drop.
 - **R3** — A lost ArrowDown is retried, and a delivered one is never repeated.
 
 ## Acceptance criteria
@@ -67,7 +67,7 @@ With a 500ms pause before ArrowDown and a wait for the drop to settle, the journ
 
 ## Implementation plan
 
-1. [ ] Wait for dnd-kit in the arrange journey: after each drop (keyboard and in `mouseDrag`) wait for `.drag-preview` to be gone, which outlasts the 50ms click block; for the keyboard move, press ArrowDown inside `expect(...).toPass()` only while the live region reads position 1, and expect position 2 — touches `tests/e2e/palettes.spec.ts` — tests T1, T2
+1. [x] Wait for dnd-kit in the arrange journey: after each drop (keyboard and in `mouseDrag`) wait for `.drag-preview` to be gone, which outlasts the 50ms click block; for the keyboard move, press ArrowDown inside `expect(...).toPass()` only while the live region reads position 1, and expect position 2; open the Move sheet the same way (click only while it's closed), since a drop that unmounts the dragged row skips the animation and the 50ms click block can outlast the preview — touches `tests/e2e/palettes.spec.ts` — tests T1, T2
 
 **Must not change:** app code; the journey's steps and assertions; the other journeys.
 
@@ -83,3 +83,4 @@ With a 500ms pause before ArrowDown and a wait for the drop to settle, the journ
 - 2026-10-17 — Planned.
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Started on branch task/arrange-e2e-races from origin/dev.
+- 2026-10-17 — Passes 4/4 on each project serially; Move sheet click also guarded after a 1-in-6 swallowed click (drop to another group skips the animation)
