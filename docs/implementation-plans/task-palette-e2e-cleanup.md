@@ -60,8 +60,8 @@ The shared E2E user is `grimify-e2e+clerk_test@example.com` (DECISIONS 032), cre
 
 ## Implementation plan
 
-1. [ ] Add the cleanup: a per-test palette name each journey records when it builds its name, and a `test.afterEach` that, if a palette with that name is listed on `/palettes`, opens it and deletes it the way the journeys do — touches `tests/e2e/palettes.spec.ts` — tests T1, T2
-2. [ ] Docs: note the cleanup in TESTING's palettes line — touches `docs/TESTING.md` — tests none
+1. [x] Add the cleanup: a per-test palette name each journey records when it builds its name, and a `test.afterEach` that, if a palette with that name is listed on `/palettes`, opens it and deletes it the way the journeys do — touches `tests/e2e/palettes.spec.ts` — tests T1, T2
+2. [x] Docs: note the cleanup in TESTING's palettes line — touches `docs/TESTING.md` — tests none
 
 **Must not change:** the journeys' steps and assertions; app code; other specs.
 
@@ -77,3 +77,4 @@ The shared E2E user is `grimify-e2e+clerk_test@example.com` (DECISIONS 032), cre
 - 2026-10-17 — Planned.
 - 2026-10-17 — Plan approved.
 - 2026-10-17 — Started on branch task/palette-e2e-cleanup from origin/dev.
+- 2026-10-17 — T1 passed: forced failure after Create, palette gone after the run; all 10 palette journeys pass
