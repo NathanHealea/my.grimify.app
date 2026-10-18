@@ -2,7 +2,7 @@
 type: bug
 epic: legacy-import    # removed by `wi new` when there is no parent epic
 slug: legacy-claim-admin-email
-status: staged
+status: released
 branch: bug/legacy-claim-admin-email
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/bug-legacy-claim-admin-email
 created: 2026-10-18
@@ -11,7 +11,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.20.4
 review_approved: 2026-10-18
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.20.4
 ---
 
 # Claim ignores emails verified by an admin
@@ -80,3 +80,4 @@ The old-data claim only counts a Clerk email address verified by `email_code` or
 - 2026-10-18 — Staged: version 0.20.3 → 0.20.4 by hand; the full suite times out intermittently under machine load, and the owner chose to go ahead (docs/TESTING.md).
 - 2026-10-18 — Review approved.
 - 2026-10-18 — Owner approved the change and its release in conversation (2026-10-18)
+- 2026-10-18 — Released 0.20.4 as v0.20.4 by hand without a passing verification run, by the owner's decision.
