@@ -76,3 +76,4 @@ The old-data claim only counts a Clerk email address verified by `email_code` or
 - 2026-10-18 — Plan approved.
 - 2026-10-18 — Approved by the owner in conversation (2026-10-18)
 - 2026-10-18 — Started on branch bug/legacy-claim-admin-email from origin/dev.
+- 2026-10-18 — Security review: no findings. paints-screen tests timed out once under load (load avg ~6); passed alone and on re-run
