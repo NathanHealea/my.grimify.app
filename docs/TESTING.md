@@ -163,3 +163,18 @@ Prioritize:
 - Catalog validates
 - Critical flow verified (E2E, or manually on a phone for PWA-specific changes)
 - No blocking console errors
+
+---
+
+## 9. Known Load-Sensitive Tests
+
+These tests pass on their own but can time out when the full suite runs in parallel on a busy machine (seen on the WSL development machine, 2026-10-18). A timeout in one of them alone isn't a regression; re-run the file on its own to confirm.
+
+| Test | File | Alone | Full suite | Tracking |
+|---|---|---|---|---|
+| select mode caps the selection at 200 (15 s timeout) | `src/features/catalog/paints-screen.test.tsx` | 1.6–3.2 s | 10–17.6 s | #29 |
+| renders 60 rows, then more, and an empty state | `src/features/catalog/paints-screen.test.tsx` | about 1.5 s | sometimes over 5 s | #29 |
+| arrange mode swaps row controls for handles | `src/features/palettes/palette-arrange.test.tsx` | passes | failed once | — |
+| teardown "window is not defined" | `src/features/palettes/palettes-screen.test.tsx` | passes | intermittent | #27 |
+
+v0.20.3 (`paints-cap-test-timeout`) and v0.20.4 (`legacy-claim-admin-email`) were released by hand without a passing full-suite run, by the owner's decision, because of these timeouts. Neither changes what users see beyond the admin-email fix, whose own tests pass.
