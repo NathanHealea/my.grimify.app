@@ -1,7 +1,7 @@
 ---
 type: task
 slug: paints-cap-test-timeout
-status: staged
+status: released
 branch: task/paints-cap-test-timeout
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/task-paints-cap-test-timeout
 created: 2026-10-18
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.20.3
 review_approved: 2026-10-18
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.20.3
 ---
 
 # Give the select-mode cap test an explicit timeout
@@ -72,3 +72,4 @@ tag:                 # set by `wi release`; the tag sits on the merge commit
 - 2026-10-18 — Full suite passed twice (520/520) with the timeout
 - 2026-10-18 — Staged: verification passed; version 0.20.2 → 0.20.3; no changelog file.
 - 2026-10-18 — Review approved.
+- 2026-10-18 — Released 0.20.3 as v0.20.3 by hand without passing verification, by the owner's decision: the full suite times out intermittently under machine load (docs/TESTING.md § Known load-sensitive tests, #29).
