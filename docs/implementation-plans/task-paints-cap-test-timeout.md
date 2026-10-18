@@ -53,7 +53,7 @@ tag:                 # set by `wi release`; the tag sits on the merge commit
 
 ## Implementation plan
 
-1. [ ] Add the explicit timeout and its reason — touches `src/features/catalog/paints-screen.test.tsx` — tests T1
+1. [x] Add the explicit timeout and its reason — touches `src/features/catalog/paints-screen.test.tsx` — tests T1
 
 **Must not change:** the test's assertions; app code.
 
@@ -69,3 +69,4 @@ tag:                 # set by `wi release`; the tag sits on the merge commit
 - 2026-10-18 — Plan approved.
 - 2026-10-18 — Approved by the owner in conversation (option 2, 2026-10-18)
 - 2026-10-18 — Started on branch task/paints-cap-test-timeout from origin/dev.
+- 2026-10-18 — Full suite passed twice (520/520) with the timeout
