@@ -2,6 +2,7 @@ import { useUser } from "@clerk/react";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { type FunctionReference, getFunctionName } from "convex/server";
+import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { catalogOf, catalogPaint } from "@/test/catalog-fixture";
@@ -9,8 +10,21 @@ import { triggerIntersection } from "@/test/intersection-observer";
 import { renderRoute } from "@/test/render-route";
 
 import { api } from "../../../convex/_generated/api";
-import { resetCatalogCache } from "./load-catalog";
 import type { Catalog } from "./schema";
+
+const rowRenders = vi.hoisted(() => new Map<string, number>());
+
+// Counts renders per paint so a memoized row that skips re-rendering is visible without test hooks.
+vi.mock("@/components/paint-row", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/paint-row")>();
+  return {
+    ...actual,
+    PaintRow: (props: ComponentProps<typeof actual.PaintRow>) => {
+      rowRenders.set(props.paint.id, (rowRenders.get(props.paint.id) ?? 0) + 1);
+      return <actual.PaintRow {...props} />;
+    },
+  };
+});
 
 const NAMED = [
   catalogPaint({ brandId: "citadel", name: "Mephiston Red", hex: "#9B130B" }),
@@ -185,7 +199,7 @@ describe("PaintsScreen", () => {
       });
     });
 
-    it("select mode ticks paints and keeps them across searches", { timeout: 30_000 }, async () => {
+    it("select mode ticks paints and keeps them across searches", async () => {
       serve(catalogOf(NAMED));
       signIn();
       renderRoute("/paints");
@@ -248,9 +262,32 @@ describe("PaintsScreen", () => {
           .getAllByRole("checkbox", { name: /^Select / })
           .filter((box) => box.matches(":checked")),
       ).toHaveLength(0);
+    });
 
-      cleanup();
-      resetCatalogCache();
+    it("select mode re-renders only the ticked row", async () => {
+      const [mephiston, macragge, darkBlue, bloodRed] = NAMED;
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      expect(screen.getAllByRole("checkbox", { name: /^Select / })).toHaveLength(4);
+      const before = new Map(rowRenders);
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
+
+      expect(screen.getByRole("checkbox", { name: "Select Macragge Blue" })).toBeChecked();
+      const increase = (id: string) => (rowRenders.get(id) ?? 0) - (before.get(id) ?? 0);
+      expect(increase(macragge.id)).toBeGreaterThan(0);
+      expect({
+        [mephiston.id]: increase(mephiston.id),
+        [darkBlue.id]: increase(darkBlue.id),
+        [bloodRed.id]: increase(bloodRed.id),
+      }).toEqual({ [mephiston.id]: 0, [darkBlue.id]: 0, [bloodRed.id]: 0 });
+    });
+
+    it("select mode caps the selection at 200", async () => {
       const many = Array.from({ length: 201 }, (_, i) =>
         catalogPaint({
           brandId: "army-painter",
@@ -259,6 +296,7 @@ describe("PaintsScreen", () => {
         }),
       );
       serve(catalogOf(many));
+      signIn();
       renderRoute("/paints");
 
       await screen.findByText("Grey 000");
