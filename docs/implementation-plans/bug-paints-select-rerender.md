@@ -1,7 +1,7 @@
 ---
 type: bug
 slug: paints-select-rerender
-status: staged
+status: released
 branch: bug/paints-select-rerender
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/bug-paints-select-rerender
 created: 2026-10-18
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.20.2
 review_approved: 2026-10-18
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.20.2
 ---
 
 # Ticking a paint in Select mode re-renders every row
@@ -89,3 +89,4 @@ In Select mode on the Paints screen, ticking one paint re-renders every visible 
 - 2026-10-18 — Reviews (code, security, a11y): no findings. One sync verify failed uncaptured while reviewers started; check passed alone
 - 2026-10-18 — Staged: verification passed; version 0.20.1 → 0.20.2; no changelog file.
 - 2026-10-18 — Review approved.
+- 2026-10-18 — Released 0.20.2 as v0.20.2.
