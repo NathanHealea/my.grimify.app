@@ -8,7 +8,7 @@ created: 2026-10-18
 approved: 2026-10-18
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.20.2
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-18
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -88,3 +88,4 @@ In Select mode on the Paints screen, ticking one paint re-renders every visible 
 - 2026-10-18 — Steps 1-2 done. Cap test 4.7 s -> 1.6 s alone; full suite passes twice with no timeout. Baseline wi verify happened to pass on dev (the timeout is intermittent).
 - 2026-10-18 — Reviews (code, security, a11y): no findings. One sync verify failed uncaptured while reviewers started; check passed alone
 - 2026-10-18 — Staged: verification passed; version 0.20.1 → 0.20.2; no changelog file.
+- 2026-10-18 — Review approved.
