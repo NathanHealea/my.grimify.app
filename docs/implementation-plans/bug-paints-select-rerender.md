@@ -67,8 +67,8 @@ In Select mode on the Paints screen, ticking one paint re-renders every visible 
 
 ## Implementation plan
 
-1. [ ] Split the select-mode test into its search and cap scenarios and drop the custom timeout — touches `src/features/catalog/paints-screen.test.tsx` — tests T2, T3
-2. [ ] Re-render only the ticked row: memoized row component, stable toggle by paint ID, constant-time selection lookup — touches `src/features/catalog/paints-screen.tsx`, `src/features/catalog/paints-screen.test.tsx` — tests T1, T4
+1. [x] Split the select-mode test into its search and cap scenarios and drop the custom timeout — touches `src/features/catalog/paints-screen.test.tsx` — tests T2, T3
+2. [x] Re-render only the ticked row: memoized row component, stable toggle by paint ID, constant-time selection lookup — touches `src/features/catalog/paints-screen.tsx`, `src/features/catalog/paints-screen.test.tsx` — tests T1, T4
 
 **Must not change:** `PaintRow` props and behavior; `paint-detail.tsx`; selection bar behavior and the 200 cap; CSS.
 
@@ -85,3 +85,4 @@ In Select mode on the Paints screen, ticking one paint re-renders every visible 
 - 2026-10-18 — Plan approved.
 - 2026-10-18 — Approved by the owner in conversation (2026-10-18); fixes #28
 - 2026-10-18 — Started on branch bug/paints-select-rerender from origin/dev.
+- 2026-10-18 — Steps 1-2 done. Cap test 4.7 s -> 1.6 s alone; full suite passes twice with no timeout. Baseline wi verify happened to pass on dev (the timeout is intermittent).
