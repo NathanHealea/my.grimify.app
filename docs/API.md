@@ -267,7 +267,7 @@ Authentication: optional; signed out returns `null` without calling Clerk (DECIS
 Args: `{}`
 Behavior:
 - `LEGACY_IMPORT_HASH_KEY` unset on the deployment → `null` (the import is off); set but `CLERK_SECRET_KEY` unset → throws
-- Reads the caller's addresses from Clerk's Backend API (`GET /v1/users/{identity.subject}`) and hashes only those with `verification.status === "verified"` and `verification.strategy` `email_code` or `email_link`; a non-2xx answer from Clerk throws
+- Reads the caller's addresses from Clerk's Backend API (`GET /v1/users/{identity.subject}`) and hashes only those with `verification.status === "verified"` and `verification.strategy` `email_code`, `email_link` or `admin`; a non-2xx answer from Clerk throws
 - Passes the hashes and the caller's `tokenIdentifier` to `legacyImports.summaryForHashes`: `null` when the caller has no `users` row or no complete staged row matches
 Returns: `{ ownedCount: number; paletteCount: number } | null`. `paletteCount` includes the palettes the export counted in `palettesOmitted`.
 

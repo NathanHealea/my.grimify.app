@@ -6,11 +6,12 @@ type ClerkUser = {
 };
 
 // The app signs in only by email code or link; an address an OAuth or SAML provider asserted isn't proof
-// of ownership here. Enabling another sign-in method means revisiting this (SECURITY.md).
-const OWNERSHIP_STRATEGIES = new Set(["email_code", "email_link"]);
+// of ownership here. `admin` is an address the instance owner created as verified. Enabling another sign-in
+// method means revisiting this (SECURITY.md).
+const OWNERSHIP_STRATEGIES = new Set(["email_code", "email_link", "admin"]);
 
 /**
- * The email addresses a Clerk user proved they own by email code or link, read from Clerk's Backend API because the
+ * The email addresses a Clerk user proved they own by email code or link, or an admin verified, read from Clerk's Backend API because the
  * session token Convex receives carries no email (DECISIONS 059). Throws on a non-2xx response.
  */
 export async function verifiedEmails(clerkUserId: string, secretKey: string): Promise<string[]> {

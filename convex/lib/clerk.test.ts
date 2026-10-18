@@ -67,6 +67,21 @@ describe("verifiedEmails", () => {
     await expect(verifiedEmails(USER_ID, SECRET)).resolves.toEqual(["c@example.com"]);
   });
 
+  it("verifiedEmails keeps an address an admin verified", async () => {
+    stubFetch(200, {
+      id: USER_ID,
+      email_addresses: [
+        { email_address: "a@example.com", verification: { status: "verified", strategy: "admin" } },
+        {
+          email_address: "b@example.com",
+          verification: { status: "unverified", strategy: "admin" },
+        },
+      ],
+    });
+
+    await expect(verifiedEmails(USER_ID, SECRET)).resolves.toEqual(["a@example.com"]);
+  });
+
   it.each([404, 500])("verifiedEmails throws with the status on a %i response", async (status) => {
     stubFetch(status, { errors: [{ message: "nope" }] });
 
