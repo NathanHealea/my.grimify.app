@@ -86,3 +86,4 @@ In Select mode on the Paints screen, ticking one paint re-renders every visible 
 - 2026-10-18 — Approved by the owner in conversation (2026-10-18); fixes #28
 - 2026-10-18 — Started on branch bug/paints-select-rerender from origin/dev.
 - 2026-10-18 — Steps 1-2 done. Cap test 4.7 s -> 1.6 s alone; full suite passes twice with no timeout. Baseline wi verify happened to pass on dev (the timeout is intermittent).
+- 2026-10-18 — Reviews (code, security, a11y): no findings. One sync verify failed uncaptured while reviewers started; check passed alone
