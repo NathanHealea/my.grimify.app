@@ -59,8 +59,8 @@ The old-data claim only counts a Clerk email address verified by `email_code` or
 
 ## Implementation plan
 
-1. [ ] Accept admin-verified addresses — touches `convex/lib/clerk.ts`, `convex/lib/clerk.test.ts` — tests T1, T2
-2. [ ] Document the admin strategy — touches `docs/DECISIONS.md`, `docs/SECURITY.md`, `docs/API.md`, `docs/features/legacy-import.md` — tests none (docs only)
+1. [x] Accept admin-verified addresses — touches `convex/lib/clerk.ts`, `convex/lib/clerk.test.ts` — tests T1, T2
+2. [x] Document the admin strategy — touches `docs/DECISIONS.md`, `docs/SECURITY.md`, `docs/API.md`, `docs/features/legacy-import.md` — tests none (docs only)
 
 **Must not change:** the other filters (status, OAuth/SAML exclusion); function contracts.
 
