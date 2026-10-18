@@ -9,7 +9,6 @@ import { triggerIntersection } from "@/test/intersection-observer";
 import { renderRoute } from "@/test/render-route";
 
 import { api } from "../../../convex/_generated/api";
-import { resetCatalogCache } from "./load-catalog";
 import type { Catalog } from "./schema";
 
 const NAMED = [
@@ -185,7 +184,7 @@ describe("PaintsScreen", () => {
       });
     });
 
-    it("select mode ticks paints and keeps them across searches", { timeout: 30_000 }, async () => {
+    it("select mode ticks paints and keeps them across searches", async () => {
       serve(catalogOf(NAMED));
       signIn();
       renderRoute("/paints");
@@ -248,9 +247,9 @@ describe("PaintsScreen", () => {
           .getAllByRole("checkbox", { name: /^Select / })
           .filter((box) => box.matches(":checked")),
       ).toHaveLength(0);
+    });
 
-      cleanup();
-      resetCatalogCache();
+    it("select mode caps the selection at 200", async () => {
       const many = Array.from({ length: 201 }, (_, i) =>
         catalogPaint({
           brandId: "army-painter",
@@ -259,6 +258,7 @@ describe("PaintsScreen", () => {
         }),
       );
       serve(catalogOf(many));
+      signIn();
       renderRoute("/paints");
 
       await screen.findByText("Grey 000");
