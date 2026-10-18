@@ -9,7 +9,7 @@ created: 2026-10-18
 approved: 2026-10-18
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.20.4
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-18
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -78,3 +78,4 @@ The old-data claim only counts a Clerk email address verified by `email_code` or
 - 2026-10-18 — Started on branch bug/legacy-claim-admin-email from origin/dev.
 - 2026-10-18 — Security review: no findings. paints-screen tests timed out once under load (load avg ~6); passed alone and on re-run
 - 2026-10-18 — Staged: version 0.20.3 → 0.20.4 by hand; the full suite times out intermittently under machine load, and the owner chose to go ahead (docs/TESTING.md).
+- 2026-10-18 — Review approved.
