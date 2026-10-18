@@ -79,3 +79,4 @@ The old-data claim only counts a Clerk email address verified by `email_code` or
 - 2026-10-18 — Security review: no findings. paints-screen tests timed out once under load (load avg ~6); passed alone and on re-run
 - 2026-10-18 — Staged: version 0.20.3 → 0.20.4 by hand; the full suite times out intermittently under machine load, and the owner chose to go ahead (docs/TESTING.md).
 - 2026-10-18 — Review approved.
+- 2026-10-18 — Owner approved the change and its release in conversation (2026-10-18)
