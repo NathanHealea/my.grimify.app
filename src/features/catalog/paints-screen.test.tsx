@@ -287,7 +287,9 @@ describe("PaintsScreen", () => {
       }).toEqual({ [mephiston.id]: 0, [darkBlue.id]: 0, [bloodRed.id]: 0 });
     });
 
-    it("select mode caps the selection at 200", async () => {
+    // 201 rows and 200 ticks: the screen still re-renders per tick, which runs past 5 s in the full
+    // parallel suite; drop this timeout once #29 fixes that.
+    it("select mode caps the selection at 200", { timeout: 15_000 }, async () => {
       const many = Array.from({ length: 201 }, (_, i) =>
         catalogPaint({
           brandId: "army-painter",
