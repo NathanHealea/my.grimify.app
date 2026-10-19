@@ -1,6 +1,8 @@
+import { renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { checkForUpdate } from "./update-state";
+import { checkForUpdate, UpdateStateProvider, useUpdateState } from "./update-state";
 
 type FakeWorker = EventTarget & { state: ServiceWorkerState };
 
@@ -90,5 +92,28 @@ describe("checkForUpdate asks the registration to update and reports whether one
     await vi.advanceTimersByTimeAsync(1000);
 
     await assertion;
+  });
+});
+
+describe("UpdateStateProvider", () => {
+  function renderUpdateState(registration: ServiceWorkerRegistration | undefined) {
+    const apply = vi.fn();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(UpdateStateProvider, { ready: false, apply, registration, children });
+    return renderHook(() => useUpdateState(), { wrapper });
+  }
+
+  it("offers no check until a service worker is registered", () => {
+    const { result } = renderUpdateState(undefined);
+
+    expect(result.current.check).toBeNull();
+  });
+
+  it("offers a check that updates the registration once one exists", async () => {
+    const update = vi.fn(() => Promise.resolve());
+    const { result } = renderUpdateState(fakeRegistration({ update }));
+
+    await expect(result.current.check?.()).resolves.toBe(false);
+    expect(update).toHaveBeenCalledOnce();
   });
 });

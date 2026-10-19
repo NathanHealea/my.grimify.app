@@ -7,7 +7,7 @@ export type UpdateState = {
   ready: boolean;
   /** Activates the waiting version and reloads the app. */
   apply: () => void;
-  /** Resolves true when a newer version is waiting afterwards; null when no service worker is wired up. */
+  /** Resolves true when a newer version is waiting afterwards; null until a service worker is registered. */
   check: (() => Promise<boolean>) | null;
 };
 
@@ -56,7 +56,7 @@ type Props = {
 
 export function UpdateStateProvider({ ready, apply, registration, children }: Props) {
   const value = useMemo<UpdateState>(
-    () => ({ ready, apply, check: () => checkForUpdate(registration) }),
+    () => ({ ready, apply, check: registration ? () => checkForUpdate(registration) : null }),
     [ready, apply, registration],
   );
   return <UpdateStateContext.Provider value={value}>{children}</UpdateStateContext.Provider>;
