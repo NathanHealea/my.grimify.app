@@ -94,12 +94,12 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 
 ## Implementation plan
 
-1. [ ] Move dev and stage to `dev.my.grimify.app` and `stage.my.grimify.app`, add `my.grimify.app` to production, and update the deploy log domains — touches `wrangler.json`, `scripts/deploy.ts`, `scripts/static-files.test.ts`, `scripts/deploy.test.ts` — tests T1, T2, T3
-2. [ ] Record the repo rename. Change `bug_tracking` in CLAUDE.md, and DECISIONS 026's repo name, to `NathanHealea/my.grimify.app` — touches `CLAUDE.md`, `docs/DECISIONS.md` — tests none (docs only)
-3. [ ] Add DECISIONS 060 (app on my.grimify.app; dev and stage on `*.my.grimify.app` with no `www.`; production keeps grimify.app until the marketing cutover; Worker names unchanged; the repo rename), and amend 044's Status — touches `docs/DECISIONS.md` — tests none (docs only)
-4. [ ] Update the environment tables and site names in the deploy docs: the `www.` paragraph, the Clerk note and the Cloudflare Workers section — touches `docs/ENVIRONMENT.md`, `docs/DEPLOYMENT.md`, `docs/features/hosting.md` — tests none (docs only)
-5. [ ] Update the remaining site names — touches `docs/SECURITY.md`, `docs/TESTING.md`, `docs/SYSTEM_MAP.md`, `docs/ROADMAP.md` — tests none (docs only)
-6. [ ] Point the legacy-import docs at `../old.grimify.app` — touches `docs/ENVIRONMENT.md`, `docs/features/legacy-import.md` — tests none (docs only)
+1. [x] Move dev and stage to `dev.my.grimify.app` and `stage.my.grimify.app`, add `my.grimify.app` to production, and update the deploy log domains — touches `wrangler.json`, `scripts/deploy.ts`, `scripts/static-files.test.ts`, `scripts/deploy.test.ts` — tests T1, T2, T3
+2. [x] Record the repo rename. Change `bug_tracking` in CLAUDE.md, and DECISIONS 026's repo name, to `NathanHealea/my.grimify.app` — touches `CLAUDE.md`, `docs/DECISIONS.md` — tests none (docs only)
+3. [x] Add DECISIONS 060 (app on my.grimify.app; dev and stage on `*.my.grimify.app` with no `www.`; production keeps grimify.app until the marketing cutover; Worker names unchanged; the repo rename), and amend 044's Status — touches `docs/DECISIONS.md` — tests none (docs only)
+4. [x] Update the environment tables and site names in the deploy docs: the `www.` paragraph, the Clerk note and the Cloudflare Workers section — touches `docs/ENVIRONMENT.md`, `docs/DEPLOYMENT.md`, `docs/features/hosting.md` — tests none (docs only)
+5. [x] Update the remaining site names — touches `docs/SECURITY.md`, `docs/TESTING.md`, `docs/SYSTEM_MAP.md`, `docs/ROADMAP.md` — tests none (docs only)
+6. [x] Point the legacy-import docs at `../old.grimify.app` — touches `docs/ENVIRONMENT.md`, `docs/features/legacy-import.md` — tests none (docs only)
 
 **Must not change:**
 - **Worker names:** `v2-grimify-app`, `v2-grimify-app-dev`, `v2-grimify-app-stage`.
@@ -126,3 +126,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-19 — Added step 6: the old app's checkout moved to ../old.grimify.app and ../grimify.app is now the marketing repo, so the legacy-import docs' path is wrong.
 - 2026-10-19 — Plan approved.
 - 2026-10-19 — Started on branch task/app-subdomain from origin/dev.
+- 2026-10-19 — All six steps done. ROADMAP's completed deploy item left as a historical record, so step 5 didn't touch ROADMAP.md.
