@@ -1,13 +1,13 @@
 ---
 type: task
 slug: app-subdomain
-status: in-progress
+status: staged
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
 approved: 2026-10-19
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.21.1
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -128,3 +128,5 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-19 — Started on branch task/app-subdomain from origin/dev.
 - 2026-10-19 — All six steps done. ROADMAP's completed deploy item left as a historical record, so step 5 didn't touch ROADMAP.md.
 - 2026-10-19 — Verification flaked twice in full-suite runs: paints-screen 'renders 60 rows, then more, and an empty state' timed out at 5 s (same cause as #29; the sibling cap test got a 15 s stopgap in task-paints-cap-test-timeout). Passes alone and in quiet full runs. Not changed here; propose an issue.
+- 2026-10-19 — Review: fixed Prettier shape, www.grimify.app wording, old-name deploy warning, two-origin device-record gap, sign-out qualifier, cutover storage-clear wording, and dev/stage Convex pins in T2. Left: deploy log line untested (pre-existing), no cross-check between ENVIRONMENTS domains and wrangler routes, marketing site inside the Clerk same-site boundary (for the cutover item).
+- 2026-10-19 — Staged: verification passed; version 0.21.0 → 0.21.1; no changelog file.
