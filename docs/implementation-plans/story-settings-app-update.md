@@ -1,7 +1,7 @@
 ---
 type: story
 slug: settings-app-update
-status: staged
+status: released
 branch: story/settings-app-update
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/story-settings-app-update
 created: 2026-10-18
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.21.0
 review_approved: 2026-10-18
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.21.0
 ---
 
 # Update the app from Settings
@@ -104,3 +104,4 @@ When a new version of Grimify is waiting, the "Update available" bar offers Relo
 - 2026-10-18 — Review cycle 2: fixes sound, 2 LOW focus notes left for the owner. Test audit: 3 tests added (T10-T12), 2 low/equivalent survivors
 - 2026-10-18 — Staged: verification passed; version 0.20.4 → 0.21.0; no changelog file.
 - 2026-10-18 — Review approved.
+- 2026-10-18 — Released 0.21.0 as v0.21.0.
