@@ -93,6 +93,27 @@ describe("checkForUpdate asks the registration to update and reports whether one
 
     await assertion;
   });
+
+  it("rejects when the update request never settles within the timeout", async () => {
+    vi.useFakeTimers();
+    const registration = fakeRegistration({ update: () => new Promise<void>(() => {}) });
+
+    const result = checkForUpdate(registration, 1000);
+    const assertion = expect(result).rejects.toThrow(Error);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await assertion;
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("clears its deadline once the check settles", async () => {
+    vi.useFakeTimers();
+    const registration = fakeRegistration({ waiting: fakeWorker("installed") });
+
+    await expect(checkForUpdate(registration, 1000)).resolves.toBe(true);
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
 
 describe("UpdateStateProvider", () => {

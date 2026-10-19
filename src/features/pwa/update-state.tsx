@@ -25,6 +25,26 @@ export async function checkForUpdate(
   timeoutMs = CHECK_TIMEOUT_MS,
 ): Promise<boolean> {
   if (!registration) throw new Error("The service worker isn't registered");
+  const abort = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`The update check didn't finish within ${timeoutMs} ms`)),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([waitForUpdate(registration, abort.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+    abort.abort();
+  }
+}
+
+async function waitForUpdate(
+  registration: ServiceWorkerRegistration,
+  signal: AbortSignal,
+): Promise<boolean> {
   await registration.update();
   if (registration.waiting) return true;
   const { installing } = registration;
@@ -32,18 +52,16 @@ export async function checkForUpdate(
   const worker: ServiceWorker = installing;
 
   // update() resolves once the new script is fetched, before it finishes installing.
-  return new Promise<boolean>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      worker.removeEventListener("statechange", onStateChange);
-      reject(new Error(`The new service worker didn't finish installing within ${timeoutMs} ms`));
-    }, timeoutMs);
-    function onStateChange() {
-      if (worker.state !== "installed" && worker.state !== "redundant") return;
-      clearTimeout(timer);
-      worker.removeEventListener("statechange", onStateChange);
-      resolve(worker.state === "installed");
-    }
-    worker.addEventListener("statechange", onStateChange);
+  return new Promise<boolean>((resolve) => {
+    worker.addEventListener(
+      "statechange",
+      () => {
+        if (worker.state === "installed" || worker.state === "redundant") {
+          resolve(worker.state === "installed");
+        }
+      },
+      { signal },
+    );
   });
 }
 
