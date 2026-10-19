@@ -9,7 +9,7 @@
 - **One command per environment**: `npm run deploy:dev`, `deploy:stage`, `deploy:prod`. Each runs **only from its own branch**: `dev`, `stage`, `main`.
 - A deploy **pushes Convex first**, then **checks that the built CSP names the right Convex host**, then uploads to Cloudflare.
 - `public/_headers` holds the **CSP** and security headers. The build fills in **`{{CONVEX_HOST}}`** per environment.
-- Sites: **`my.grimify.app`**, **`dev.my.grimify.app`**, **`stage.my.grimify.app`**. Production also keeps **`grimify.app`** and `www.grimify.app` until the marketing cutover (DECISIONS 060).
+- Sites: **`my.grimify.app`**, **`dev.my.grimify.app`**, **`stage.my.grimify.app`**. Production also keeps **`grimify.app`** until the marketing cutover (DECISIONS 060); `www.grimify.app` redirects to it.
 
 ## Where the code lives
 

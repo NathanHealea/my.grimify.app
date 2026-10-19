@@ -11,6 +11,8 @@
 | Stage | `stage` | `https://stage.my.grimify.app` (Worker `v2-grimify-app-stage`) | `npm run deploy:stage` |
 | Production | `main` | `https://my.grimify.app` (Worker `v2-grimify-app`; also `grimify.app` until the marketing cutover) | `npm run deploy:prod` |
 
+The first `deploy:dev` and `deploy:stage` after DECISIONS 060 remove `dev.grimify.app`, `stage.grimify.app` and their `www.` names, DNS records included. Deploy dev first and check sign-in on `dev.my.grimify.app` before stage.
+
 Dev and stage each have their own Convex deployment and sign in with production Clerk accounts. ENVIRONMENT.md § Environments and § Deploying have the details and the one-time setup.
 
 ---
