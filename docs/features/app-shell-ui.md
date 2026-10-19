@@ -29,11 +29,11 @@
 
 ```text
 <StrictMode>
-  <ClerkProvider>
-    <ConvexProviderWithClerk>
-      <AppProviders>            ToastProvider → CollectionProvider → SignInProvider (+ StoreUser)
-        <RouterProvider>        __root → <AppShell> → <Outlet>
-  <ServiceWorkerUpdates>
+  <ServiceWorkerUpdates>        update state for the app (useUpdateState), then the update bar after it
+    <ClerkProvider>
+      <ConvexProviderWithClerk>
+        <AppProviders>          ToastProvider → CollectionProvider → SignInProvider (+ StoreUser)
+          <RouterProvider>      __root → <AppShell> → <Outlet>
 ```
 
 ## App shell
