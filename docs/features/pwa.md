@@ -47,7 +47,8 @@ Storage failures, such as private mode, are **ignored on purpose**, because the 
 ## Shared update state
 
 - `ServiceWorkerUpdates` wraps the whole app, so the bar and Settings read one state through `useUpdateState()`: `ready` (= `needRefresh`), `apply` (= `updateServiceWorker()`) and `check`.
-- `check` runs `checkForUpdate(registration)`: it calls `registration.update()`, then resolves **true** if a worker is waiting, waits for an installing worker to reach `installed` (true) or `redundant` (false), and **rejects** after 30 s, when `update()` fails, or when the worker never registered.
+- `check` runs `checkForUpdate(registration)`: it calls `registration.update()`, then resolves **true** if a worker is waiting, waits for an installing worker to reach `installed` (true) or `redundant` (false), and **rejects** when `update()` fails, when the worker never registered, or when the whole check (including `update()` itself) takes over 30 s.
+- `check` is `null` until `useRegisterSW` reports a registration, so Settings hides **Check for updates** when no worker registers.
 - **Without the provider** (unit tests, or a dev server where the worker doesn't register) `useUpdateState()` returns `ready: false` and `check: null`, and Settings shows only the version.
 - `virtual:pwa-register/react` exists only in Vite builds, so `service-worker-updates.tsx` stays thin and untested; the logic is tested in `update-state.test.ts` and through Settings. The real worker swap is checked by hand.
 

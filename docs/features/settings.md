@@ -29,9 +29,10 @@
 About reads `useUpdateState()` from the [PWA feature](pwa.md#shared-update-state). Messages and states are in [UX_FLOWS.md Flow 9](../UX_FLOWS.md).
 
 - **Ready** (`ready`, or a check that found one): "A new version is ready." and **Update** (calls `apply`). Enabled offline.
-- **Not ready**: **Check for updates**, disabled while checking or offline.
+- **Not ready**: **Check for updates**. Offline it is `disabled`. While checking it is `aria-disabled="true"` and ignores clicks instead, so focus stays on it (WCAG 2.4.3); when the check finds a version, focus moves to **Update**.
+- Both buttons wrap their text at narrow widths (`white-space: normal`, scoped in `settings-screen.css`).
 - The status text sits in one always-mounted `role="status"` element, so screen readers announce each change. **Check for updates** points at it with `aria-describedby`.
-- With no provider mounted (`check: null`), only the version shows.
+- With no provider mounted, or before a service worker registers (`check: null`), only the version shows.
 
 ## Relations to other features
 
