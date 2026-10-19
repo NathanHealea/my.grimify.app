@@ -1,6 +1,60 @@
 import "./settings-screen.css";
 
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { AccountSection } from "@/features/auth/account-section";
+import { useUpdateState } from "@/features/pwa/update-state";
+import { useOnlineStatus } from "@/features/pwa/use-online-status";
+
+type CheckState = "idle" | "checking" | "found" | "latest" | "failed";
+
+function AppUpdate() {
+  const { ready, apply, check } = useUpdateState();
+  const online = useOnlineStatus();
+  const [checkState, setCheckState] = useState<CheckState>("idle");
+  const showReady = ready || checkState === "found";
+
+  const checkNow = (run: () => Promise<boolean>) => {
+    setCheckState("checking");
+    run().then(
+      (found) => setCheckState(found ? "found" : "latest"),
+      (error: unknown) => {
+        console.error("Update check failed", error);
+        setCheckState("failed");
+      },
+    );
+  };
+
+  let message = "";
+  if (showReady) message = "A new version is ready.";
+  else if (checkState === "checking") message = "Checking for updates…";
+  else if (check && !online) message = "Connect to the internet to check for updates.";
+  else if (checkState === "failed") message = "Couldn't check for updates. Try again.";
+  else if (checkState === "latest") message = "You're on the latest version.";
+
+  return (
+    <div className="settings-screen__update">
+      <p id="update-status" role="status">
+        {message}
+      </p>
+      {showReady ? (
+        <Button onClick={apply}>Update</Button>
+      ) : (
+        check && (
+          <Button
+            variant="outline"
+            aria-describedby="update-status"
+            disabled={!online || checkState === "checking"}
+            onClick={() => checkNow(check)}
+          >
+            Check for updates
+          </Button>
+        )
+      )}
+    </div>
+  );
+}
 
 /** UX_FLOWS Flow 9. */
 export function SettingsScreen() {
@@ -15,6 +69,7 @@ export function SettingsScreen() {
       <section className="settings-screen__section" aria-labelledby="about-heading">
         <h2 id="about-heading">About</h2>
         <p>Version {__APP_VERSION__}</p>
+        <AppUpdate />
         {/* Plain text, not a link: an outside link would take an installed iOS app out of itself. */}
         <p className="settings-screen__note">
           Paint colors are approximate on-screen values. Most hex values come from PaintPad
