@@ -1337,4 +1337,4 @@ Alternatives:
 
 Consequences:
 Positive: the apex is free for marketing without a gap in service; the app's sites share one parent name.
-Trade-off: until the cutover, production answers on two origins. Local state, the service worker and installs don't carry between my.grimify.app and grimify.app; signed-in data lives in Convex, so collections and palettes match on both. The old dev and stage names stop resolving on their next deploy.
+Trade-off: until the cutover, production answers on two origins. Local state, the service worker and installs don't carry between my.grimify.app and grimify.app; signed-in data lives in Convex, so collections and palettes match on both. Deleting the account or signing out clears the device record only on the origin where it runs, so the other origin's cached collection can still show offline (SECURITY.md § Deletion). The cutover must clear the grimify.app origin's storage, for example with `Clear-Site-Data: "storage"`, and accepts the loss of any outbox entries that never synced there. The old dev and stage names stop resolving on their next deploy.
