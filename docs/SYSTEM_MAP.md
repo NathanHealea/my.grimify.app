@@ -249,7 +249,7 @@ Clerk can't load. The collection uses the user ID stored on the device to show c
 
 - The catalog build reuses `src/features/matching/classify-hue.ts` to set `hue` and `value`.
 - The service worker precaches `**/*.{js,css,html,json,svg,woff2}`, which includes `catalog.json`.
-- Domains: `grimify.app`, `stage.grimify.app`, `dev.grimify.app`, each also on `www.`.
+- Domains: `my.grimify.app`, `stage.my.grimify.app`, `dev.my.grimify.app`. Production also keeps `grimify.app` and `www.grimify.app` until the marketing cutover (DECISIONS 060).
 
 ---
 

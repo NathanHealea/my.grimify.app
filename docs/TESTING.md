@@ -61,12 +61,12 @@ Automated tools can't fully cover installed iOS PWA behavior:
 - [ ] Update prompt appears after a new deploy
 
 ### Deployed checks (after each deploy to dev, stage or production, and after any `public/_headers` change)
-Replace `<site>` with `dev.grimify.app`, `stage.grimify.app` or `grimify.app`. Run them in a private window or with the service worker unregistered: a cached `index.html` keeps the CSP it was cached with.
-- [ ] `curl -sI https://<site>/paints` shows the CSP, `nosniff`, `Referrer-Policy` and `Permissions-Policy`, and the CSP's `connect-src` names that environment's Convex deployment (`nautical-toucan-398` only on grimify.app)
+Replace `<site>` with `dev.my.grimify.app`, `stage.my.grimify.app` or `my.grimify.app`. Run them in a private window or with the service worker unregistered: a cached `index.html` keeps the CSP it was cached with.
+- [ ] `curl -sI https://<site>/paints` shows the CSP, `nosniff`, `Referrer-Policy` and `Permissions-Policy`, and the CSP's `connect-src` names that environment's Convex deployment (`nautical-toucan-398` only on my.grimify.app)
 - [ ] `https://<site>/robots.txt` reads `User-agent: *` / `Disallow: /`
 - [ ] A paint URL pasted into a new tab loads the paint, not a 404; reloading on `/my-paints` keeps you there; `curl -s -o /dev/null -w "%{http_code}" https://<site>/paints` prints `200`
 - [ ] Desktop browser: sign in with an email code, own a paint, see it in My Paints, sign out; the console shows no CSP violations
-- [ ] Dev and stage: a paint owned there doesn't appear in My Paints on grimify.app (separate data)
+- [ ] Dev and stage: a paint owned there doesn't appear in My Paints on my.grimify.app (separate data)
 - [ ] iPhone Safari and the installed app (production): the same journey; the paint owned on desktop shows up
 - [ ] Settings › About shows the deployed version
 
