@@ -198,17 +198,13 @@ describe("wrangler.json", () => {
 
     expect(Object.keys(env.dev).sort()).toEqual(["assets", "routes"]);
     expect(env.dev.assets).toEqual(spaAssets);
-    expect(env.dev.routes).toEqual([
-      { pattern: "dev.my.grimify.app", custom_domain: true },
-    ]);
+    expect(env.dev.routes).toEqual([{ pattern: "dev.my.grimify.app", custom_domain: true }]);
     expect(env.dev).not.toHaveProperty("main");
     expect(env.dev).not.toHaveProperty("name");
 
     expect(Object.keys(env.stage).sort()).toEqual(["assets", "routes"]);
     expect(env.stage.assets).toEqual(spaAssets);
-    expect(env.stage.routes).toEqual([
-      { pattern: "stage.my.grimify.app", custom_domain: true },
-    ]);
+    expect(env.stage.routes).toEqual([{ pattern: "stage.my.grimify.app", custom_domain: true }]);
     expect(env.stage).not.toHaveProperty("main");
     expect(env.stage).not.toHaveProperty("name");
   });
