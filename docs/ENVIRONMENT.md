@@ -8,7 +8,7 @@
 ```bash
 VITE_CONVEX_URL=              # https://<deployment>.convex.cloud (set automatically by `npx convex dev` / `convex deploy`); the build writes its host into the CSP
 VITE_CLERK_PUBLISHABLE_KEY=   # pk_test_… (dev) / pk_live_… (prod)
-VITE_APP_URL=                 # e.g. http://localhost:5173 / https://grimify.app
+VITE_APP_URL=                 # e.g. http://localhost:5173 / https://my.grimify.app
 ```
 
 ---
@@ -73,13 +73,13 @@ CLERK_SECRET_KEY=             # sk_test_… from the Clerk dev instance; Playwri
 | Environment | Branch | Site | Cloudflare Worker | Convex deployment | Clerk |
 |---|---|---|---|---|---|
 | Local | any | `npm run dev` (localhost:5173) | none | personal dev deployment (`npx convex dev`) | dev instance |
-| Dev | `dev` | `https://dev.grimify.app` | `v2-grimify-app-dev` | `develop` (name recorded in `scripts/deploy.ts`) | production instance |
-| Stage | `stage` | `https://stage.grimify.app` | `v2-grimify-app-stage` | `stage` (name recorded in `scripts/deploy.ts`) | production instance |
-| Production | `main` | `https://grimify.app` | `v2-grimify-app` | `nautical-toucan-398` | production instance |
+| Dev | `dev` | `https://dev.my.grimify.app` | `v2-grimify-app-dev` | `develop` (name recorded in `scripts/deploy.ts`) | production instance |
+| Stage | `stage` | `https://stage.my.grimify.app` | `v2-grimify-app-stage` | `stage` (name recorded in `scripts/deploy.ts`) | production instance |
+| Production | `main` | `https://my.grimify.app` (and `https://grimify.app` until the marketing cutover) | `v2-grimify-app` | `nautical-toucan-398` | production instance |
 
-Each site also answers on its `www.` name (`www.grimify.app`, `www.dev.grimify.app`, `www.stage.grimify.app`). Declare every domain in `wrangler.json`'s `routes`: the first scripted production deploy dropped `www.grimify.app`, which had been attached only in the Cloudflare dashboard. Each custom domain gets its own certificate, so the two-level `www.` names are covered.
+Production also answers on `grimify.app` and `www.grimify.app` until the marketing site takes the apex (DECISIONS 060). The `my.` names have no `www.` variant. Declare every domain in `wrangler.json`'s `routes`: a deploy removes custom domains that aren't listed, as the first scripted production deploy did to `www.grimify.app`, which had been attached only in the Cloudflare dashboard. Each custom domain gets its own certificate, so the two-level names (`dev.my.grimify.app`) are covered.
 
-Dev and stage sign in with real production accounts (Clerk allows this on subdomains of the production domain), but keep their own collections: nothing they write reaches production data. Every environment shows the live catalog, because the catalog is built into the app. Signing in on one `*.grimify.app` site signs you in on all of them. **Delete account on dev or stage deletes the real account.**
+Dev and stage sign in with real production accounts (Clerk allows this on subdomains of the production domain), but keep their own collections: nothing they write reaches production data. Every environment shows the live catalog, because the catalog is built into the app. Signing in on one `*.grimify.app` site, including the `my.` ones, signs you in on all of them. **Delete account on dev or stage deletes the real account.**
 
 ---
 
@@ -132,7 +132,7 @@ Never put `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` in `.env.local`: Wra
 
 ### Cloudflare Workers
 
-`wrangler.json` defines all three. Production is the top level; `env.dev` and `env.stage` become the Workers `v2-grimify-app-dev` and `v2-grimify-app-stage`. Each serves `./dist` with the single-page-app fallback and declares its domain as a custom domain. The top-level `name` must stay `v2-grimify-app`; another name makes `wrangler deploy` create a new Worker without the domain. `www.grimify.app` redirects to the apex with a Cloudflare redirect rule rather than serving the app, so there's one origin for sign-in, storage and the installed app.
+`wrangler.json` defines all three. Production is the top level; `env.dev` and `env.stage` become the Workers `v2-grimify-app-dev` and `v2-grimify-app-stage`. Each serves `./dist` with the single-page-app fallback and declares its domain as a custom domain. The top-level `name` must stay `v2-grimify-app`; another name makes `wrangler deploy` create a new Worker without the domain. Production's sites are `my.grimify.app` and, until the marketing cutover, `grimify.app`. `www.grimify.app` redirects to the apex with a Cloudflare redirect rule rather than serving the app.
 
 ### Convex
 
@@ -148,7 +148,7 @@ npx convex function-spec --prod                     # production, after a deploy
 Same settings as dev (see Rules), plus:
 - Domain `grimify.app`, with the DNS records from Clerk dashboard → Domains. The Frontend API host (`clerk.grimify.app`) is in `public/_headers`; if it differs, change the CSP there.
 - Integrations → Convex activated, or `.../tokens/convex` returns 404 and everyone looks signed out.
-- Dev and stage need no Clerk change: they're subdomains of `grimify.app` using the same keys.
+- `my.grimify.app`, dev and stage need no Clerk change: they're subdomains of `grimify.app` using the same keys.
 
 ### Content-Security-Policy
 

@@ -7,9 +7,9 @@
 | Environment | Branch | Site | Deploy |
 |---|---|---|---|
 | Local | any | `http://localhost:5173` + personal Convex dev deployment | `npm run dev` |
-| Dev | `dev` | `https://dev.grimify.app` (Worker `v2-grimify-app-dev`) | `npm run deploy:dev` |
-| Stage | `stage` | `https://stage.grimify.app` (Worker `v2-grimify-app-stage`) | `npm run deploy:stage` |
-| Production | `main` | `https://grimify.app` (Worker `v2-grimify-app`) | `npm run deploy:prod` |
+| Dev | `dev` | `https://dev.my.grimify.app` (Worker `v2-grimify-app-dev`) | `npm run deploy:dev` |
+| Stage | `stage` | `https://stage.my.grimify.app` (Worker `v2-grimify-app-stage`) | `npm run deploy:stage` |
+| Production | `main` | `https://my.grimify.app` (Worker `v2-grimify-app`; also `grimify.app` until the marketing cutover) | `npm run deploy:prod` |
 
 Dev and stage each have their own Convex deployment and sign in with production Clerk accounts. ENVIRONMENT.md § Environments and § Deploying have the details and the one-time setup.
 
