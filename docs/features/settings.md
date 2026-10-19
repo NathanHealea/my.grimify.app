@@ -8,7 +8,7 @@
 - **Three sections**: **Account**, **Appearance** and **About**.
 - **Account** is `<AccountSection>` from the [auth feature](auth-account.md): sign in, sign out and delete account.
 - **Appearance** is read-only: "Theme: Follows your system". **Dark mode is a NEXT item** (ROADMAP).
-- **About** shows **`Version {__APP_VERSION__}`**, the color-accuracy note and the trademark note.
+- **About** shows **`Version {__APP_VERSION__}`**, the app update status with **Update** or **Check for updates**, the color-accuracy note and the trademark note.
 - The PaintPad credit is **plain text, not a link**, because an outside link would take an installed iOS app out of itself.
 
 ## Where the code lives
@@ -24,7 +24,18 @@
 
 `__APP_VERSION__` is read from `package.json` at build time. **`wi stage` bumps `package.json`**, so the version shown always matches the release.
 
+## App update
+
+About reads `useUpdateState()` from the [PWA feature](pwa.md#shared-update-state). Messages and states are in [UX_FLOWS.md Flow 9](../UX_FLOWS.md).
+
+- **Ready** (`ready`, or a check that found one): "A new version is ready." and **Update** (calls `apply`). Enabled offline.
+- **Not ready**: **Check for updates**. Offline it is `disabled`. While checking it is `aria-disabled="true"` and ignores clicks instead, so focus stays on it (WCAG 2.4.3); when the check finds a version, focus moves to **Update**.
+- Both buttons wrap their text at narrow widths (`white-space: normal`, scoped in `settings-screen.css`).
+- The status text sits in one always-mounted `role="status"` element, so screen readers announce each change. **Check for updates** points at it with `aria-describedby`.
+- With no provider mounted, or before a service worker registers (`check: null`), only the version shows.
+
 ## Relations to other features
 
 - **Auth** ([auth-account.md](auth-account.md)): all account actions.
+- **PWA** ([pwa.md](pwa.md)): the update state and `useOnlineStatus()`.
 - **App shell** ([app-shell-ui.md](app-shell-ui.md)): the Settings tab in the nav bar.

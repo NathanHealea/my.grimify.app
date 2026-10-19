@@ -184,7 +184,14 @@ Three skeleton rows (hidden from screen readers) and a "Loading your paints…" 
 Settings shows three sections:
 - **Account:** the email, Sign out, Delete account (signed in), or Sign in (signed out).
 - **Appearance:** "Theme: Follows your system" (dark mode is a NEXT item).
-- **About:** the version, where paint colors come from (PaintPad, manufacturer pages) and "Grimify isn't affiliated with any paint manufacturer."
+- **About:** the version, the app update status, where paint colors come from (PaintPad, manufacturer pages) and "Grimify isn't affiliated with any paint manufacturer."
+
+App update (in About; status text is announced politely):
+- A new version is waiting, even if the update bar was dismissed with Later: "A new version is ready." with **Update**, which applies it and reloads. Works offline, because the new version is already downloaded.
+- None waiting: **Check for updates**. While checking: "Checking for updates…" and the button is unavailable but keeps focus. Then either the ready state above (focus moves to **Update**) or "You're on the latest version."
+- Offline with none waiting: the button is disabled with "Connect to the internet to check for updates."
+- The check failed: "Couldn't check for updates. Try again." and the button is enabled again.
+- The new version's number isn't shown; the page doesn't know it without fetching more data.
 "How to install" (the install banner covers it) and Privacy (public launch) aren't in the MVP.
 
 Sign out:

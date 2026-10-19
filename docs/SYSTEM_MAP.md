@@ -66,14 +66,14 @@
 
 `src/main.tsx` wraps the app in this order (outer → inner):
 
-1. `ClerkProvider`: auth session
-2. `ConvexProviderWithClerk`: Convex client, authenticated with Clerk's token
-3. `AppProviders` (`src/app-providers.tsx`):
+1. `ServiceWorkerUpdates`: registers the service worker, provides the update state (`useUpdateState()`) and renders the update bar after the app
+2. `ClerkProvider`: auth session
+3. `ConvexProviderWithClerk`: Convex client, authenticated with Clerk's token
+4. `AppProviders` (`src/app-providers.tsx`):
    1. `ToastProvider`
    2. `CollectionProvider`
    3. `SignInProvider`, plus `<StoreUser />` (creates the `users` row after sign-in)
-4. `RouterProvider`: renders routes
-5. `ServiceWorkerUpdates`: sits outside the providers, beside the app
+5. `RouterProvider`: renders routes
 
 If `readAuthEnv` fails, the missing config shows on screen instead of a blank page.
 
@@ -100,7 +100,7 @@ All routes render inside `AppShell` (from `src/routes/__root.tsx`).
 | `matching` | Delta-E, equivalents, hue + value classification, type families. Pure, no React. | `delta-e.ts`, `find-equivalents.ts`, `classify-hue.ts`, `type-families.ts` | `catalog/schema` (types only) |
 | `collection` | Owned / wishlist / favorite state, outbox, device cache | `collection-provider.tsx`, `use-set-paint-flags.ts`, `outbox.ts`, `device-store.ts`, `paint-toggles.tsx`, `my-paints-screen.tsx` | Convex, Clerk, `auth`, `feedback`, `pwa` |
 | `auth` | Sign-in sheet, storing the user, account + delete | `sign-in-provider.tsx`, `sign-in-sheet.tsx`, `use-store-user.ts`, `account-section.tsx`, `delete-account.tsx`, `env.ts` | Convex, Clerk, `collection` |
-| `pwa` | Online status, install banner, update prompt | `use-online-status.ts`, `install-banner.tsx`, `install-hint.ts`, `service-worker-updates.tsx`, `update-prompt.tsx` | `virtual:pwa-register/react` |
+| `pwa` | Online status, install banner, update prompt | `use-online-status.ts`, `install-banner.tsx`, `install-hint.ts`, `service-worker-updates.tsx`, `update-state.tsx`, `update-prompt.tsx` | `virtual:pwa-register/react` |
 | `feedback` | Toasts | `toast-provider.tsx` | `components/ui/toast` |
 | `settings` | Settings page | `settings-screen.tsx` | `auth` |
 
