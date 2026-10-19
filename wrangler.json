@@ -6,7 +6,9 @@
     "not_found_handling": "single-page-application"
   },
   "routes": [
-    { "pattern": "my.grimify.app", "custom_domain": true }
+    { "pattern": "my.grimify.app", "custom_domain": true },
+    { "pattern": "grimify.app", "custom_domain": true },
+    { "pattern": "www.grimify.app", "custom_domain": true }
   ],
   "env": {
     "dev": {

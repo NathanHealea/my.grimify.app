@@ -188,6 +188,7 @@ describe("wrangler.json", () => {
     expect(config.name).toBe("v2-grimify-app");
     expect(config).not.toHaveProperty("main");
     expect(config.routes).toEqual([
+      { pattern: "my.grimify.app", custom_domain: true },
       { pattern: "grimify.app", custom_domain: true },
       { pattern: "www.grimify.app", custom_domain: true },
     ]);
@@ -198,8 +199,7 @@ describe("wrangler.json", () => {
     expect(Object.keys(env.dev).sort()).toEqual(["assets", "routes"]);
     expect(env.dev.assets).toEqual(spaAssets);
     expect(env.dev.routes).toEqual([
-      { pattern: "dev.grimify.app", custom_domain: true },
-      { pattern: "www.dev.grimify.app", custom_domain: true },
+      { pattern: "dev.my.grimify.app", custom_domain: true },
     ]);
     expect(env.dev).not.toHaveProperty("main");
     expect(env.dev).not.toHaveProperty("name");
@@ -207,8 +207,7 @@ describe("wrangler.json", () => {
     expect(Object.keys(env.stage).sort()).toEqual(["assets", "routes"]);
     expect(env.stage.assets).toEqual(spaAssets);
     expect(env.stage.routes).toEqual([
-      { pattern: "stage.grimify.app", custom_domain: true },
-      { pattern: "www.stage.grimify.app", custom_domain: true },
+      { pattern: "stage.my.grimify.app", custom_domain: true },
     ]);
     expect(env.stage).not.toHaveProperty("main");
     expect(env.stage).not.toHaveProperty("name");
