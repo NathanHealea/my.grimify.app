@@ -1,6 +1,6 @@
 import "./settings-screen.css";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AccountSection } from "@/features/auth/account-section";
@@ -14,8 +14,15 @@ function AppUpdate() {
   const online = useOnlineStatus();
   const [checkState, setCheckState] = useState<CheckState>("idle");
   const showReady = ready || checkState === "found";
+  const checking = checkState === "checking";
+  const updateButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (checkState === "found") updateButton.current?.focus();
+  }, [checkState]);
 
   const checkNow = (run: () => Promise<boolean>) => {
+    if (checking) return;
     setCheckState("checking");
     run().then(
       (found) => setCheckState(found ? "found" : "latest"),
@@ -28,7 +35,7 @@ function AppUpdate() {
 
   let message = "";
   if (showReady) message = "A new version is ready.";
-  else if (checkState === "checking") message = "Checking for updates…";
+  else if (checking) message = "Checking for updates…";
   else if (check && !online) message = "Connect to the internet to check for updates.";
   else if (checkState === "failed") message = "Couldn't check for updates. Try again.";
   else if (checkState === "latest") message = "You're on the latest version.";
@@ -39,13 +46,18 @@ function AppUpdate() {
         {message}
       </p>
       {showReady ? (
-        <Button onClick={apply}>Update</Button>
+        <Button ref={updateButton} className="settings-screen__update-button" onClick={apply}>
+          Update
+        </Button>
       ) : (
         check && (
+          // aria-disabled, not disabled, while checking: a disabled button drops focus to the page (WCAG 2.4.3).
           <Button
             variant="outline"
+            className="settings-screen__update-button"
             aria-describedby="update-status"
-            disabled={!online || checkState === "checking"}
+            aria-disabled={checking || undefined}
+            disabled={!online}
             onClick={() => checkNow(check)}
           >
             Check for updates

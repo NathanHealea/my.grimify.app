@@ -98,7 +98,10 @@ describe("SettingsScreen", () => {
     fireEvent.click(about.getByRole("button", { name: "Check for updates" }));
 
     expect(await about.findByText("Checking for updates…")).toBeInTheDocument();
-    expect(about.getByRole("button", { name: "Check for updates" })).toBeDisabled();
+    expect(about.getByRole("button", { name: "Check for updates" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
 
     found.resolve(true);
 
@@ -115,6 +118,28 @@ describe("SettingsScreen", () => {
     expect(await again.findByText("You're on the latest version.")).toBeInTheDocument();
     expect(again.getByRole("button", { name: "Check for updates" })).toBeEnabled();
     expect(again.queryByRole("button", { name: "Update" })).not.toBeInTheDocument();
+  });
+
+  it("focus stays on check for updates while checking and moves to update when one is found", async () => {
+    const found = deferred<boolean>();
+    const check = vi.fn(() => found.promise);
+    const about = renderWithUpdates({ ready: false, apply: vi.fn(), check });
+    const checkButton = about.getByRole("button", { name: "Check for updates" });
+
+    checkButton.focus();
+    fireEvent.click(checkButton);
+    expect(await about.findByText("Checking for updates…")).toBeInTheDocument();
+
+    expect(checkButton).not.toBeDisabled();
+    expect(checkButton).toHaveFocus();
+    fireEvent.click(checkButton);
+    fireEvent.click(checkButton);
+    expect(check).toHaveBeenCalledTimes(1);
+
+    found.resolve(true);
+
+    const update = await about.findByRole("button", { name: "Update" });
+    await waitFor(() => expect(update).toHaveFocus());
   });
 
   it("check for updates is disabled offline", () => {
