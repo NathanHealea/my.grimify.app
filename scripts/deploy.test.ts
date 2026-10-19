@@ -75,12 +75,14 @@ describe("deploy environments", () => {
       worker: "v2-grimify-app-dev",
       domain: "dev.my.grimify.app",
       wranglerEnv: "dev",
+      convexDeployment: "sensible-buffalo-782",
     });
     expect(ENVIRONMENTS.stage).toMatchObject({
       branch: "stage",
       worker: "v2-grimify-app-stage",
       domain: "stage.my.grimify.app",
       wranglerEnv: "stage",
+      convexDeployment: "notable-ferret-719",
     });
     expect(ENVIRONMENTS.prod).toEqual({
       branch: "main",
