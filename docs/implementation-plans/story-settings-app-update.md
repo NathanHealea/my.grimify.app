@@ -1,13 +1,13 @@
 ---
 type: story
 slug: settings-app-update
-status: in-progress
+status: staged
 branch: story/settings-app-update
 worktree_path: /home/nathan/development/grimify/v2.grimify.app-worktrees/story-settings-app-update
 created: 2026-10-18
 approved: 2026-10-18
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.21.0
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -63,12 +63,18 @@ When a new version of Grimify is waiting, the "Update available" bar offers Relo
 | ID | Covers | Test | File | Asserts |
 |----|--------|------|------|---------|
 | T1 | R1, R2 | `about shows the version and an update button when one is ready` | `src/features/settings/settings-screen.test.tsx` | With a test update provider (`ready: true`), About shows the version, "A new version is ready." and **Update**; clicking calls `apply`. |
-| T2 | R3 | `check for updates reports a found update or the latest version` | `src/features/settings/settings-screen.test.tsx` | `check` pending → "Checking for updates…" and disabled; resolves with ready → R2 state; resolves without → "You're on the latest version." |
+| T2 | R3 | `check for updates reports a found update or the latest version` | `src/features/settings/settings-screen.test.tsx` | `check` pending → "Checking for updates…" and `aria-disabled="true"`; resolves with ready → R2 state; resolves without → "You're on the latest version." |
 | T3 | R4 | `check for updates is disabled offline` | `src/features/settings/settings-screen.test.tsx` | Offline (mock `useOnlineStatus`) → button disabled and offline message; with `ready: true` offline, **Update** is enabled. |
 | T4 | R5 | `a failed check shows an error and re-enables the button` | `src/features/settings/settings-screen.test.tsx` | `check` rejects → error text, button enabled. |
 | T5 | R6 | `update status is announced` | `src/features/settings/settings-screen.test.tsx` | The status text is inside an element with `role="status"` present before the text changes; buttons found by name. |
-| T6 | R3 | `checkForUpdate asks the registration to update and reports whether one is waiting` | `src/features/pwa/update-state.test.ts` | Pure helper with a fake registration: calls `update()`, resolves `true` when `waiting`/`installing` ends in a waiting worker, `false` otherwise, rejects when `update()` rejects or no registration exists. |
+| T6 | R3 | `checkForUpdate asks the registration to update and reports whether one is waiting` | `src/features/pwa/update-state.test.ts` | Pure helper with a fake registration: calls `update()`, resolves `true` when `waiting`/`installing` ends in a waiting worker, `false` otherwise, rejects when `update()` rejects, no registration exists, or `update()` never settles within the timeout; leaves no timer behind. |
+| T8 | R3, R6 | `focus stays on check for updates while checking and moves to update when one is found` | `src/features/settings/settings-screen.test.tsx` | While checking the button keeps focus, isn't natively disabled and extra clicks don't start a second check; a found update moves focus to **Update**. |
+| T9 | R3 | `UpdateStateProvider` | `src/features/pwa/update-state.test.ts` | `check` is `null` with no registration; with one, `check` calls `update()`. |
 | T7 | R7 | existing `update-prompt.test.tsx` | `src/features/pwa/update-prompt.test.tsx` | Unchanged and passing. |
+
+| T10 | R1, R4 | `about offers no update controls without a service worker` | `src/features/settings/settings-screen.test.tsx` | No provider, offline: version only, no buttons, empty status. |
+| T11 | R4, R5 | `going offline after a failed check shows the offline message` | `src/features/settings/settings-screen.test.tsx` | Offline message replaces the failure message; button disabled. |
+| T12 | R2, R3 | `an update that becomes ready during a check is announced as ready` | `src/features/settings/settings-screen.test.tsx` | `ready` turning true mid-check shows "A new version is ready." with Update. |
 
 **Not unit testable:** the real service worker swap (`useRegisterSW`, `updateServiceWorker`) lives in the virtual module; verify by hand: deploy to dev, keep a tab open, deploy again, tap Later on the bar, open Settings → Update reloads to the new version; and Check for updates finds a deploy made while the tab was open. 320 px / 200% text checked by hand.
 
@@ -94,3 +100,6 @@ When a new version of Grimify is waiting, the "Update available" bar offers Relo
 - 2026-10-18 — Plan approved.
 - 2026-10-18 — Started on branch story/settings-app-update from origin/dev.
 - 2026-10-18 — Built all three steps. Docs step also updated docs/features/app-shell-ui.md and docs/SYSTEM_MAP.md, which described the old provider order.
+- 2026-10-18 — Review fixes: Check for updates keeps focus while checking (aria-disabled) and focus moves to Update when found; check is null until a service worker registers; the 30 s deadline covers registration.update(); About update buttons wrap. Added T8, T9 and timeout tests to T6.
+- 2026-10-18 — Review cycle 2: fixes sound, 2 LOW focus notes left for the owner. Test audit: 3 tests added (T10-T12), 2 low/equivalent survivors
+- 2026-10-18 — Staged: verification passed; version 0.20.4 → 0.21.0; no changelog file.
