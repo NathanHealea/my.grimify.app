@@ -1,6 +1,6 @@
 # Legacy Import
 
-> Covers bringing old Grimify (the Supabase app in `../grimify.app`) owned paints and palettes into this app.
+> Covers bringing old Grimify (the Supabase app in `../old.grimify.app`) owned paints and palettes into this app.
 > Plan: [epic-legacy-import.md](../implementation-plans/legacy-import/epic-legacy-import.md). Env vars: [ENVIRONMENT.md](../ENVIRONMENT.md). Rationale: [DECISIONS 056, 057, 058, 059](../DECISIONS.md). Flow: [UX_FLOWS Flow 11](../UX_FLOWS.md).
 
 ## TL;DR
@@ -40,7 +40,7 @@
 Prerequisites: the old hosted project is running (free Supabase projects pause when idle), its URL and secret key are at hand, and you have a hash key. Put the three variables in `.env.legacy.local` (ENVIRONMENT.md).
 
 ```bash
-npm run legacy:export -- /tmp/grimify-legacy ../grimify.app/scripts/data
+npm run legacy:export -- /tmp/grimify-legacy ../old.grimify.app/scripts/data
 ```
 
 The command stops with exit code 2, **before reading anything**, when a variable is missing, the URL isn't `https://`, the secret key has spaces or control characters, the hash key is under 32 characters, the output directory is inside the repository, or `export.json` or `report.json` already exists there. It prints row counts per table and a one-line summary with no personal data. Both files are written with mode `600`.
