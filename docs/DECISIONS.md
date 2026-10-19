@@ -915,7 +915,7 @@ Trade-off: a request for a missing hashed asset also gets `index.html` (200, HTM
 ## Decision 044 — Dev and stage environments, deployed by one command each
 
 Date: 2026-10-09
-Status: Accepted; promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only); tags now sit on each item's last commit, since `wi release` fast-forwards (see 055's Context)
+Status: Accepted; domains amended by 060 (my.grimify.app); promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only); tags now sit on each item's last commit, since `wi release` fast-forwards (see 055's Context)
 
 Context:
 Only `main` deployed, from Workers Builds, so nothing could be tried on real hosting with real sign-in before reaching users. A branch build would have pushed that branch's Convex functions to production (041). The owner wants `main ← stage ← dev ← work items`, hotfixes to `main`, dev and stage both deployed, and "a simple command for each deployment" with no web UI. Cloudflare's branch preview URLs are on `*.workers.dev`, where production Clerk keys don't work, and preview deployments in Convex expire.
@@ -1315,3 +1315,26 @@ Alternatives:
 Consequences:
 Positive: verification comes from Clerk's own record; no Clerk dashboard change.
 Trade-off: the deployment holds `CLERK_SECRET_KEY`, which can read and change every Clerk user. So it and `LEGACY_IMPORT_HASH_KEY` are set only on the production deployment: develop and stage sign in with the production Clerk instance, so their key would be the production `sk_live_` key, too broad for non-production. The feature is off there, and the prompt is tested end to end on a personal `npx convex dev` deployment with the Clerk dev instance and a made-up export. Each new session of a signed-in user makes one call to Clerk. A Clerk outage only means no prompt that session.
+
+## Decision 060 — Serve the app from my.grimify.app so grimify.app can host the marketing site
+
+Date: 2026-10-19
+Status: Accepted (work item `app-subdomain`); amends 044's domains
+
+Context:
+The owner wants grimify.app to be a marketing site, built in its own repo (`NathanHealea/grimify.app`). The app served grimify.app, dev.grimify.app and stage.grimify.app, each also on `www.` (044). The GitHub repository was renamed from `NathanHealea/v2.grimify.app` to `NathanHealea/my.grimify.app`, and the old Supabase app's checkout moved to `../old.grimify.app`.
+
+Decision:
+- Production serves `my.grimify.app`. Dev and stage serve `dev.my.grimify.app` and `stage.my.grimify.app`. All are custom-domain routes in `wrangler.json`.
+- The new names have no `www.` variant. Nobody types `www.dev.my.grimify.app`, and one name per site keeps one origin for sign-in, storage and the installed app.
+- Production keeps `grimify.app` and `www.grimify.app` until the marketing site's cutover. Removing them now would leave grimify.app serving nothing and break installed apps, whose `start_url` is `/paints` on grimify.app. The cutover, in the marketing repo, ships a self-unregistering `sw.js` and redirects app paths to my.grimify.app before this Worker drops those routes.
+- The Workers keep their names (`v2-grimify-app`, `-dev`, `-stage`). A new top-level name makes `wrangler deploy` create a second Worker.
+- Clerk stays on `clerk.grimify.app`. Every new name is a subdomain of grimify.app, so the production instance and the CSP are unchanged.
+
+Alternatives:
+- Move production off grimify.app in the same change: simpler config, but grimify.app goes dark until the marketing site exists, and installed apps open to nothing
+- Flat names (`my-dev.grimify.app`): one level deep, but they don't read as part of the app
+
+Consequences:
+Positive: the apex is free for marketing without a gap in service; the app's sites share one parent name.
+Trade-off: until the cutover, production answers on two origins. Local state, the service worker and installs don't carry between my.grimify.app and grimify.app; signed-in data lives in Convex, so collections and palettes match on both. The old dev and stage names stop resolving on their next deploy.
