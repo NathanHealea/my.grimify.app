@@ -8,7 +8,7 @@ created: 2026-10-18
 approved: 2026-10-18
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.21.0
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-18
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -103,3 +103,4 @@ When a new version of Grimify is waiting, the "Update available" bar offers Relo
 - 2026-10-18 — Review fixes: Check for updates keeps focus while checking (aria-disabled) and focus moves to Update when found; check is null until a service worker registers; the 30 s deadline covers registration.update(); About update buttons wrap. Added T8, T9 and timeout tests to T6.
 - 2026-10-18 — Review cycle 2: fixes sound, 2 LOW focus notes left for the owner. Test audit: 3 tests added (T10-T12), 2 low/equivalent survivors
 - 2026-10-18 — Staged: verification passed; version 0.20.4 → 0.21.0; no changelog file.
+- 2026-10-18 — Review approved.
