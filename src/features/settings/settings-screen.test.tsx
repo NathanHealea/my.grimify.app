@@ -117,6 +117,9 @@ describe("SettingsScreen", () => {
 
     expect(await again.findByText("You're on the latest version.")).toBeInTheDocument();
     expect(again.getByRole("button", { name: "Check for updates" })).toBeEnabled();
+    expect(again.getByRole("button", { name: "Check for updates" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
     expect(again.queryByRole("button", { name: "Update" })).not.toBeInTheDocument();
   });
 
@@ -176,6 +179,9 @@ describe("SettingsScreen", () => {
 
     expect(await about.findByText("Couldn't check for updates. Try again.")).toBeInTheDocument();
     expect(about.getByRole("button", { name: "Check for updates" })).toBeEnabled();
+    expect(about.getByRole("button", { name: "Check for updates" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
   });
 
   it("update status is announced", async () => {
@@ -193,5 +199,60 @@ describe("SettingsScreen", () => {
     pending.resolve(false);
     await waitFor(() => expect(status).toHaveTextContent("You're on the latest version."));
     expect(about.getByRole("status")).toBe(status);
+  });
+
+  it("about offers no update controls without a service worker", () => {
+    network.online = false;
+    render(<SettingsScreen />, { wrapper: Providers });
+    const about = within(screen.getByRole("region", { name: "About" }));
+
+    expect(about.queryByRole("button", { name: "Check for updates" })).not.toBeInTheDocument();
+    expect(about.queryByRole("button", { name: "Update" })).not.toBeInTheDocument();
+    expect(about.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("going offline after a failed check shows the offline message", async () => {
+    const update: UpdateState = {
+      ready: false,
+      apply: vi.fn(),
+      check: vi.fn(() => Promise.reject(new Error("network down"))),
+    };
+    const tree = () => (
+      <UpdateStateContext.Provider value={update}>
+        <SettingsScreen />
+      </UpdateStateContext.Provider>
+    );
+    const { rerender } = render(tree(), { wrapper: Providers });
+    const about = within(screen.getByRole("region", { name: "About" }));
+    fireEvent.click(about.getByRole("button", { name: "Check for updates" }));
+    expect(await about.findByText("Couldn't check for updates. Try again.")).toBeInTheDocument();
+
+    network.online = false;
+    rerender(tree());
+
+    expect(about.getByRole("status")).toHaveTextContent(
+      "Connect to the internet to check for updates.",
+    );
+  });
+
+  it("an update that becomes ready during a check is announced as ready", async () => {
+    const pending = deferred<boolean>();
+    const check = vi.fn(() => pending.promise);
+    const tree = (update: UpdateState) => (
+      <UpdateStateContext.Provider value={update}>
+        <SettingsScreen />
+      </UpdateStateContext.Provider>
+    );
+    const { rerender } = render(tree({ ready: false, apply: vi.fn(), check }), {
+      wrapper: Providers,
+    });
+    const about = within(screen.getByRole("region", { name: "About" }));
+    fireEvent.click(about.getByRole("button", { name: "Check for updates" }));
+    expect(await about.findByText("Checking for updates…")).toBeInTheDocument();
+
+    rerender(tree({ ready: true, apply: vi.fn(), check }));
+
+    expect(about.getByRole("status")).toHaveTextContent("A new version is ready.");
+    expect(about.getByRole("button", { name: "Update" })).toBeEnabled();
   });
 });
