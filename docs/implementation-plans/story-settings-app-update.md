@@ -74,9 +74,9 @@ When a new version of Grimify is waiting, the "Update available" bar offers Relo
 
 ## Implementation plan
 
-1. [ ] Add the shared update state: a context with `ready`, `apply` and `check`, the pure `checkForUpdate(registration)` helper, and a provider fed by `useRegisterSW` that also renders the bar — touches `src/features/pwa/update-state.tsx`, `src/features/pwa/update-state.test.ts`, `src/features/pwa/service-worker-updates.tsx`, `src/main.tsx` — tests T6, T7
-2. [ ] Show version, status, Update and Check for updates in Settings → About — touches `src/features/settings/settings-screen.tsx`, `src/features/settings/settings-screen.css`, `src/features/settings/settings-screen.test.tsx` — tests T1, T2, T3, T4, T5
-3. [ ] Document the Settings update path — touches `docs/UX_FLOWS.md`, `docs/features/pwa.md`, `docs/features/settings.md` — tests none (docs only)
+1. [x] Add the shared update state: a context with `ready`, `apply` and `check`, the pure `checkForUpdate(registration)` helper, and a provider fed by `useRegisterSW` that also renders the bar — touches `src/features/pwa/update-state.tsx`, `src/features/pwa/update-state.test.ts`, `src/features/pwa/service-worker-updates.tsx`, `src/main.tsx` — tests T6, T7
+2. [x] Show version, status, Update and Check for updates in Settings → About — touches `src/features/settings/settings-screen.tsx`, `src/features/settings/settings-screen.css`, `src/features/settings/settings-screen.test.tsx` — tests T1, T2, T3, T4, T5
+3. [x] Document the Settings update path — touches `docs/UX_FLOWS.md`, `docs/features/pwa.md`, `docs/features/settings.md` — tests none (docs only)
 
 **Must not change:** `registerType: "prompt"`; the update bar's text, buttons and dismissal; `__APP_VERSION__`.
 
@@ -93,3 +93,4 @@ When a new version of Grimify is waiting, the "Update available" bar offers Relo
 - 2026-10-18 — Planned.
 - 2026-10-18 — Plan approved.
 - 2026-10-18 — Started on branch story/settings-app-update from origin/dev.
+- 2026-10-18 — Built all three steps. Docs step also updated docs/features/app-shell-ui.md and docs/SYSTEM_MAP.md, which described the old provider order.
