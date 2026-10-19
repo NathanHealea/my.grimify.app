@@ -34,18 +34,19 @@ const router = createAppRouter();
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ClerkProvider
-      publishableKey={authEnv.clerkPublishableKey}
-      // Clerk's redirects go through the router, so finishing sign-in doesn't reload the page.
-      routerPush={(to) => router.navigate({ href: to })}
-      routerReplace={(to) => router.navigate({ href: to, replace: true })}
-    >
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <AppProviders>
-          <RouterProvider router={router} />
-        </AppProviders>
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
-    <ServiceWorkerUpdates />
+    <ServiceWorkerUpdates>
+      <ClerkProvider
+        publishableKey={authEnv.clerkPublishableKey}
+        // Clerk's redirects go through the router, so finishing sign-in doesn't reload the page.
+        routerPush={(to) => router.navigate({ href: to })}
+        routerReplace={(to) => router.navigate({ href: to, replace: true })}
+      >
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <AppProviders>
+            <RouterProvider router={router} />
+          </AppProviders>
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </ServiceWorkerUpdates>
   </StrictMode>,
 );
