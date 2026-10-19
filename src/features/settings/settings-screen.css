@@ -23,6 +23,11 @@
   align-items: flex-start;
 }
 
+.settings-screen__update .settings-screen__update-button {
+  white-space: normal;
+  text-align: center;
+}
+
 .settings-screen__update-button[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: var(--opacity-disabled);
