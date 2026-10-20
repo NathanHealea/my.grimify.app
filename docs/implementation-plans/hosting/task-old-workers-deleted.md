@@ -1,7 +1,7 @@
 ---
 type: task
 slug: old-workers-deleted
-status: staged
+status: released
 branch: task/old-workers-deleted
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-old-workers-deleted
 created: 2026-10-20
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.21.3
 review_approved: 2026-10-20
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.21.3
 ---
 
 # Record that the old dev and stage Workers are deleted
@@ -76,3 +76,4 @@ On 2026-10-20 the owner had the old `v2-grimify-app-dev` and `v2-grimify-app-sta
 - 2026-10-20 — T1 grep: only DECISIONS 044 (history) and the new deleted-on-2026-10-20 wording mention the old dev/stage Workers. Docs-only diff, self-reviewed.
 - 2026-10-20 — Staged: verification passed; version 0.21.2 → 0.21.3; no changelog file.
 - 2026-10-20 — Review approved.
+- 2026-10-20 — Released 0.21.3 as v0.21.3.
