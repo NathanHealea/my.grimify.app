@@ -1,13 +1,13 @@
 ---
 type: bug
 slug: paints-select-screen-rerender
-status: in-progress
+status: staged
 branch: bug/paints-select-screen-rerender
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/bug-paints-select-screen-rerender
 created: 2026-10-19
 approved: 2026-10-19
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version:             # set by `wi stage`
+version: 0.21.1
 review_approved:     # set by `wi accept`
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -76,14 +76,14 @@ This change moves the ticked IDs into a small store that each row subscribes to 
   - focus moves as documented;
   - leaving the screen drops the ticks.
 - **R3** — "select mode caps the selection at 200" and "renders 60 rows, then more, and an empty state" pass with no explicit timeout, under Vitest's 5 s default, in the full parallel suite.
-- **R4** — The store keeps IDs in tick order, ignores a toggle that would pass the cap, and notifies only subscribers whose answer changed. A row for an untouched ID isn't notified.
+- **R4** — The store keeps IDs in tick order and ignores a toggle that would pass the cap. A tick re-renders only the hooks whose answer changed; a row for an untouched ID doesn't re-render. (Every listener is called; React skips the re-render because the snapshot is unchanged.)
 
 ## Acceptance criteria
 
 - **AC1** (R1) — Given Select mode with 4 rows, when I tick one, then `<PaintsFilters>` doesn't re-render, and only the ticked row's `<PaintRow>` does.
 - **AC2** (R2) — Given every existing Select mode test in `paints-screen.test.tsx`, when the suite runs, then each passes unchanged apart from removing the timeouts.
 - **AC3** (R3) — Given three consecutive full `npm run check` runs, when they finish, then both tests pass each time with no explicit timeout.
-- **AC4** (R4) — Given a store with IDs a, b and c ticked, when I untick b, then the snapshot is [a, c]. "Is a ticked" subscribers aren't called; "is b ticked" and count subscribers are.
+- **AC4** (R4) — Given a store with a, b and c ticked, when I untick b, then the IDs are [a, c] (T5). Given an empty store, when I tick b, then a `useTicked(b)` hook re-renders and a `useTicked(a)` hook doesn't; `useAtCap` re-renders only on reaching or leaving the cap (T7).
 
 ## Test plan
 
@@ -91,13 +91,13 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 
 | ID | Covers | Test | File | Asserts |
 |----|--------|------|------|---------|
-| T1 | R1 | `ticking a paint doesn't re-render the search form or the filters` | `src/features/catalog/paints-screen.test.tsx` | with `<PaintsFilters>` wrapped in a render counter (like `PaintRow`), ticking one row adds 0 `PaintsFilters` renders. Fails on current code |
+| T1 | R1 | `ticking a paint doesn't re-render the filters` | `src/features/catalog/paints-screen.test.tsx` | with `<PaintsFilters>` wrapped in a render counter (like `PaintRow`), ticking one row adds 0 `PaintsFilters` renders. Fails on current code |
 | T2 | R1 | existing `ticking a paint re-renders only that row` | `src/features/catalog/paints-screen.test.tsx` | unchanged; still passes |
 | T3 | R2 | every existing Select mode test | `src/features/catalog/paints-screen.test.tsx` | unchanged assertions pass |
 | T4 | R3 | `select mode caps the selection at 200`, `renders 60 rows, then more, and an empty state` | `src/features/catalog/paints-screen.test.tsx` | assertions unchanged; cheaper queries; `{ timeout: 15_000 }` and both comments removed; pass under the 5 s default in three consecutive full runs |
 | T5 | R4 | `keeps ticks in order and toggles off` | `src/features/catalog/selection-store.test.ts` | toggle a, b, c, then b: `ids()` is [a, c]; `count()` is 2 |
 | T6 | R4 | `ignores a tick past the cap` | `src/features/catalog/selection-store.test.ts` | with max 2, ticking a third ID leaves [a, b]; unticking still works |
-| T7 | R4 | `notifies only the rows whose answer changed` | `src/features/catalog/selection-store.test.ts` | via `renderHook`, toggling b re-renders the `useTicked(b)` hook and not `useTicked(a)`; `useAtCap` changes only on reaching or leaving the cap |
+| T7 | R4 | `re-renders only the hooks whose answer changed` | `src/features/catalog/selection-store.test.ts` | via `renderHook`, toggling b re-renders the `useTicked(b)` hook and not `useTicked(a)`; `useAtCap` changes only on reaching or leaving the cap |
 | T8 | R2 | `clear empties the selection` | `src/features/catalog/selection-store.test.ts` | after `clear()`, `ids()` is [] and every ticked hook reads false |
 
 **Not unit testable:** the phone-side gain. After the dev deploy, check on a phone that 50 or more quick ticks in Select mode stay responsive. AC3's three-run check is recorded in the progress log.
@@ -134,3 +134,7 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 - 2026-10-19 — Step 2 implemented (uncommitted). Ticks now ~4.4 ms (was 8-10). Phase profile of the cap test: getByRole button 661 ms vs 56 ms with hidden:true; getAllByRole checkboxes 350 ms vs getAllByLabelText 49 ms. Test time is dominated by testing-library role-query accessibility checks over large DOMs, not ticks; the paging test never enters select mode. R3 can't be met by the store alone. Stopped to ask.
 - 2026-10-19 — Plan revised (owner-approved): step 3 swaps the slow role queries in the two tests before removing the timeouts.
 - 2026-10-19 — Step 3: three consecutive full npm run check runs passed (546/546). In full-suite vitest runs the paging test took ~1.9 s and the cap test 2.7-3.0 s against the 5 s default. Also replaced step 2's two-component row with one memoized row: switching component types remounted every row on entering Select mode.
+- 2026-10-19 — Review cycle 1: restored the shared rows()/selectionBar() helpers (long-list tests get their own hidden:true variants), renamed T1 to match what it checks, listed selection-store.test.ts in the feature doc, reworded R4/AC4 to re-render rather than notify. Security: none. A11y: no product regression.
+- 2026-10-19 — Review cycle 2: four later Select mode tests had picked up the hidden bar query by mistake; restored. T7 renamed; AC4 reworded to match T5/T7. Two review cycles done.
+- 2026-10-19 — Test audit: 14/20 mutants killed. Added tests for leaving the screen dropping ticks and for unsubscribe (both shown to catch their mutants). Left as notes: redundant clears in start/stop, LoadMore onVisible stability and ResultRow memo untested (performance only).
+- 2026-10-19 — Staged: verification passed; version 0.21.0 → 0.21.1; no changelog file.
