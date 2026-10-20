@@ -8,7 +8,7 @@ created: 2026-10-20
 approved: 2026-10-20
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.21.3
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-20
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -75,3 +75,4 @@ On 2026-10-20 the owner had the old `v2-grimify-app-dev` and `v2-grimify-app-sta
 - 2026-10-20 — Started on branch task/old-workers-deleted from origin/dev.
 - 2026-10-20 — T1 grep: only DECISIONS 044 (history) and the new deleted-on-2026-10-20 wording mention the old dev/stage Workers. Docs-only diff, self-reviewed.
 - 2026-10-20 — Staged: verification passed; version 0.21.2 → 0.21.3; no changelog file.
+- 2026-10-20 — Review approved.
