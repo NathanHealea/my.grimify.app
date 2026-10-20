@@ -1,13 +1,13 @@
 ---
 type: task
 slug: app-subdomain
-status: in-progress
+status: staged
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
 approved: 2026-10-19
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
-version: 0.21.1
+version: 0.21.2
 review_approved: 2026-10-19
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
@@ -133,3 +133,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-19 — Review approved.
 - 2026-10-20 — Changes requested: Re-stage on top of v0.21.1 (paints-select-screen-rerender), which took the 0.21.1 version; no code changes requested.
 - 2026-10-20 — Resumed to address requested changes.
+- 2026-10-20 — Staged: verification passed; version 0.21.1 → 0.21.2; no changelog file.
