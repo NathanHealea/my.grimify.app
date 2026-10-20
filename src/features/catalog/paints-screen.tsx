@@ -297,7 +297,8 @@ function PaintsSearch({
                     brandName={brandNames.get(paint.brandId) ?? paint.brandId}
                     lineName={lineNames.get(paint.lineId) ?? paint.lineId}
                     match={label}
-                    selection={selecting ? selection : undefined}
+                    selection={selection}
+                    selecting={selecting}
                   />
                 ))}
               </ul>
@@ -315,40 +316,37 @@ type ResultRowProps = {
   brandName: string;
   lineName: string;
   match?: SearchResult["label"];
-  /** Set while selecting. */
-  selection?: Selection;
+  selection: Selection;
+  selecting: boolean;
 };
 
-// Memoized with only stable props; while selecting, each row reads its own tick from the store.
-const ResultRow = memo(function ResultRow({ selection, ...props }: ResultRowProps) {
-  return selection ? (
-    <SelectableRow {...props} selection={selection} />
-  ) : (
-    <PaintRow
-      {...props}
-      actions={<PaintToggles paintId={props.paint.id} paintName={props.paint.name} />}
-    />
-  );
-});
-
-function SelectableRow({
+// Memoized with only stable props; each row reads its own tick from the store, so a tick re-renders
+// just that row. One component either way, so entering Select mode updates rows instead of remounting them.
+const ResultRow = memo(function ResultRow({
+  paint,
   selection,
+  selecting,
   ...props
-}: Omit<ResultRowProps, "selection"> & { selection: Selection }) {
-  const ticked = useTicked(selection, props.paint.id);
+}: ResultRowProps) {
+  const ticked = useTicked(selection, paint.id);
   const atCap = useAtCap(selection);
   return (
     <PaintRow
       {...props}
-      actions={<PaintToggles paintId={props.paint.id} paintName={props.paint.name} />}
-      selection={{
-        selected: ticked,
-        disabled: !ticked && atCap,
-        onToggle: () => selection.toggle(props.paint.id),
-      }}
+      paint={paint}
+      actions={<PaintToggles paintId={paint.id} paintName={paint.name} />}
+      selection={
+        selecting
+          ? {
+              selected: ticked,
+              disabled: !ticked && atCap,
+              onToggle: () => selection.toggle(paint.id),
+            }
+          : undefined
+      }
     />
   );
-}
+});
 
 /** Appends the next page when it scrolls into view; avoids rendering thousands of rows at once. */
 function LoadMore({ onVisible }: { onVisible: () => void }) {
