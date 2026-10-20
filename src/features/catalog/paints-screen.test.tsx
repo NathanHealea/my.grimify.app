@@ -60,8 +60,12 @@ function serve(catalog: Catalog) {
   return fetch;
 }
 
-// hidden: true skips testing-library's per-element visibility check, which dominates on long lists.
 const rows = () =>
+  screen.queryAllByRole("listitem").filter((li) => li.classList.contains("paint-row"));
+
+// hidden: true skips testing-library's per-element visibility check, which dominates on 100+ rows;
+// only the long-list tests use these, and other tests cover visibility.
+const rowsSkippingVisibility = () =>
   screen
     .queryAllByRole("listitem", { hidden: true })
     .filter((li) => li.classList.contains("paint-row"));
@@ -83,7 +87,9 @@ function signIn() {
   });
 }
 
-const selectionBar = () => screen.getByRole("region", { name: "Selection", hidden: true });
+const selectionBar = () => screen.getByRole("region", { name: "Selection" });
+const selectionBarSkippingVisibility = () =>
+  screen.getByRole("region", { name: "Selection", hidden: true });
 
 const rowLinks = () => rows().flatMap((row) => within(row).queryAllByRole("link"));
 
@@ -142,16 +148,16 @@ describe("PaintsScreen", () => {
     renderRoute("/paints");
 
     await screen.findByText("Blood Red");
-    expect(rows()).toHaveLength(60);
+    expect(rowsSkippingVisibility()).toHaveLength(60);
     act(() => triggerIntersection());
-    expect(rows()).toHaveLength(100);
+    expect(rowsSkippingVisibility()).toHaveLength(100);
 
     fireEvent.change(screen.getByRole("searchbox", { hidden: true }), {
       target: { value: "zzzzqq" },
     });
     expect(await screen.findByText("No paints match")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
-    await vi.waitFor(() => expect(rows()).toHaveLength(60));
+    await vi.waitFor(() => expect(rowsSkippingVisibility()).toHaveLength(60));
     expect(screen.getByRole("searchbox", { hidden: true })).toHaveValue("");
   });
 
@@ -305,7 +311,7 @@ describe("PaintsScreen", () => {
       }).toEqual({ [mephiston.id]: 0, [darkBlue.id]: 0, [bloodRed.id]: 0 });
     });
 
-    it("ticking a paint doesn't re-render the search form or the filters", async () => {
+    it("ticking a paint doesn't re-render the filters", async () => {
       serve(catalogOf(NAMED));
       signIn();
       renderRoute("/paints");
@@ -336,26 +342,32 @@ describe("PaintsScreen", () => {
       await screen.findByText("Grey 000");
       fireEvent.click(screen.getByRole("button", { name: "Add to palette", hidden: true }));
       for (let page = 0; page < 3; page++) act(() => triggerIntersection());
-      await vi.waitFor(() => expect(rows()).toHaveLength(201));
+      await vi.waitFor(() => expect(rowsSkippingVisibility()).toHaveLength(201));
 
       const boxes = screen.getAllByLabelText<HTMLInputElement>(/^Select /);
       for (const box of boxes.slice(0, 200)) fireEvent.click(box);
 
-      expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
       expect(
-        within(selectionBar()).getByText("You can add up to 200 paints at once."),
+        within(selectionBarSkippingVisibility()).getByText("200 selected"),
+      ).toBeInTheDocument();
+      expect(
+        within(selectionBarSkippingVisibility()).getByText("You can add up to 200 paints at once."),
       ).toBeInTheDocument();
       const last = boxes[200];
       expect(last).not.toBeChecked();
       expect(last).toBeDisabled();
       fireEvent.click(last);
       expect(last).not.toBeChecked();
-      expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
+      expect(
+        within(selectionBarSkippingVisibility()).getByText("200 selected"),
+      ).toBeInTheDocument();
       expect(boxes[0]).toBeChecked();
       expect(boxes[0]).toBeEnabled();
 
       fireEvent.click(boxes[0]);
-      expect(within(selectionBar()).getByText("199 selected")).toBeInTheDocument();
+      expect(
+        within(selectionBarSkippingVisibility()).getByText("199 selected"),
+      ).toBeInTheDocument();
       expect(last).toBeEnabled();
     });
 
@@ -369,7 +381,9 @@ describe("PaintsScreen", () => {
 
       expect(screen.getAllByRole("checkbox", { name: /^Select / })[0]).toHaveFocus();
 
-      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
+      fireEvent.click(
+        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Done" }),
+      );
 
       expect(screen.getByRole("button", { name: "Add to palette" })).toHaveFocus();
     });
@@ -383,7 +397,9 @@ describe("PaintsScreen", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzzqq" } });
       await screen.findByText("No paints match");
-      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
+      fireEvent.click(
+        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Done" }),
+      );
 
       expect(screen.getByRole("searchbox", { name: "Search paints" })).toHaveFocus();
     });
@@ -419,9 +435,11 @@ describe("PaintsScreen", () => {
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
-      expect(within(selectionBar()).getByText("3 selected")).toBeInTheDocument();
+      expect(within(selectionBarSkippingVisibility()).getByText("3 selected")).toBeInTheDocument();
 
-      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Add to palette" }));
+      fireEvent.click(
+        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Add to palette" }),
+      );
       const picker = screen.getByRole("dialog", { name: "Add to palette" });
       fireEvent.click(within(picker).getByRole("button", { name: /^Ultramarines/ }));
 
@@ -444,17 +462,21 @@ describe("PaintsScreen", () => {
       await screen.findByText("Blood Red");
       fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Blood Red" }));
-      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeEnabled();
+      expect(
+        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Add to palette" }),
+      ).toBeEnabled();
 
       onLine.mockReturnValue(false);
       act(() => void window.dispatchEvent(new Event("offline")));
 
-      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeDisabled();
+      expect(
+        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Add to palette" }),
+      ).toBeDisabled();
       const note = screen.getByText("Connect to the internet to edit palettes.");
       expect(note.closest('[role="status"]')).not.toBeNull();
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
       expect(screen.getByRole("checkbox", { name: "Select Dark Blue" })).toBeChecked();
-      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
+      expect(within(selectionBarSkippingVisibility()).getByText("2 selected")).toBeInTheDocument();
 
       cleanup();
       onLine.mockReturnValue(true);
