@@ -42,7 +42,7 @@ Authorization must be enforced server-side (in Convex functions):
 - Every user-data function calls `requireUser(ctx)` (see `convex/lib/auth.ts`)
 - `userId` always comes from `ctx.auth`, **never** from client arguments
 - The device store (browser IndexedDB, DECISIONS 036) holds the Clerk user ID, the last collection (paint IDs and flags) and the outbox. No tokens, email or name. The user ID only decides which cached collection to show offline; it's never sent as an argument, and the server still derives the user from the auth token on every call
-- A different user signing in on the device clears the store before anything shows; signing out clears it (after a warning if changes haven't synced)
+- A different user signing in on the device clears the store before anything shows; signing out clears it on that origin (after a warning if changes haven't synced; see § Deletion for the second production origin)
 - Queries always filter by the caller's `userId` using an index
 
 ---
@@ -84,7 +84,7 @@ Rate limiting:
 Not required for MVP. If abuse appears, add the `@convex-dev/rate-limiter` component to mutations. The auth provider rate-limits code emails.
 
 CORS:
-Not applicable. The Convex client handles its own origin; there are no custom HTTP endpoints. If Convex HTTP actions are added later, allow only the grimify.app, stage.grimify.app and dev.grimify.app origins.
+Not applicable. The Convex client handles its own origin; there are no custom HTTP endpoints. If Convex HTTP actions are added later, allow only the my.grimify.app, stage.my.grimify.app and dev.my.grimify.app origins (and grimify.app until the marketing cutover).
 
 Authentication:
 Required for all user-data functions.
@@ -101,7 +101,7 @@ Headers (`public/_headers`, applied by the Cloudflare Worker to every static res
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`. Allow `camera` when barcode scanning ships.
 
-Environments: dev.grimify.app and stage.grimify.app use the production Clerk instance with their own Convex deployments, so they hold real account IDs (no student or personnel data) and get the same care as production. Deploy keys live only in git-ignored `.env.deploy.<env>.local` files; the deploy script never prints them.
+Environments: dev.my.grimify.app and stage.my.grimify.app use the production Clerk instance with their own Convex deployments, so they hold real account IDs (no student or personnel data) and get the same care as production. Deploy keys live only in git-ignored `.env.deploy.<env>.local` files; the deploy script never prints them.
 
 Crawlers: `public/robots.txt` disallows everything during the private beta. It isn't access control; anyone with the link can open the app.
 
@@ -117,10 +117,10 @@ Encryption:
 In transit via HTTPS (Cloudflare and Convex); at rest by the providers.
 
 Retention:
-Kept until the user deletes their account. Dev and stage (dev.grimify.app, stage.grimify.app) sign in with the same production accounts but keep their own Convex data, so one person can have rows in up to three deployments.
+Kept until the user deletes their account. Dev and stage (dev.my.grimify.app, stage.my.grimify.app) sign in with the same production accounts but keep their own Convex data, so one person can have rows in up to three deployments.
 
 Deletion:
-"Delete account" in Settings (type DELETE to confirm) → `users.deleteAccount` removes all Convex data (collection, palettes, `users` row) → the device record is cleared → Clerk's `user.delete()` removes the auth account (DECISIONS 037). Collections over 500 rows finish deleting in scheduled batches seconds later. If the Clerk step fails, the account exists with no data and the user is told to retry; a retry completes it. Needs "Allow users to delete their accounts" on in the Clerk instance (ENVIRONMENT.md). **Gap:** deletion clears only the Convex deployment of the site it runs on. Deleting on grimify.app leaves any dev or stage rows; deleting on dev or stage deletes the production Clerk account and leaves the production rows with no way to sign in and clear them (DECISIONS 044; issue #20).
+"Delete account" in Settings (type DELETE to confirm) → `users.deleteAccount` removes all Convex data (collection, palettes, `users` row) → the device record is cleared → Clerk's `user.delete()` removes the auth account (DECISIONS 037). Collections over 500 rows finish deleting in scheduled batches seconds later. If the Clerk step fails, the account exists with no data and the user is told to retry; a retry completes it. Needs "Allow users to delete their accounts" on in the Clerk instance (ENVIRONMENT.md). **Gap:** deletion clears only the Convex deployment of the site it runs on. Deleting on my.grimify.app leaves any dev or stage rows; deleting on dev or stage deletes the production Clerk account and leaves the production rows with no way to sign in and clear them (DECISIONS 044; issue #20). Until the marketing cutover, production runs on two origins, my.grimify.app and grimify.app, each with its own device record. Deleting or signing out on one clears only that origin's record; the other's is hidden once Clerk reports signed out, but offline the stored user stands in and its cached collection shows (DECISIONS 036, 060). The cutover must clear the grimify.app origin's storage, through a request the old service worker doesn't answer from its cache.
 
 Signing out clears the device record only after Clerk's sign-out succeeds; while it runs, nothing is saved to the device or sent (DECISIONS 038).
 
@@ -166,7 +166,7 @@ If photo color-picking ships later: process the image **client-side only** (canv
 - [ ] Server-side validation on all function args
 - [ ] Secrets only in Convex, Cloudflare or GitHub secret stores
 - [ ] `.env.local` gitignored
-- [x] Security headers configured (`public/_headers`; verify on grimify.app after each change)
+- [x] Security headers configured (`public/_headers`; verify on my.grimify.app after each change)
 - [ ] Account deletion works end to end (built; manual check on the dev instance pending)
 - [ ] Errors don't expose sensitive details
 - [ ] `npm audit` reviewed; dependencies kept minimal

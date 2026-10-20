@@ -548,7 +548,7 @@ Context:
 Defects and follow-ups found during work items (e.g., metallic paints typed as opaque, the app icon still missing) had nowhere to live except progress logs and chat.
 
 Decision:
-Track them as GitHub Issues on `NathanHealea/v2.grimify.app`: label `bug` for defects, `enhancement` for follow-ups. Work items stay in `docs/implementation-plans/`; a work item that fixes an issue links it. The first issues are #1 (metallics typed as opaque), #2 (Vallejo Model Color merges) and #3 (app icon).
+Track them as GitHub Issues on `NathanHealea/my.grimify.app`: label `bug` for defects, `enhancement` for follow-ups. Work items stay in `docs/implementation-plans/`; a work item that fixes an issue links it. The first issues are #1 (metallics typed as opaque), #2 (Vallejo Model Color merges) and #3 (app icon).
 
 Alternatives:
 - Bug work items as markdown files only: no single list, and easy to lose between items
@@ -915,7 +915,7 @@ Trade-off: a request for a missing hashed asset also gets `index.html` (200, HTM
 ## Decision 044 — Dev and stage environments, deployed by one command each
 
 Date: 2026-10-09
-Status: Accepted; promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only); tags now sit on each item's last commit, since `wi release` fast-forwards (see 055's Context)
+Status: Accepted; domains amended by 060 (my.grimify.app); promotions amended by 055 (fast-forward only, hotfixes merged back into `dev` only); tags now sit on each item's last commit, since `wi release` fast-forwards (see 055's Context)
 
 Context:
 Only `main` deployed, from Workers Builds, so nothing could be tried on real hosting with real sign-in before reaching users. A branch build would have pushed that branch's Convex functions to production (041). The owner wants `main ← stage ← dev ← work items`, hotfixes to `main`, dev and stage both deployed, and "a simple command for each deployment" with no web UI. Cloudflare's branch preview URLs are on `*.workers.dev`, where production Clerk keys don't work, and preview deployments in Convex expire.
@@ -1315,3 +1315,27 @@ Alternatives:
 Consequences:
 Positive: verification comes from Clerk's own record; no Clerk dashboard change.
 Trade-off: the deployment holds `CLERK_SECRET_KEY`, which can read and change every Clerk user. So it and `LEGACY_IMPORT_HASH_KEY` are set only on the production deployment: develop and stage sign in with the production Clerk instance, so their key would be the production `sk_live_` key, too broad for non-production. The feature is off there, and the prompt is tested end to end on a personal `npx convex dev` deployment with the Clerk dev instance and a made-up export. Each new session of a signed-in user makes one call to Clerk. A Clerk outage only means no prompt that session.
+
+## Decision 060 — Serve the app from my.grimify.app so grimify.app can host the marketing site
+
+Date: 2026-10-19
+Status: Accepted (work item `app-subdomain`); amends 044's domains and Worker names
+
+Context:
+The owner wants grimify.app to be a marketing site, built in its own repo (`NathanHealea/grimify.app`). The app served grimify.app, dev.grimify.app and stage.grimify.app, each also on `www.` (044). The GitHub repository was renamed from `NathanHealea/v2.grimify.app` to `NathanHealea/my.grimify.app`, and the old Supabase app's checkout moved to `../old.grimify.app`.
+
+Decision:
+- Production serves `my.grimify.app`. Dev and stage serve `dev.my.grimify.app` and `stage.my.grimify.app`. All are custom-domain routes in `wrangler.json`.
+- The new names have no `www.` variant. Nobody types `www.dev.my.grimify.app`, and one name per site keeps one origin for sign-in, storage and the installed app.
+- The Workers are renamed to match the repository: `my-grimify-app`, `my-grimify-app-dev` and `my-grimify-app-stage` (owner's change, 2026-10-20). The new names make `wrangler deploy` create new Workers rather than rename the old ones.
+- `grimify.app` and `www.grimify.app` stay on the old `v2-grimify-app` Worker, frozen at its last deploy, until the marketing site's cutover. Taking them away now would leave grimify.app serving nothing and break installed apps, whose `start_url` is `/paints` on grimify.app. The cutover, in the marketing repo, ships a self-unregistering `sw.js` and redirects app paths to my.grimify.app before `v2-grimify-app` is deleted.
+- The old dev and stage Workers are deleted by hand once the new sites are checked (ENVIRONMENT.md § Cloudflare Workers).
+- Clerk stays on `clerk.grimify.app`. Every new name is a subdomain of grimify.app, so the production instance and the CSP are unchanged.
+
+Alternatives:
+- Move production off grimify.app in the same change: simpler config, but grimify.app goes dark until the marketing site exists, and installed apps open to nothing
+- Flat names (`my-dev.grimify.app`): one level deep, but they don't read as part of the app
+
+Consequences:
+Positive: the apex is free for marketing without a gap in service; the app's sites share one parent name.
+Trade-off: until the cutover, the app answers on two origins, and grimify.app runs the last pre-rename release, so it gets no fixes. Local state, the service worker and installs don't carry between my.grimify.app and grimify.app; signed-in data lives in Convex, so collections and palettes match on both. Deleting the account or signing out clears the device record only on the origin where it runs, so the other origin's cached collection can still show offline (SECURITY.md § Deletion). The cutover must clear the grimify.app origin's storage. The old service worker answers page loads from its cache, so the clear has to arrive another way, such as the service worker's own update fetch; the cutover work item picks and verifies the mechanism. It accepts the loss of any outbox entries that never synced there. The old dev and stage names keep resolving until their Workers are deleted.

@@ -17,22 +17,22 @@ export type Environment = {
 export const ENVIRONMENTS: Record<EnvName, Environment> = {
   dev: {
     branch: "dev",
-    worker: "v2-grimify-app-dev",
-    domain: "dev.grimify.app",
+    worker: "my-grimify-app-dev",
+    domain: "dev.my.grimify.app",
     wranglerEnv: "dev",
     convexDeployment: "sensible-buffalo-782",
   },
   stage: {
     branch: "stage",
-    worker: "v2-grimify-app-stage",
-    domain: "stage.grimify.app",
+    worker: "my-grimify-app-stage",
+    domain: "stage.my.grimify.app",
     wranglerEnv: "stage",
     convexDeployment: "notable-ferret-719",
   },
   prod: {
     branch: "main",
-    worker: "v2-grimify-app",
-    domain: "grimify.app",
+    worker: "my-grimify-app",
+    domain: "my.grimify.app",
     wranglerEnv: null,
     convexDeployment: "nautical-toucan-398",
   },

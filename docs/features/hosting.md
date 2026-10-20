@@ -1,7 +1,7 @@
 # Hosting and Deploys
 
 > Covers the Cloudflare Workers, the security headers, and `scripts/deploy.ts`.
-> Process and rollback: [DEPLOYMENT.md](../DEPLOYMENT.md). Env vars and setup: [ENVIRONMENT.md](../ENVIRONMENT.md). Headers policy: [SECURITY.md §5](../SECURITY.md). Rationale: [DECISIONS 043, 044](../DECISIONS.md).
+> Process and rollback: [DEPLOYMENT.md](../DEPLOYMENT.md). Env vars and setup: [ENVIRONMENT.md](../ENVIRONMENT.md). Headers policy: [SECURITY.md §5](../SECURITY.md). Rationale: [DECISIONS 043, 044, 060](../DECISIONS.md).
 
 ## TL;DR
 
@@ -9,7 +9,7 @@
 - **One command per environment**: `npm run deploy:dev`, `deploy:stage`, `deploy:prod`. Each runs **only from its own branch**: `dev`, `stage`, `main`.
 - A deploy **pushes Convex first**, then **checks that the built CSP names the right Convex host**, then uploads to Cloudflare.
 - `public/_headers` holds the **CSP** and security headers. The build fills in **`{{CONVEX_HOST}}`** per environment.
-- Every site is also served on its **`www.` name**.
+- Sites: **`my.grimify.app`**, **`dev.my.grimify.app`**, **`stage.my.grimify.app`**. The retired Worker `v2-grimify-app` keeps serving **`grimify.app`**, frozen at its last deploy, until the marketing cutover (DECISIONS 060); `www.grimify.app` redirects to it.
 
 ## Where the code lives
 
@@ -25,9 +25,9 @@
 
 | Env | Branch | Worker | Domains | Convex deployment |
 |---|---|---|---|---|
-| `dev` | `dev` | `v2-grimify-app-dev` | `dev.grimify.app`, `www.dev.grimify.app` | `sensible-buffalo-782` |
-| `stage` | `stage` | `v2-grimify-app-stage` | `stage.grimify.app`, `www.stage.grimify.app` | `notable-ferret-719` |
-| `prod` | `main` | `v2-grimify-app` | `grimify.app`, `www.grimify.app` | `nautical-toucan-398` |
+| `dev` | `dev` | `my-grimify-app-dev` | `dev.my.grimify.app` | `sensible-buffalo-782` |
+| `stage` | `stage` | `my-grimify-app-stage` | `stage.my.grimify.app` | `notable-ferret-719` |
+| `prod` | `main` | `my-grimify-app` | `my.grimify.app` | `nautical-toucan-398` |
 
 ## What a deploy checks first
 
