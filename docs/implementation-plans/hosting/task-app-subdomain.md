@@ -1,7 +1,7 @@
 ---
 type: task
 slug: app-subdomain
-status: changes-requested
+status: in-progress
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
@@ -132,3 +132,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-19 — Staged: verification passed; version 0.21.0 → 0.21.1; no changelog file.
 - 2026-10-19 — Review approved.
 - 2026-10-20 — Changes requested: Re-stage on top of v0.21.1 (paints-select-screen-rerender), which took the 0.21.1 version; no code changes requested.
+- 2026-10-20 — Resumed to address requested changes.
