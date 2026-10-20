@@ -1,7 +1,7 @@
 ---
 type: task
 slug: app-subdomain
-status: staged
+status: changes-requested
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
@@ -134,3 +134,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-20 — Changes requested: Re-stage on top of v0.21.1 (paints-select-screen-rerender), which took the 0.21.1 version; no code changes requested.
 - 2026-10-20 — Resumed to address requested changes.
 - 2026-10-20 — Staged: verification passed; version 0.21.1 → 0.21.2; no changelog file.
+- 2026-10-20 — Changes requested: Owner renamed the Workers to my-grimify-app (-dev, -stage) and dropped grimify.app/www.grimify.app from the new production Worker; the old v2-grimify-app Worker keeps serving grimify.app until the marketing cutover.
