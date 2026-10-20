@@ -91,7 +91,7 @@ The sheet edits a **draft**. **"Show N paints" commits it**, and the count is li
 - **Select mode must leave the default row alone**: without `selection`, `<PaintRow>` renders exactly as before (link plus `actions`).
 - **Rows subscribe narrowly.** A row hook must return a value that only its own paint's tick changes, such as a boolean. Reading the whole ID list in a row brings back a re-render of every row on every tick.
 - **New filter**: add it to `Filters`, `FilterParams`, `parseFilterParams`, `serializeFilters`, `countActive` and `matchesFilters`, **and** to the route's Zod `searchSchema` in both `routes/paints/index.tsx` and `routes/my-paints.tsx`.
-- Tests sit next to each file: `parse-query.test.ts`, `search.test.ts`, `filters.test.ts`, `paints-screen.test.tsx` (Select mode included), `paints-filters.test.tsx`.
+- Tests sit next to each file: `parse-query.test.ts`, `search.test.ts`, `filters.test.ts`, `paints-screen.test.tsx` (Select mode included), `selection-store.test.ts`, `paints-filters.test.tsx`.
 
 ## Relations to other features
 
