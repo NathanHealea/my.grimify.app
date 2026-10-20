@@ -11,7 +11,7 @@
 | Stage | `stage` | `https://stage.my.grimify.app` (Worker `my-grimify-app-stage`) | `npm run deploy:stage` |
 | Production | `main` | `https://my.grimify.app` (Worker `my-grimify-app`) | `npm run deploy:prod` |
 
-The first deploy of each environment after DECISIONS 060 creates its new `my-grimify-app*` Worker and `my.` domain. The old `v2-grimify-app*` Workers keep their domains until they're deleted. Deploy dev first and check sign-in on `dev.my.grimify.app` before stage. Retiring the old Workers: ENVIRONMENT.md § Cloudflare Workers.
+The first deploy of each environment after DECISIONS 060 creates its new `my-grimify-app*` Worker and `my.` domain. The old dev and stage Workers were deleted on 2026-10-20; `v2-grimify-app` still serves `grimify.app` until the marketing cutover. Deploy dev first and check sign-in on `dev.my.grimify.app` before stage. Retiring the old Workers: ENVIRONMENT.md § Cloudflare Workers.
 
 Dev and stage each have their own Convex deployment and sign in with production Clerk accounts. ENVIRONMENT.md § Environments and § Deploying have the details and the one-time setup.
 
