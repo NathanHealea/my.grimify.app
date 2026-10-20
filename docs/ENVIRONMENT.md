@@ -134,15 +134,7 @@ Never put `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` in `.env.local`: Wra
 
 `wrangler.json` defines all three. Production is the top level; `env.dev` and `env.stage` become the Workers `my-grimify-app-dev` and `my-grimify-app-stage`. Each serves `./dist` with the single-page-app fallback and declares its domain as a custom domain. The top-level `name` must stay `my-grimify-app`; another name makes `wrangler deploy` create a new Worker without the domain. `www.grimify.app` redirects to the apex with a Cloudflare redirect rule rather than serving the app.
 
-**Retiring the old Workers.** Until 0.21.2 the Workers were `v2-grimify-app`, `-dev` and `-stage` (DECISIONS 044). Renaming them created new Workers, so the old ones still serve `grimify.app`, `dev.grimify.app`, `stage.grimify.app` and their `www.` names. Once the new sites are checked, delete the old dev and stage Workers, which also removes their domains and DNS records. This can't be undone:
-
-```bash
-npx --no wrangler delete v2-grimify-app-dev --dry-run   # shows what would go; drop --dry-run to delete
-npx --no wrangler delete v2-grimify-app-dev
-npx --no wrangler delete v2-grimify-app-stage
-```
-
-Leave `v2-grimify-app` until the marketing cutover, which moves `grimify.app` to the marketing site.
+**The old Workers.** Until 0.21.2 the Workers were `v2-grimify-app`, `-dev` and `-stage` (DECISIONS 044). Renaming them created new Workers. The old `v2-grimify-app-dev` and `v2-grimify-app-stage` were deleted on 2026-10-20 with `npx --no wrangler delete <name>`, which also removed `dev.grimify.app`, `stage.grimify.app` and their `www.` names. Only `v2-grimify-app` is left. It serves `grimify.app`, frozen at its last deploy, until the marketing cutover moves `grimify.app` to the marketing site; delete it the same way then.
 
 ### Convex
 
