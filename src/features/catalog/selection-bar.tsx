@@ -1,23 +1,27 @@
 import "./selection-bar.css";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AddToPaletteSheet } from "@/features/palettes/add-to-palette-sheet";
 import { OFFLINE_EDIT_NOTE } from "@/features/palettes/palette-name-sheet";
 import { useOnlineStatus } from "@/features/pwa/use-online-status";
 
+import { type Selection, useSelectedIds } from "./selection-store";
+
 /** The most paints select mode ticks; matches the palette cap in convex/palettes.ts. */
 export const MAX_SELECTED = 200;
 
 type Props = {
-  /** Selected paint IDs in the order they were ticked. */
-  paintIds: string[];
+  /** Select mode's ticks, in the order they were ticked. */
+  selection: Selection;
   onDone: () => void;
 };
 
 /** Select mode's bar above the nav: the count, Add to palette and Done. */
-export function SelectionBar({ paintIds, onDone }: Props) {
+export function SelectionBar({ selection, onDone }: Props) {
+  const ids = useSelectedIds(selection);
+  const paintIds = useMemo(() => [...ids], [ids]);
   const online = useOnlineStatus();
   const [picking, setPicking] = useState(false);
   const addButton = useRef<HTMLButtonElement>(null);

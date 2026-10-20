@@ -29,6 +29,7 @@ import { hueLabel, type ParsedQuery, parseQuery, removeToken, suggest } from "./
 import type { Catalog, CatalogPaint } from "./schema";
 import { type NameIndex, searchPaints, type SearchResult } from "./search";
 import { MAX_SELECTED, SelectionBar } from "./selection-bar";
+import { createSelection, type Selection, useAtCap, useTicked } from "./selection-store";
 
 type Props = {
   /** The committed query from the URL. */
@@ -73,20 +74,18 @@ function PaintsSearch({
 }: Props & { catalog: Catalog; index: NameIndex }) {
   const collection = useCollection();
   const { isSignedIn } = useUser();
-  // Palettes need an account, so select mode is only offered signed in; null means not selecting.
-  const [selected, setSelected] = useState<string[] | null>(null);
-  const selecting = selected !== null;
-  const selectedIds = useMemo(() => new Set(selected), [selected]);
-  const atCap = (selected?.length ?? 0) >= MAX_SELECTED;
-  const toggle = useCallback(
-    (paintId: string) =>
-      setSelected((current) =>
-        current?.includes(paintId)
-          ? current.filter((id) => id !== paintId)
-          : [...(current ?? []), paintId],
-      ),
-    [],
-  );
+  // Palettes need an account, so select mode is only offered signed in.
+  const [selecting, setSelecting] = useState(false);
+  // Ticks live outside state so a tick re-renders only its row and the bar, not this screen (#29).
+  const [selection] = useState(() => createSelection(MAX_SELECTED));
+  const startSelecting = () => {
+    selection.clear();
+    setSelecting(true);
+  };
+  const stopSelecting = () => {
+    setSelecting(false);
+    selection.clear();
+  };
   const selectButton = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const wasSelecting = useRef(selecting);
@@ -104,6 +103,7 @@ function PaintsSearch({
   const [syncedQuery, setSyncedQuery] = useState(query);
   const [sentQuery, setSentQuery] = useState(query);
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const showMore = useCallback(() => setLimit((n) => n + PAGE_SIZE), []);
   const listKey = `${query}|${JSON.stringify(filterParams)}`;
   const [syncedListKey, setSyncedListKey] = useState(listKey);
 
@@ -263,15 +263,15 @@ function PaintsSearch({
             <p className="paints-screen__count" role="status">
               {results.length === 1 ? "1 paint" : `${results.length.toLocaleString("en")} paints`}
             </p>
-            {isSignedIn && selected === null && results.length > 0 && (
-              <Button ref={selectButton} variant="outline" onClick={() => setSelected([])}>
+            {isSignedIn && !selecting && results.length > 0 && (
+              <Button ref={selectButton} variant="outline" onClick={startSelecting}>
                 <SwatchBook aria-hidden="true" />
                 Add to palette
               </Button>
             )}
           </div>
           {/* Early in the DOM so Tab reaches it before the endless list; CSS shows it at the bottom. */}
-          {selected && <SelectionBar paintIds={selected} onDone={() => setSelected(null)} />}
+          {selecting && <SelectionBar selection={selection} onDone={stopSelecting} />}
 
           {results.length === 0 ? (
             <div className="paints-screen__empty">
@@ -290,26 +290,18 @@ function PaintsSearch({
           ) : (
             <>
               <ul ref={listRef} className="paints-screen__list">
-                {results.slice(0, limit).map(({ paint, label }) => {
-                  const ticked = selectedIds.has(paint.id);
-                  return (
-                    <ResultRow
-                      key={paint.id}
-                      paint={paint}
-                      brandName={brandNames.get(paint.brandId) ?? paint.brandId}
-                      lineName={lineNames.get(paint.lineId) ?? paint.lineId}
-                      match={label}
-                      selecting={selecting}
-                      ticked={ticked}
-                      disabled={!ticked && atCap}
-                      onToggle={toggle}
-                    />
-                  );
-                })}
+                {results.slice(0, limit).map(({ paint, label }) => (
+                  <ResultRow
+                    key={paint.id}
+                    paint={paint}
+                    brandName={brandNames.get(paint.brandId) ?? paint.brandId}
+                    lineName={lineNames.get(paint.lineId) ?? paint.lineId}
+                    match={label}
+                    selection={selecting ? selection : undefined}
+                  />
+                ))}
               </ul>
-              {limit < results.length && (
-                <LoadMore onVisible={() => setLimit((n) => n + PAGE_SIZE)} />
-              )}
+              {limit < results.length && <LoadMore onVisible={showMore} />}
             </>
           )}
         </>
@@ -323,36 +315,40 @@ type ResultRowProps = {
   brandName: string;
   lineName: string;
   match?: SearchResult["label"];
-  selecting: boolean;
-  ticked: boolean;
-  disabled: boolean;
-  onToggle: (paintId: string) => void;
+  /** Set while selecting. */
+  selection?: Selection;
 };
 
-// Memoized with only stable props so a tick re-renders just the row it changed, not the whole list.
-const ResultRow = memo(function ResultRow({
-  paint,
-  brandName,
-  lineName,
-  match,
-  selecting,
-  ticked,
-  disabled,
-  onToggle,
-}: ResultRowProps) {
-  return (
+// Memoized with only stable props; while selecting, each row reads its own tick from the store.
+const ResultRow = memo(function ResultRow({ selection, ...props }: ResultRowProps) {
+  return selection ? (
+    <SelectableRow {...props} selection={selection} />
+  ) : (
     <PaintRow
-      paint={paint}
-      brandName={brandName}
-      lineName={lineName}
-      match={match}
-      actions={<PaintToggles paintId={paint.id} paintName={paint.name} />}
-      selection={
-        selecting ? { selected: ticked, disabled, onToggle: () => onToggle(paint.id) } : undefined
-      }
+      {...props}
+      actions={<PaintToggles paintId={props.paint.id} paintName={props.paint.name} />}
     />
   );
 });
+
+function SelectableRow({
+  selection,
+  ...props
+}: Omit<ResultRowProps, "selection"> & { selection: Selection }) {
+  const ticked = useTicked(selection, props.paint.id);
+  const atCap = useAtCap(selection);
+  return (
+    <PaintRow
+      {...props}
+      actions={<PaintToggles paintId={props.paint.id} paintName={props.paint.name} />}
+      selection={{
+        selected: ticked,
+        disabled: !ticked && atCap,
+        onToggle: () => selection.toggle(props.paint.id),
+      }}
+    />
+  );
+}
 
 /** Appends the next page when it scrolls into view; avoids rendering thousands of rows at once. */
 function LoadMore({ onVisible }: { onVisible: () => void }) {

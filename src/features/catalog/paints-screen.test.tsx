@@ -26,6 +26,19 @@ vi.mock("@/components/paint-row", async (importOriginal) => {
   };
 });
 
+const filtersRenders = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock("./paints-filters", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./paints-filters")>();
+  return {
+    ...actual,
+    PaintsFilters: (props: ComponentProps<typeof actual.PaintsFilters>) => {
+      filtersRenders.count += 1;
+      return <actual.PaintsFilters {...props} />;
+    },
+  };
+});
+
 const NAMED = [
   catalogPaint({ brandId: "citadel", name: "Mephiston Red", hex: "#9B130B" }),
   catalogPaint({ brandId: "citadel", name: "Macragge Blue", hex: "#193A79" }),
@@ -285,6 +298,22 @@ describe("PaintsScreen", () => {
         [darkBlue.id]: increase(darkBlue.id),
         [bloodRed.id]: increase(bloodRed.id),
       }).toEqual({ [mephiston.id]: 0, [darkBlue.id]: 0, [bloodRed.id]: 0 });
+    });
+
+    it("ticking a paint doesn't re-render the search form or the filters", async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      expect(screen.getAllByRole("checkbox", { name: /^Select / })).toHaveLength(4);
+      const before = filtersRenders.count;
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
+
+      expect(screen.getByRole("checkbox", { name: "Select Macragge Blue" })).toBeChecked();
+      expect(filtersRenders.count - before).toBe(0);
     });
 
     // 201 rows and 200 ticks: the screen still re-renders per tick, which runs past 5 s in the full
