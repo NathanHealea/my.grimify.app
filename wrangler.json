@@ -1,13 +1,12 @@
 {
-  "name": "v2-grimify-app",
+  "name": "my-grimify-app",
   "compatibility_date": "2026-10-08",
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   },
   "routes": [
-    { "pattern": "grimify.app", "custom_domain": true },
-    { "pattern": "www.grimify.app", "custom_domain": true }
+    { "pattern": "my.grimify.app", "custom_domain": true }
   ],
   "env": {
     "dev": {
@@ -16,8 +15,7 @@
         "not_found_handling": "single-page-application"
       },
       "routes": [
-        { "pattern": "dev.grimify.app", "custom_domain": true },
-        { "pattern": "www.dev.grimify.app", "custom_domain": true }
+        { "pattern": "dev.my.grimify.app", "custom_domain": true }
       ]
     },
     "stage": {
@@ -26,8 +24,7 @@
         "not_found_handling": "single-page-application"
       },
       "routes": [
-        { "pattern": "stage.grimify.app", "custom_domain": true },
-        { "pattern": "www.stage.grimify.app", "custom_domain": true }
+        { "pattern": "stage.my.grimify.app", "custom_domain": true }
       ]
     }
   }
