@@ -58,7 +58,7 @@ On 2026-10-20 the owner had the old `v2-grimify-app-dev` and `v2-grimify-app-sta
 
 ## Implementation plan
 
-1. [ ] Say the old dev and stage Workers are deleted in ENVIRONMENT.md, DEPLOYMENT.md and DECISIONS 060 — touches `docs/ENVIRONMENT.md`, `docs/DEPLOYMENT.md`, `docs/DECISIONS.md` — tests T1
+1. [x] Say the old dev and stage Workers are deleted in ENVIRONMENT.md, DEPLOYMENT.md and DECISIONS 060 — touches `docs/ENVIRONMENT.md`, `docs/DEPLOYMENT.md`, `docs/DECISIONS.md` — tests T1
 
 **Must not change:** code, config, DECISIONS 044.
 
@@ -73,3 +73,4 @@ On 2026-10-20 the owner had the old `v2-grimify-app-dev` and `v2-grimify-app-sta
 - 2026-10-20 — Planned.
 - 2026-10-20 — Plan approved.
 - 2026-10-20 — Started on branch task/old-workers-deleted from origin/dev.
+- 2026-10-20 — T1 grep: only DECISIONS 044 (history) and the new deleted-on-2026-10-20 wording mention the old dev/stage Workers. Docs-only diff, self-reviewed.
