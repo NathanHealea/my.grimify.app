@@ -60,8 +60,11 @@ function serve(catalog: Catalog) {
   return fetch;
 }
 
+// hidden: true skips testing-library's per-element visibility check, which dominates on long lists.
 const rows = () =>
-  screen.queryAllByRole("listitem").filter((li) => li.classList.contains("paint-row"));
+  screen
+    .queryAllByRole("listitem", { hidden: true })
+    .filter((li) => li.classList.contains("paint-row"));
 
 const nameOf = (ref: unknown) => getFunctionName(ref as FunctionReference<"query" | "mutation">);
 
@@ -80,7 +83,7 @@ function signIn() {
   });
 }
 
-const selectionBar = () => screen.getByRole("region", { name: "Selection" });
+const selectionBar = () => screen.getByRole("region", { name: "Selection", hidden: true });
 
 const rowLinks = () => rows().flatMap((row) => within(row).queryAllByRole("link"));
 
@@ -143,11 +146,13 @@ describe("PaintsScreen", () => {
     act(() => triggerIntersection());
     expect(rows()).toHaveLength(100);
 
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzzqq" } });
+    fireEvent.change(screen.getByRole("searchbox", { hidden: true }), {
+      target: { value: "zzzzqq" },
+    });
     expect(await screen.findByText("No paints match")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
     await vi.waitFor(() => expect(rows()).toHaveLength(60));
-    expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(screen.getByRole("searchbox", { hidden: true })).toHaveValue("");
   });
 
   it("restores the query from the URL", async () => {
@@ -316,9 +321,7 @@ describe("PaintsScreen", () => {
       expect(filtersRenders.count - before).toBe(0);
     });
 
-    // 201 rows and 200 ticks: the screen still re-renders per tick, which runs past 5 s in the full
-    // parallel suite; drop this timeout once #29 fixes that.
-    it("select mode caps the selection at 200", { timeout: 15_000 }, async () => {
+    it("select mode caps the selection at 200", async () => {
       const many = Array.from({ length: 201 }, (_, i) =>
         catalogPaint({
           brandId: "army-painter",
@@ -331,11 +334,11 @@ describe("PaintsScreen", () => {
       renderRoute("/paints");
 
       await screen.findByText("Grey 000");
-      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette", hidden: true }));
       for (let page = 0; page < 3; page++) act(() => triggerIntersection());
       await vi.waitFor(() => expect(rows()).toHaveLength(201));
 
-      const boxes = screen.getAllByRole("checkbox", { name: /^Select / });
+      const boxes = screen.getAllByLabelText<HTMLInputElement>(/^Select /);
       for (const box of boxes.slice(0, 200)) fireEvent.click(box);
 
       expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
