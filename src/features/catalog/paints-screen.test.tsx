@@ -26,6 +26,19 @@ vi.mock("@/components/paint-row", async (importOriginal) => {
   };
 });
 
+const filtersRenders = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock("./paints-filters", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./paints-filters")>();
+  return {
+    ...actual,
+    PaintsFilters: (props: ComponentProps<typeof actual.PaintsFilters>) => {
+      filtersRenders.count += 1;
+      return <actual.PaintsFilters {...props} />;
+    },
+  };
+});
+
 const NAMED = [
   catalogPaint({ brandId: "citadel", name: "Mephiston Red", hex: "#9B130B" }),
   catalogPaint({ brandId: "citadel", name: "Macragge Blue", hex: "#193A79" }),
@@ -50,6 +63,13 @@ function serve(catalog: Catalog) {
 const rows = () =>
   screen.queryAllByRole("listitem").filter((li) => li.classList.contains("paint-row"));
 
+// hidden: true skips testing-library's per-element visibility check, which dominates on 100+ rows;
+// only the long-list tests use these, and other tests cover visibility.
+const rowsSkippingVisibility = () =>
+  screen
+    .queryAllByRole("listitem", { hidden: true })
+    .filter((li) => li.classList.contains("paint-row"));
+
 const nameOf = (ref: unknown) => getFunctionName(ref as FunctionReference<"query" | "mutation">);
 
 const defaultUseMutation = vi.mocked(useMutation).getMockImplementation();
@@ -68,6 +88,8 @@ function signIn() {
 }
 
 const selectionBar = () => screen.getByRole("region", { name: "Selection" });
+const selectionBarSkippingVisibility = () =>
+  screen.getByRole("region", { name: "Selection", hidden: true });
 
 const rowLinks = () => rows().flatMap((row) => within(row).queryAllByRole("link"));
 
@@ -126,15 +148,17 @@ describe("PaintsScreen", () => {
     renderRoute("/paints");
 
     await screen.findByText("Blood Red");
-    expect(rows()).toHaveLength(60);
+    expect(rowsSkippingVisibility()).toHaveLength(60);
     act(() => triggerIntersection());
-    expect(rows()).toHaveLength(100);
+    expect(rowsSkippingVisibility()).toHaveLength(100);
 
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzzqq" } });
+    fireEvent.change(screen.getByRole("searchbox", { hidden: true }), {
+      target: { value: "zzzzqq" },
+    });
     expect(await screen.findByText("No paints match")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
-    await vi.waitFor(() => expect(rows()).toHaveLength(60));
-    expect(screen.getByRole("searchbox")).toHaveValue("");
+    await vi.waitFor(() => expect(rowsSkippingVisibility()).toHaveLength(60));
+    expect(screen.getByRole("searchbox", { hidden: true })).toHaveValue("");
   });
 
   it("restores the query from the URL", async () => {
@@ -264,6 +288,27 @@ describe("PaintsScreen", () => {
       ).toHaveLength(0);
     });
 
+    it("leaving the screen drops the ticks", async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
+      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
+
+      cleanup();
+      renderRoute("/paints");
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+
+      expect(within(selectionBar()).getByText("0 selected")).toBeInTheDocument();
+      for (const box of screen.getAllByRole("checkbox", { name: /^Select / })) {
+        expect(box).not.toBeChecked();
+      }
+    });
     it("select mode re-renders only the ticked row", async () => {
       const [mephiston, macragge, darkBlue, bloodRed] = NAMED;
       serve(catalogOf(NAMED));
@@ -287,9 +332,23 @@ describe("PaintsScreen", () => {
       }).toEqual({ [mephiston.id]: 0, [darkBlue.id]: 0, [bloodRed.id]: 0 });
     });
 
-    // 201 rows and 200 ticks: the screen still re-renders per tick, which runs past 5 s in the full
-    // parallel suite; drop this timeout once #29 fixes that.
-    it("select mode caps the selection at 200", { timeout: 15_000 }, async () => {
+    it("ticking a paint doesn't re-render the filters", async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      expect(screen.getAllByRole("checkbox", { name: /^Select / })).toHaveLength(4);
+      const before = filtersRenders.count;
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
+
+      expect(screen.getByRole("checkbox", { name: "Select Macragge Blue" })).toBeChecked();
+      expect(filtersRenders.count - before).toBe(0);
+    });
+
+    it("select mode caps the selection at 200", async () => {
       const many = Array.from({ length: 201 }, (_, i) =>
         catalogPaint({
           brandId: "army-painter",
@@ -302,28 +361,34 @@ describe("PaintsScreen", () => {
       renderRoute("/paints");
 
       await screen.findByText("Grey 000");
-      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette", hidden: true }));
       for (let page = 0; page < 3; page++) act(() => triggerIntersection());
-      await vi.waitFor(() => expect(rows()).toHaveLength(201));
+      await vi.waitFor(() => expect(rowsSkippingVisibility()).toHaveLength(201));
 
-      const boxes = screen.getAllByRole("checkbox", { name: /^Select / });
+      const boxes = screen.getAllByLabelText<HTMLInputElement>(/^Select /);
       for (const box of boxes.slice(0, 200)) fireEvent.click(box);
 
-      expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
       expect(
-        within(selectionBar()).getByText("You can add up to 200 paints at once."),
+        within(selectionBarSkippingVisibility()).getByText("200 selected"),
+      ).toBeInTheDocument();
+      expect(
+        within(selectionBarSkippingVisibility()).getByText("You can add up to 200 paints at once."),
       ).toBeInTheDocument();
       const last = boxes[200];
       expect(last).not.toBeChecked();
       expect(last).toBeDisabled();
       fireEvent.click(last);
       expect(last).not.toBeChecked();
-      expect(within(selectionBar()).getByText("200 selected")).toBeInTheDocument();
+      expect(
+        within(selectionBarSkippingVisibility()).getByText("200 selected"),
+      ).toBeInTheDocument();
       expect(boxes[0]).toBeChecked();
       expect(boxes[0]).toBeEnabled();
 
       fireEvent.click(boxes[0]);
-      expect(within(selectionBar()).getByText("199 selected")).toBeInTheDocument();
+      expect(
+        within(selectionBarSkippingVisibility()).getByText("199 selected"),
+      ).toBeInTheDocument();
       expect(last).toBeEnabled();
     });
 
