@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createSelection, useAtCap, useTicked } from "./selection-store";
 
@@ -14,6 +14,18 @@ describe("selection store", () => {
 
     expect(selection.ids()).toEqual(["a", "c"]);
     expect(selection.count()).toBe(2);
+  });
+
+  it("stops calling a listener after it unsubscribes", () => {
+    const selection = createSelection(10);
+    const listener = vi.fn();
+
+    const unsubscribe = selection.subscribe(listener);
+    selection.toggle("a");
+    unsubscribe();
+    selection.toggle("b");
+
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("ignores a tick past the cap", () => {

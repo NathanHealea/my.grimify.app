@@ -288,6 +288,27 @@ describe("PaintsScreen", () => {
       ).toHaveLength(0);
     });
 
+    it("leaving the screen drops the ticks", async () => {
+      serve(catalogOf(NAMED));
+      signIn();
+      renderRoute("/paints");
+
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
+      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
+
+      cleanup();
+      renderRoute("/paints");
+      await screen.findByText("Blood Red");
+      fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
+
+      expect(within(selectionBar()).getByText("0 selected")).toBeInTheDocument();
+      for (const box of screen.getAllByRole("checkbox", { name: /^Select / })) {
+        expect(box).not.toBeChecked();
+      }
+    });
     it("select mode re-renders only the ticked row", async () => {
       const [mephiston, macragge, darkBlue, bloodRed] = NAMED;
       serve(catalogOf(NAMED));
