@@ -1319,7 +1319,7 @@ Trade-off: the deployment holds `CLERK_SECRET_KEY`, which can read and change ev
 ## Decision 060 — Serve the app from my.grimify.app so grimify.app can host the marketing site
 
 Date: 2026-10-19
-Status: Accepted (work item `app-subdomain`); amends 044's domains
+Status: Accepted (work item `app-subdomain`); amends 044's domains and Worker names
 
 Context:
 The owner wants grimify.app to be a marketing site, built in its own repo (`NathanHealea/grimify.app`). The app served grimify.app, dev.grimify.app and stage.grimify.app, each also on `www.` (044). The GitHub repository was renamed from `NathanHealea/v2.grimify.app` to `NathanHealea/my.grimify.app`, and the old Supabase app's checkout moved to `../old.grimify.app`.
@@ -1327,8 +1327,9 @@ The owner wants grimify.app to be a marketing site, built in its own repo (`Nath
 Decision:
 - Production serves `my.grimify.app`. Dev and stage serve `dev.my.grimify.app` and `stage.my.grimify.app`. All are custom-domain routes in `wrangler.json`.
 - The new names have no `www.` variant. Nobody types `www.dev.my.grimify.app`, and one name per site keeps one origin for sign-in, storage and the installed app.
-- Production keeps `grimify.app` and `www.grimify.app` until the marketing site's cutover. Removing them now would leave grimify.app serving nothing and break installed apps, whose `start_url` is `/paints` on grimify.app. The cutover, in the marketing repo, ships a self-unregistering `sw.js` and redirects app paths to my.grimify.app before this Worker drops those routes.
-- The Workers keep their names (`v2-grimify-app`, `-dev`, `-stage`). A new top-level name makes `wrangler deploy` create a second Worker.
+- The Workers are renamed to match the repository: `my-grimify-app`, `my-grimify-app-dev` and `my-grimify-app-stage` (owner's change, 2026-10-20). The new names make `wrangler deploy` create new Workers rather than rename the old ones.
+- `grimify.app` and `www.grimify.app` stay on the old `v2-grimify-app` Worker, frozen at its last deploy, until the marketing site's cutover. Taking them away now would leave grimify.app serving nothing and break installed apps, whose `start_url` is `/paints` on grimify.app. The cutover, in the marketing repo, ships a self-unregistering `sw.js` and redirects app paths to my.grimify.app before `v2-grimify-app` is deleted.
+- The old dev and stage Workers are deleted by hand once the new sites are checked (ENVIRONMENT.md § Cloudflare Workers).
 - Clerk stays on `clerk.grimify.app`. Every new name is a subdomain of grimify.app, so the production instance and the CSP are unchanged.
 
 Alternatives:
@@ -1337,4 +1338,4 @@ Alternatives:
 
 Consequences:
 Positive: the apex is free for marketing without a gap in service; the app's sites share one parent name.
-Trade-off: until the cutover, production answers on two origins. Local state, the service worker and installs don't carry between my.grimify.app and grimify.app; signed-in data lives in Convex, so collections and palettes match on both. Deleting the account or signing out clears the device record only on the origin where it runs, so the other origin's cached collection can still show offline (SECURITY.md § Deletion). The cutover must clear the grimify.app origin's storage. The old service worker answers page loads from its cache, so the clear has to arrive another way, such as the service worker's own update fetch; the cutover work item picks and verifies the mechanism. It accepts the loss of any outbox entries that never synced there. The old dev and stage names stop resolving on their next deploy.
+Trade-off: until the cutover, the app answers on two origins, and grimify.app runs the last pre-rename release, so it gets no fixes. Local state, the service worker and installs don't carry between my.grimify.app and grimify.app; signed-in data lives in Convex, so collections and palettes match on both. Deleting the account or signing out clears the device record only on the origin where it runs, so the other origin's cached collection can still show offline (SECURITY.md § Deletion). The cutover must clear the grimify.app origin's storage. The old service worker answers page loads from its cache, so the clear has to arrive another way, such as the service worker's own update fetch; the cutover work item picks and verifies the mechanism. It accepts the loss of any outbox entries that never synced there. The old dev and stage names keep resolving until their Workers are deleted.

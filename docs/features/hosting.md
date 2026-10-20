@@ -9,7 +9,7 @@
 - **One command per environment**: `npm run deploy:dev`, `deploy:stage`, `deploy:prod`. Each runs **only from its own branch**: `dev`, `stage`, `main`.
 - A deploy **pushes Convex first**, then **checks that the built CSP names the right Convex host**, then uploads to Cloudflare.
 - `public/_headers` holds the **CSP** and security headers. The build fills in **`{{CONVEX_HOST}}`** per environment.
-- Sites: **`my.grimify.app`**, **`dev.my.grimify.app`**, **`stage.my.grimify.app`**. Production also keeps **`grimify.app`** until the marketing cutover (DECISIONS 060); `www.grimify.app` redirects to it.
+- Sites: **`my.grimify.app`**, **`dev.my.grimify.app`**, **`stage.my.grimify.app`**. The retired Worker `v2-grimify-app` keeps serving **`grimify.app`**, frozen at its last deploy, until the marketing cutover (DECISIONS 060); `www.grimify.app` redirects to it.
 
 ## Where the code lives
 
@@ -25,9 +25,9 @@
 
 | Env | Branch | Worker | Domains | Convex deployment |
 |---|---|---|---|---|
-| `dev` | `dev` | `v2-grimify-app-dev` | `dev.my.grimify.app` | `sensible-buffalo-782` |
-| `stage` | `stage` | `v2-grimify-app-stage` | `stage.my.grimify.app` | `notable-ferret-719` |
-| `prod` | `main` | `v2-grimify-app` | `my.grimify.app`, `grimify.app`, `www.grimify.app` | `nautical-toucan-398` |
+| `dev` | `dev` | `my-grimify-app-dev` | `dev.my.grimify.app` | `sensible-buffalo-782` |
+| `stage` | `stage` | `my-grimify-app-stage` | `stage.my.grimify.app` | `notable-ferret-719` |
+| `prod` | `main` | `my-grimify-app` | `my.grimify.app` | `nautical-toucan-398` |
 
 ## What a deploy checks first
 

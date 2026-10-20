@@ -73,11 +73,11 @@ CLERK_SECRET_KEY=             # sk_test_… from the Clerk dev instance; Playwri
 | Environment | Branch | Site | Cloudflare Worker | Convex deployment | Clerk |
 |---|---|---|---|---|---|
 | Local | any | `npm run dev` (localhost:5173) | none | personal dev deployment (`npx convex dev`) | dev instance |
-| Dev | `dev` | `https://dev.my.grimify.app` | `v2-grimify-app-dev` | `develop` (name recorded in `scripts/deploy.ts`) | production instance |
-| Stage | `stage` | `https://stage.my.grimify.app` | `v2-grimify-app-stage` | `stage` (name recorded in `scripts/deploy.ts`) | production instance |
-| Production | `main` | `https://my.grimify.app` (and `https://grimify.app` until the marketing cutover) | `v2-grimify-app` | `nautical-toucan-398` | production instance |
+| Dev | `dev` | `https://dev.my.grimify.app` | `my-grimify-app-dev` | `develop` (name recorded in `scripts/deploy.ts`) | production instance |
+| Stage | `stage` | `https://stage.my.grimify.app` | `my-grimify-app-stage` | `stage` (name recorded in `scripts/deploy.ts`) | production instance |
+| Production | `main` | `https://my.grimify.app` | `my-grimify-app` | `nautical-toucan-398` | production instance |
 
-Production also answers on `grimify.app` until the marketing site takes the apex (DECISIONS 060). `www.grimify.app` is routed to the Worker too, but a Cloudflare redirect rule sends it to `grimify.app` first. The `my.` names have no `www.` variant. Declare every domain in `wrangler.json`'s `routes`: a deploy removes custom domains that aren't listed, as the first scripted production deploy did to `www.grimify.app`, which had been attached only in the Cloudflare dashboard. Each custom domain gets its own certificate, so the two-level names (`dev.my.grimify.app`) are covered.
+The retired Worker `v2-grimify-app` keeps serving `grimify.app`, frozen at its last deploy, until the marketing cutover (DECISIONS 060). `www.grimify.app` is routed to it too, but a Cloudflare redirect rule sends it to `grimify.app` first. The `my.` names have no `www.` variant. Declare every domain in `wrangler.json`'s `routes`: a deploy removes custom domains that aren't listed, as the first scripted production deploy did to `www.grimify.app`, which had been attached only in the Cloudflare dashboard. Each custom domain gets its own certificate, so the two-level names (`dev.my.grimify.app`) are covered.
 
 Dev and stage sign in with real production accounts (Clerk allows this on subdomains of the production domain), but keep their own collections: nothing they write reaches production data. Every environment shows the live catalog, because the catalog is built into the app. Signing in on one `*.grimify.app` site, including the `my.` ones, signs you in on all of them. **Delete account on dev or stage deletes the real account.**
 
@@ -132,7 +132,17 @@ Never put `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` in `.env.local`: Wra
 
 ### Cloudflare Workers
 
-`wrangler.json` defines all three. Production is the top level; `env.dev` and `env.stage` become the Workers `v2-grimify-app-dev` and `v2-grimify-app-stage`. Each serves `./dist` with the single-page-app fallback and declares its domain as a custom domain. The top-level `name` must stay `v2-grimify-app`; another name makes `wrangler deploy` create a new Worker without the domain. Production's sites are `my.grimify.app` and, until the marketing cutover, `grimify.app`. `www.grimify.app` redirects to the apex with a Cloudflare redirect rule rather than serving the app.
+`wrangler.json` defines all three. Production is the top level; `env.dev` and `env.stage` become the Workers `my-grimify-app-dev` and `my-grimify-app-stage`. Each serves `./dist` with the single-page-app fallback and declares its domain as a custom domain. The top-level `name` must stay `my-grimify-app`; another name makes `wrangler deploy` create a new Worker without the domain. `www.grimify.app` redirects to the apex with a Cloudflare redirect rule rather than serving the app.
+
+**Retiring the old Workers.** Until 0.21.2 the Workers were `v2-grimify-app`, `-dev` and `-stage` (DECISIONS 044). Renaming them created new Workers, so the old ones still serve `grimify.app`, `dev.grimify.app`, `stage.grimify.app` and their `www.` names. Once the new sites are checked, delete the old dev and stage Workers, which also removes their domains and DNS records. This can't be undone:
+
+```bash
+npx --no wrangler delete v2-grimify-app-dev --dry-run   # shows what would go; drop --dry-run to delete
+npx --no wrangler delete v2-grimify-app-dev
+npx --no wrangler delete v2-grimify-app-stage
+```
+
+Leave `v2-grimify-app` until the marketing cutover, which moves `grimify.app` to the marketing site.
 
 ### Convex
 
