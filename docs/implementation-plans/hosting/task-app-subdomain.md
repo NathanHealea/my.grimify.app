@@ -1,7 +1,7 @@
 ---
 type: task
 slug: app-subdomain
-status: staged
+status: released
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
@@ -10,7 +10,7 @@ commit_type:         # optional override for the merge commit type (default: sto
 version: 0.21.2
 review_approved: 2026-10-20
 pr:                  # set by `wi pr`
-tag:                 # set by `wi release`; the tag sits on the merge commit
+tag: v0.21.2
 ---
 
 # Serve the app from my.grimify.app
@@ -142,3 +142,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-20 — Steps 7-8 done; rebased onto the owner's wrangler.json commit 71a6d26 (same content, Prettier wrapping kept). Self-reviewed: config/tests/doc changes only; the earlier review cycles covered the rest.
 - 2026-10-20 — Staged: verification passed; version 0.21.1 → 0.21.2; no changelog file.
 - 2026-10-20 — Review approved.
+- 2026-10-20 — Released 0.21.2 as v0.21.2.
