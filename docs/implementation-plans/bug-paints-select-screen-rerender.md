@@ -94,7 +94,7 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 | T1 | R1 | `ticking a paint doesn't re-render the search form or the filters` | `src/features/catalog/paints-screen.test.tsx` | with `<PaintsFilters>` wrapped in a render counter (like `PaintRow`), ticking one row adds 0 `PaintsFilters` renders. Fails on current code |
 | T2 | R1 | existing `ticking a paint re-renders only that row` | `src/features/catalog/paints-screen.test.tsx` | unchanged; still passes |
 | T3 | R2 | every existing Select mode test | `src/features/catalog/paints-screen.test.tsx` | unchanged assertions pass |
-| T4 | R3 | `select mode caps the selection at 200`, `renders 60 rows, then more, and an empty state` | `src/features/catalog/paints-screen.test.tsx` | `{ timeout: 15_000 }` and both comments removed; pass under the 5 s default |
+| T4 | R3 | `select mode caps the selection at 200`, `renders 60 rows, then more, and an empty state` | `src/features/catalog/paints-screen.test.tsx` | assertions unchanged; cheaper queries; `{ timeout: 15_000 }` and both comments removed; pass under the 5 s default in three consecutive full runs |
 | T5 | R4 | `keeps ticks in order and toggles off` | `src/features/catalog/selection-store.test.ts` | toggle a, b, c, then b: `ids()` is [a, c]; `count()` is 2 |
 | T6 | R4 | `ignores a tick past the cap` | `src/features/catalog/selection-store.test.ts` | with max 2, ticking a third ID leaves [a, b]; unticking still works |
 | T7 | R4 | `notifies only the rows whose answer changed` | `src/features/catalog/selection-store.test.ts` | via `renderHook`, toggling b re-renders the `useTicked(b)` hook and not `useTicked(a)`; `useAtCap` changes only on reaching or leaving the cap |
@@ -104,10 +104,10 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 
 ## Implementation plan
 
-1. [ ] Add the selection store and its hooks (`useTicked(id)`, `useSelectedIds()`, `useAtCap()`) with unit tests — touches `src/features/catalog/selection-store.ts`, `src/features/catalog/selection-store.test.ts` — tests T5, T6, T7, T8
-2. [ ] Wire `PaintsSearch`, `ResultRow` and `<SelectionBar>` to the store. Keep only `selecting` in screen state, give `<LoadMore>` a stable `onVisible`, and add the Filters render-count test — touches `src/features/catalog/paints-screen.tsx`, `src/features/catalog/selection-bar.tsx`, `src/features/catalog/paints-screen.test.tsx` — tests T1, T2, T3
-3. [ ] Remove both explicit timeouts and their comments — touches `src/features/catalog/paints-screen.test.tsx` — tests T4
-4. [ ] Update Select mode's docs on where the ticked IDs live — touches `docs/features/catalog/search-and-filters.md`, `docs/features/palettes.md` — tests none (docs only)
+1. [x] Add the selection store and its hooks (`useTicked(id)`, `useSelectedIds()`, `useAtCap()`) with unit tests — touches `src/features/catalog/selection-store.ts`, `src/features/catalog/selection-store.test.ts` — tests T5, T6, T7, T8
+2. [x] Wire `PaintsSearch`, `ResultRow` and `<SelectionBar>` to the store. Keep only `selecting` in screen state, give `<LoadMore>` a stable `onVisible`, and add the Filters render-count test — touches `src/features/catalog/paints-screen.tsx`, `src/features/catalog/selection-bar.tsx`, `src/features/catalog/paints-screen.test.tsx` — tests T1, T2, T3
+3. [x] In the two slow tests, swap testing-library role queries that run its accessibility check over the whole page for equivalents that check the same thing (`getAllByLabelText` for the checkboxes, `hidden: true` where another test already covers visibility), then remove both explicit timeouts and their comments — touches `src/features/catalog/paints-screen.test.tsx` — tests T4
+4. [x] Update Select mode's docs on where the ticked IDs live — touches `docs/features/catalog/search-and-filters.md`, `docs/features/palettes.md` — tests none (docs only)
 
 **Must not change:**
 - `<PaintRow>`'s props and default rendering (paint detail uses it).
@@ -119,6 +119,7 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 
 ## Risks and open questions
 
+- **Revised 2026-10-19 (owner-approved):** step 2's profile showed the two tests' time is mostly testing-library role queries, not ticks. `getByRole` for a button took 661 ms against 56 ms with `hidden: true`, and `getAllByRole` for the checkboxes took 350 ms against 49 ms for `getAllByLabelText`. The paging test never enters Select mode. Step 3 now swaps those queries in the two tests. The global `defaultHidden` setting was rejected because it weakens accessibility checks suite-wide.
 - **Decided: drop `task-paints-paging-test-timeout`.** It's staged and accepted but unreleased, and its one change (a 15 s timeout) is what step 3 removes. Dropping it deletes its local branch and worktree, which were never pushed. I'll confirm before deleting.
 - **Risk: the gain may fall short of 5 s under load.** The floor is 0.35 ms per click, plus one row and the bar. If the cap test still runs long, profile again before adding any timeout back.
 - **Risk: one store per screen instance.** The store must be created per `PaintsSearch` mount (`useState(() => createSelection())`), not at module level, so Paints and My Paints never share ticks and leaving the screen drops them (R2).
@@ -129,3 +130,7 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 - 2026-10-19 — Planned.
 - 2026-10-19 — Plan approved.
 - 2026-10-19 — Started on branch bug/paints-select-screen-rerender from origin/dev.
+- 2026-10-19 — Step 1: the store was written alongside its tests rather than after them, so red wasn't shown directly; the test-engineer showed the tests fail on a missing module and on five broken stores (no cap, no untick, wide useTicked, count-based useAtCap, no-op clear).
+- 2026-10-19 — Step 2 implemented (uncommitted). Ticks now ~4.4 ms (was 8-10). Phase profile of the cap test: getByRole button 661 ms vs 56 ms with hidden:true; getAllByRole checkboxes 350 ms vs getAllByLabelText 49 ms. Test time is dominated by testing-library role-query accessibility checks over large DOMs, not ticks; the paging test never enters select mode. R3 can't be met by the store alone. Stopped to ask.
+- 2026-10-19 — Plan revised (owner-approved): step 3 swaps the slow role queries in the two tests before removing the timeouts.
+- 2026-10-19 — Step 3: three consecutive full npm run check runs passed (546/546). In full-suite vitest runs the paging test took ~1.9 s and the cap test 2.7-3.0 s against the 5 s default. Also replaced step 2's two-component row with one memoized row: switching component types remounted every row on entering Select mode.
