@@ -8,7 +8,7 @@ created: 2026-10-19
 approved: 2026-10-19
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.21.2
-review_approved: 2026-10-19
+review_approved: 2026-10-20
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -141,3 +141,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-20 — Plan revised (owner change, 2026-10-20): Workers renamed to my-grimify-app(-dev, -stage); the new production Worker serves my.grimify.app only, and grimify.app stays on the old v2-grimify-app Worker until the cutover. Steps 7 and 8 added.
 - 2026-10-20 — Steps 7-8 done; rebased onto the owner's wrangler.json commit 71a6d26 (same content, Prettier wrapping kept). Self-reviewed: config/tests/doc changes only; the earlier review cycles covered the rest.
 - 2026-10-20 — Staged: verification passed; version 0.21.1 → 0.21.2; no changelog file.
+- 2026-10-20 — Review approved.
