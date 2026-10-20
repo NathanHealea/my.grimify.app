@@ -1,7 +1,7 @@
 ---
 type: task
 slug: app-subdomain
-status: staged
+status: changes-requested
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
@@ -131,3 +131,4 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-19 — Review: fixed Prettier shape, www.grimify.app wording, old-name deploy warning, two-origin device-record gap, sign-out qualifier, cutover storage-clear wording, and dev/stage Convex pins in T2. Left: deploy log line untested (pre-existing), no cross-check between ENVIRONMENTS domains and wrangler routes, marketing site inside the Clerk same-site boundary (for the cutover item).
 - 2026-10-19 — Staged: verification passed; version 0.21.0 → 0.21.1; no changelog file.
 - 2026-10-19 — Review approved.
+- 2026-10-20 — Changes requested: Re-stage on top of v0.21.1 (paints-select-screen-rerender), which took the 0.21.1 version; no code changes requested.
