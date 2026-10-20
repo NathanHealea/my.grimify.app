@@ -36,7 +36,7 @@
 | `src/features/palettes/palette-name-sheet.tsx` | `<PaletteNameSheet>` for creating and renaming palettes and creating groups (`kind`); exports `OFFLINE_EDIT_NOTE` |
 | `src/features/palettes/add-to-palette-sheet.tsx` | `<AddToPaletteSheet>`: the picker; adds `paintIds` to a chosen or new palette |
 | `src/features/catalog/paint-detail.tsx` | `AddToPalette`: the "Add to palette" button on a paint's page |
-| `src/features/catalog/paints-screen.tsx` | Select mode: the Add to palette button beside the count and the ticked IDs |
+| `src/features/catalog/paints-screen.tsx` | Select mode: the Add to palette button beside the count; the ticked IDs live in `selection-store.ts` |
 | `src/features/catalog/selection-bar.tsx` | `<SelectionBar>`: "n selected", Add to palette, Done |
 | `src/components/paint-row.tsx` | `selection` prop: the row as a checkbox label |
 | `src/features/palettes/use-paint-lookup.ts` | `usePaintLookup()`: paint ID → catalog paint for preview swatches |

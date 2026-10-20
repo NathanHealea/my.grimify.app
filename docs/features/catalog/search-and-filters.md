@@ -19,6 +19,7 @@
 | `src/routes/paints/index.tsx` | Route `/paints/`; validates search params with Zod; turns changes into navigation |
 | `src/features/catalog/paints-screen.tsx` | `<PaintsScreen>`: search box, chips, hue dots, result list, paging |
 | `src/features/catalog/paints-filters.tsx` | `<PaintsFilters>`: the Filters bottom sheet |
+| `src/features/catalog/selection-store.ts` | `createSelection`: Select mode's ticked IDs in tick order, with `useTicked`, `useAtCap` and `useSelectedIds` |
 | `src/features/catalog/selection-bar.tsx` | `<SelectionBar>`: Select mode's bar; opens the [palette picker](../palettes.md) |
 | `src/features/catalog/parse-query.ts` | `parseQuery`, `removeToken`, `suggest`, `hueLabel` |
 | `src/features/catalog/search.ts` | `createNameIndex` (Fuse.js), `searchPaints` |
@@ -78,7 +79,7 @@ The sheet edits a **draft**. **"Show N paints" commits it**, and the count is li
 ## Select mode
 
 - **Add to palette** (the button that starts Select mode) sits beside the result count, **only when signed in** (`useUser().isSignedIn`). Palettes need an account.
-- Ticked IDs live in component state (`selected: string[] | null`, `null` = off), **not in the URL**. Search and filter changes keep them; leaving the screen drops them.
+- Ticked IDs live in a **per-screen store** (`createSelection` in `selection-store.ts`), **not in React state or the URL**. The screen keeps only whether it's selecting. Each row reads its own tick with `useTicked` and the cap with `useAtCap`; the bar reads the IDs with `useSelectedIds`. So a tick re-renders one row and the bar, not the screen (#29). Search and filter changes keep the ticks; Done, a successful add and leaving the screen drop them.
 - While selecting, `<PaintRow>` gets `selection` instead of the link and toggles: the row is a `<label>` for a checkbox named **"Select <name>"**, so a tap anywhere on it ticks.
 - Order is **tick order**; that's the order paints are added. At **200** ticks (`MAX_SELECTED`, the palette cap) the unticked boxes are disabled.
 - `<SelectionBar>` (a `section` named "Selection") shows **"n selected"** in a `status` region, **Add to palette** (disabled at 0 or offline, with the offline note) and **Done**. A successful add or Done turns the mode off.
@@ -88,6 +89,7 @@ The sheet edits a **draft**. **"Show N paints" commits it**, and the count is li
 
 - **New search syntax** goes in `parseQuery`. Add a `QueryToken` kind so it gets a chip.
 - **Select mode must leave the default row alone**: without `selection`, `<PaintRow>` renders exactly as before (link plus `actions`).
+- **Rows subscribe narrowly.** A row hook must return a value that only its own paint's tick changes, such as a boolean. Reading the whole ID list in a row brings back a re-render of every row on every tick.
 - **New filter**: add it to `Filters`, `FilterParams`, `parseFilterParams`, `serializeFilters`, `countActive` and `matchesFilters`, **and** to the route's Zod `searchSchema` in both `routes/paints/index.tsx` and `routes/my-paints.tsx`.
 - Tests sit next to each file: `parse-query.test.ts`, `search.test.ts`, `filters.test.ts`, `paints-screen.test.tsx` (Select mode included), `paints-filters.test.tsx`.
 
