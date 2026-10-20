@@ -1,7 +1,7 @@
 ---
 type: task
 slug: app-subdomain
-status: changes-requested
+status: in-progress
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
@@ -64,8 +64,8 @@ Facts this plan relies on:
 
 ## Requirements
 
-- **R1** — Production serves the app on `my.grimify.app`, and still on `grimify.app` and `www.grimify.app`.
-- **R2** — Dev serves the app on `dev.my.grimify.app` only. Stage serves it on `stage.my.grimify.app` only. Neither keeps its old `*.grimify.app` names.
+- **R1** — Production serves the app on `my.grimify.app` from the Worker `my-grimify-app`. ~~It also keeps `grimify.app` and `www.grimify.app`~~ (owner change, 2026-10-20: those stay on the old `v2-grimify-app` Worker, frozen, until the marketing cutover).
+- **R2** — Dev serves the app on `dev.my.grimify.app` only, from `my-grimify-app-dev`. Stage serves it on `stage.my.grimify.app` only, from `my-grimify-app-stage`. The old names stay on the old Workers until those are deleted.
 - **R3** — `npm run deploy:<env>` prints the environment's app domain: `dev.my.grimify.app`, `stage.my.grimify.app`, `my.grimify.app`.
 - **R4** — Sign-in still works on all three new domains, with the production Clerk instance and an unchanged CSP.
 - **R5** — The docs name the new domains wherever they name an environment's site. The repo name `NathanHealea/my.grimify.app` replaces `NathanHealea/v2.grimify.app` in CLAUDE.md and DECISIONS 026. The old app's folder is given as `../old.grimify.app` wherever the docs give it. DECISIONS 060 records the move.
@@ -84,8 +84,8 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 
 | ID | Covers | Test | File | Asserts |
 |----|--------|------|------|---------|
-| T1 | R1, R2 | `wrangler.json deploys three assets-only Workers on their domains` (updated) | `scripts/static-files.test.ts` | top-level `routes` equal exactly `my.grimify.app`, `grimify.app`, `www.grimify.app` (all `custom_domain: true`). `env.dev.routes` equals exactly `[dev.my.grimify.app]`, and `env.stage.routes` equals exactly `[stage.my.grimify.app]`. Names, assets and no-`main` checks unchanged |
-| T2 | R3 | `maps each environment to its branch, Worker, domain and wrangler env` (updated) | `scripts/deploy.test.ts` | `domain` is `dev.my.grimify.app`, `stage.my.grimify.app`, `my.grimify.app`; Workers and Convex deployments unchanged |
+| T1 | R1, R2 | `wrangler.json deploys three assets-only Workers on their domains` (updated) | `scripts/static-files.test.ts` | top-level `name` is `my-grimify-app`; top-level `routes` equal exactly `my.grimify.app` (`custom_domain: true`). `env.dev.routes` equals exactly `[dev.my.grimify.app]`, and `env.stage.routes` equals exactly `[stage.my.grimify.app]`. Names, assets and no-`main` checks unchanged |
+| T2 | R3 | `maps each environment to its branch, Worker, domain and wrangler env` (updated) | `scripts/deploy.test.ts` | `domain` is `dev.my.grimify.app`, `stage.my.grimify.app`, `my.grimify.app`; Workers are `my-grimify-app-dev`, `my-grimify-app-stage`, `my-grimify-app`; Convex deployments unchanged |
 | T3 | R4 | existing CSP tests, unchanged | `scripts/static-files.test.ts`, `scripts/csp-headers.test.ts` | still pass with no edit, proving the Clerk origins didn't move |
 
 **Not unit testable:**
@@ -100,16 +100,18 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 4. [x] Update the environment tables and site names in the deploy docs: the `www.` paragraph, the Clerk note and the Cloudflare Workers section — touches `docs/ENVIRONMENT.md`, `docs/DEPLOYMENT.md`, `docs/features/hosting.md` — tests none (docs only)
 5. [x] Update the remaining site names — touches `docs/SECURITY.md`, `docs/TESTING.md`, `docs/SYSTEM_MAP.md`, `docs/ROADMAP.md` — tests none (docs only)
 6. [x] Point the legacy-import docs at `../old.grimify.app` — touches `docs/ENVIRONMENT.md`, `docs/features/legacy-import.md` — tests none (docs only)
+7. [x] Owner change: rename the Workers to `my-grimify-app`, `my-grimify-app-dev` and `my-grimify-app-stage`, and serve production on `my.grimify.app` only. The old `v2-grimify-app` Worker keeps serving `grimify.app`, frozen at its last deploy, until the marketing cutover — touches `wrangler.json`, `scripts/deploy.ts`, `scripts/static-files.test.ts`, `scripts/deploy.test.ts` — tests T1, T2
+8. [x] Docs for the rename: the environment tables, the Workers section, DECISIONS 060, and the steps to retire the old Workers — touches `docs/ENVIRONMENT.md`, `docs/DEPLOYMENT.md`, `docs/features/hosting.md`, `docs/SYSTEM_MAP.md`, `docs/DECISIONS.md` — tests none (docs only)
 
 **Must not change:**
-- **Worker names:** `v2-grimify-app`, `v2-grimify-app-dev`, `v2-grimify-app-stage`.
+- ~~**Worker names**~~ (owner change, 2026-10-20: renamed in step 7).
 - **Convex deployments** and their names.
 - **Clerk origins:** `clerk.grimify.app` in `public/_headers`.
 - **The PWA manifest:** `start_url`, `scope`.
 - **Deploy checks** in `scripts/deploy.ts`.
 - **The service worker's behavior.**
 
-**High-risk steps:** Step 1, when deployed. `wrangler deploy` with the new `routes` deletes the DNS records and custom domains for `dev.grimify.app`, `www.dev.grimify.app`, `stage.grimify.app` and `www.stage.grimify.app`. `git revert` restores the config but not live state: getting those domains back means another deploy. Production loses nothing in this item. Deploy dev first and confirm sign-in before stage and prod.
+**High-risk steps:** Deploying step 7. The first deploy of each environment creates a new Worker and attaches its `my.` domain; the old Workers and their domains are left alone, so nothing is lost by deploying. Deleting the old Workers (`npx --no wrangler delete v2-grimify-app-dev`, then `v2-grimify-app-stage`) is irreversible: it removes `dev.grimify.app`, `stage.grimify.app` and their `www.` names. Do it only after the new sites are checked, and leave `v2-grimify-app` until the marketing cutover.
 
 ## Risks and open questions
 
@@ -135,3 +137,5 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-20 — Resumed to address requested changes.
 - 2026-10-20 — Staged: verification passed; version 0.21.1 → 0.21.2; no changelog file.
 - 2026-10-20 — Changes requested: Owner renamed the Workers to my-grimify-app (-dev, -stage) and dropped grimify.app/www.grimify.app from the new production Worker; the old v2-grimify-app Worker keeps serving grimify.app until the marketing cutover.
+- 2026-10-20 — Resumed to address requested changes.
+- 2026-10-20 — Plan revised (owner change, 2026-10-20): Workers renamed to my-grimify-app(-dev, -stage); the new production Worker serves my.grimify.app only, and grimify.app stays on the old v2-grimify-app Worker until the cutover. Steps 7 and 8 added.
