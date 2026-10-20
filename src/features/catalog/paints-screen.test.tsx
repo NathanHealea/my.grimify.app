@@ -381,9 +381,7 @@ describe("PaintsScreen", () => {
 
       expect(screen.getAllByRole("checkbox", { name: /^Select / })[0]).toHaveFocus();
 
-      fireEvent.click(
-        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Done" }),
-      );
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
 
       expect(screen.getByRole("button", { name: "Add to palette" })).toHaveFocus();
     });
@@ -397,9 +395,7 @@ describe("PaintsScreen", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzzqq" } });
       await screen.findByText("No paints match");
-      fireEvent.click(
-        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Done" }),
-      );
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Done" }));
 
       expect(screen.getByRole("searchbox", { name: "Search paints" })).toHaveFocus();
     });
@@ -435,11 +431,9 @@ describe("PaintsScreen", () => {
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Mephiston Red" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Macragge Blue" }));
-      expect(within(selectionBarSkippingVisibility()).getByText("3 selected")).toBeInTheDocument();
+      expect(within(selectionBar()).getByText("3 selected")).toBeInTheDocument();
 
-      fireEvent.click(
-        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Add to palette" }),
-      );
+      fireEvent.click(within(selectionBar()).getByRole("button", { name: "Add to palette" }));
       const picker = screen.getByRole("dialog", { name: "Add to palette" });
       fireEvent.click(within(picker).getByRole("button", { name: /^Ultramarines/ }));
 
@@ -462,21 +456,17 @@ describe("PaintsScreen", () => {
       await screen.findByText("Blood Red");
       fireEvent.click(screen.getByRole("button", { name: "Add to palette" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Blood Red" }));
-      expect(
-        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Add to palette" }),
-      ).toBeEnabled();
+      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeEnabled();
 
       onLine.mockReturnValue(false);
       act(() => void window.dispatchEvent(new Event("offline")));
 
-      expect(
-        within(selectionBarSkippingVisibility()).getByRole("button", { name: "Add to palette" }),
-      ).toBeDisabled();
+      expect(within(selectionBar()).getByRole("button", { name: "Add to palette" })).toBeDisabled();
       const note = screen.getByText("Connect to the internet to edit palettes.");
       expect(note.closest('[role="status"]')).not.toBeNull();
       fireEvent.click(screen.getByRole("checkbox", { name: "Select Dark Blue" }));
       expect(screen.getByRole("checkbox", { name: "Select Dark Blue" })).toBeChecked();
-      expect(within(selectionBarSkippingVisibility()).getByText("2 selected")).toBeInTheDocument();
+      expect(within(selectionBar()).getByText("2 selected")).toBeInTheDocument();
 
       cleanup();
       onLine.mockReturnValue(true);

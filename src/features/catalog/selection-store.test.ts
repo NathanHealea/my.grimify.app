@@ -29,7 +29,7 @@ describe("selection store", () => {
     expect(selection.ids()).toEqual(["b"]);
   });
 
-  it("notifies only the rows whose answer changed", () => {
+  it("re-renders only the hooks whose answer changed", () => {
     const selection = createSelection(2);
     const renders = { a: 0, b: 0, atCap: 0 };
     const rowA = renderHook(() => {
