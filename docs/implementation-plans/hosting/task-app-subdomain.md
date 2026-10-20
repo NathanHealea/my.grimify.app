@@ -1,7 +1,7 @@
 ---
 type: task
 slug: app-subdomain
-status: in-progress
+status: staged
 branch: task/app-subdomain
 worktree_path: /home/nathan/development/grimify/my.grimify.app-worktrees/task-app-subdomain
 created: 2026-10-19
@@ -139,3 +139,5 @@ Vitest, following the existing `scripts/static-files.test.ts` and `scripts/deplo
 - 2026-10-20 — Changes requested: Owner renamed the Workers to my-grimify-app (-dev, -stage) and dropped grimify.app/www.grimify.app from the new production Worker; the old v2-grimify-app Worker keeps serving grimify.app until the marketing cutover.
 - 2026-10-20 — Resumed to address requested changes.
 - 2026-10-20 — Plan revised (owner change, 2026-10-20): Workers renamed to my-grimify-app(-dev, -stage); the new production Worker serves my.grimify.app only, and grimify.app stays on the old v2-grimify-app Worker until the cutover. Steps 7 and 8 added.
+- 2026-10-20 — Steps 7-8 done; rebased onto the owner's wrangler.json commit 71a6d26 (same content, Prettier wrapping kept). Self-reviewed: config/tests/doc changes only; the earlier review cycles covered the rest.
+- 2026-10-20 — Staged: verification passed; version 0.21.1 → 0.21.2; no changelog file.
