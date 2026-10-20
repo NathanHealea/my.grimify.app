@@ -8,7 +8,7 @@ created: 2026-10-19
 approved: 2026-10-19
 commit_type:         # optional override for the merge commit type (default: story=feat, bug=fix, task=chore)
 version: 0.21.1
-review_approved:     # set by `wi accept`
+review_approved: 2026-10-20
 pr:                  # set by `wi pr`
 tag:                 # set by `wi release`; the tag sits on the merge commit
 ---
@@ -138,3 +138,4 @@ Vitest in jsdom, beside the code, following `paints-screen.test.tsx`. Render cou
 - 2026-10-19 — Review cycle 2: four later Select mode tests had picked up the hidden bar query by mistake; restored. T7 renamed; AC4 reworded to match T5/T7. Two review cycles done.
 - 2026-10-19 — Test audit: 14/20 mutants killed. Added tests for leaving the screen dropping ticks and for unsubscribe (both shown to catch their mutants). Left as notes: redundant clears in start/stop, LoadMore onVisible stability and ResultRow memo untested (performance only).
 - 2026-10-19 — Staged: verification passed; version 0.21.0 → 0.21.1; no changelog file.
+- 2026-10-20 — Review approved.
