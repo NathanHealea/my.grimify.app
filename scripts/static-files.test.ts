@@ -162,11 +162,11 @@ describe("wrangler.json", () => {
     });
   });
 
-  it("deploys assets only, as the v2-grimify-app Worker", () => {
+  it("deploys assets only, as the my-grimify-app Worker", () => {
     const config = readWrangler();
 
     expect(config).not.toHaveProperty("main");
-    expect(config.name).toBe("v2-grimify-app");
+    expect(config.name).toBe("my-grimify-app");
     expect(config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(Object.keys(config).sort()).toEqual([
       "assets",
@@ -185,13 +185,9 @@ describe("wrangler.json", () => {
     const config = readWrangler();
     const spaAssets = { directory: "./dist", not_found_handling: "single-page-application" };
 
-    expect(config.name).toBe("v2-grimify-app");
+    expect(config.name).toBe("my-grimify-app");
     expect(config).not.toHaveProperty("main");
-    expect(config.routes).toEqual([
-      { pattern: "my.grimify.app", custom_domain: true },
-      { pattern: "grimify.app", custom_domain: true },
-      { pattern: "www.grimify.app", custom_domain: true },
-    ]);
+    expect(config.routes).toEqual([{ pattern: "my.grimify.app", custom_domain: true }]);
 
     const env = config.env as Record<string, Record<string, unknown>>;
     expect(Object.keys(env).sort()).toEqual(["dev", "stage"]);
